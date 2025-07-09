@@ -6,7 +6,7 @@ import {
     FiUser,
     FiLogOut,
     FiChevronDown,
-    FiMail,
+    //FiMail,
     FiTool
 } from 'react-icons/fi';
 import authService from '../services/authService';
@@ -100,8 +100,8 @@ const Header = ({ onLogout }) => {
                                 <FiUser className="avatar-icon" />
                             </div>
                             <div className="user-info">
-                                <span className="user-name">{user?.firstName || user?.username}</span>
-                                <span className="user-role">User</span>
+                                <span className="user-name">{user?.fullName || `${user?.firstName} ${user?.lastName}` || user?.username}</span>
+                                <span className="user-role">{user?.isAdmin ? 'Administrator' : 'User'}</span>
                             </div>
                             <FiChevronDown className={`dropdown-icon ${showProfileDropdown ? 'rotated' : ''}`} />
                         </button>

@@ -42,17 +42,17 @@ L.Icon.Default.mergeOptions({
 
 const Dashboard = () => {
     const user = authService.getCurrentUser();
-    
+
     // Extract user preferences with fallbacks
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
     const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
-    
+
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [lastFetchTime, setLastFetchTime] = useState(null);
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
     const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
-    console.log(user);
+    //console.log(user);
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
         failedLogins: 0,
@@ -848,11 +848,13 @@ const Dashboard = () => {
 
             {/* Connection Status */}
             <section className="dashboard__connection-status">
-                <div className="status-indicator">
-                    <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-                    <span className="status-text">
-                        Real-time Status: {isConnected ? 'Connected' : 'Disconnected'}
-                    </span>
+                <div className="status-indicator-group">
+                    <div className="status-indicator">
+                        <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
+                        <span className="status-text">
+                            Real-time Status: {isConnected ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </div>
                     {lastFetchTime && (
                         <span className="last-update">
                             Last Update: {formatDate(lastFetchTime)}
@@ -903,22 +905,22 @@ const Dashboard = () => {
 
                         <div className="account-status">
                             <div className="status-item">
+                                <span className="status-label">Account Status:</span>
                                 <span className={`status-badge ${profileData.isActive ? 'active' : 'inactive'}`}>
                                     {profileData.isActive ? 'Active' : 'Inactive'}
                                 </span>
-                                <span className="status-label">Account Status</span>
                             </div>
                             <div className="status-item">
+                                <span className="status-label">Role:</span>
                                 <span className={`status-badge ${profileData.isAdmin ? 'admin' : 'user'}`}>
                                     {profileData.isAdmin ? 'Admin' : 'User'}
                                 </span>
-                                <span className="status-label">Role</span>
                             </div>
                             <div className="status-item">
+                                <span className="status-label">2FA:</span>
                                 <span className={`status-badge ${profileData.twoFactorEnabled ? 'enabled' : 'disabled'}`}>
                                     {profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}
                                 </span>
-                                <span className="status-label">2FA</span>
                             </div>
                         </div>
 
@@ -938,26 +940,27 @@ const Dashboard = () => {
                         </div>
 
                         <div className="quick-actions">
-                            <h5>Quick Actions</h5>
                             <div className="action-buttons">
-                                <button
+                                <a
+                                    href="#"
                                     className="action-btn edit-profile"
-                                    onClick={() => handleQuickAction('edit-profile')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleQuickAction('edit-profile');
+                                    }}
                                 >
-                                    <FiUser /> Edit Profile
-                                </button>
-                                <button
+                                    Edit Profile
+                                </a>
+                                <a
+                                    href="#"
                                     className="action-btn change-password"
-                                    onClick={() => handleQuickAction('change-password')}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleQuickAction('change-password');
+                                    }}
                                 >
-                                    <FiKey /> Change Password
-                                </button>
-                                <button
-                                    className={`action-btn toggle-2fa ${profileData.twoFactorEnabled ? 'enabled' : 'disabled'}`}
-                                    onClick={() => handleQuickAction('toggle-2fa')}
-                                >
-                                    <FiShield /> {profileData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
-                                </button>
+                                    Change Password
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -1045,7 +1048,7 @@ const Dashboard = () => {
                 <article className="dashboard__card dashboard__card--stats">
                     <div className="card-header">
                         <h3>Quick Stats</h3>
-                        <small className="stats-period">({securityStats.period})</small>
+                        <span className="stats-period">Last {securityStats.period}</span>
                     </div>
                     <div className="card-content">
                         <div className="stats-grid">
