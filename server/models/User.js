@@ -182,6 +182,26 @@ const userSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  // User Preferences
+  userPreferences: {
+    timezone: {
+      type: String,
+      default: 'Asia/Beirut'
+    },
+    language: {
+      type: String,
+      default: 'english'
+    },
+    theme: {
+      type: String,
+      enum: ['light', 'dark'],
+      default: 'light'
+    },
+    dateFormat: {
+      type: String,
+      default: 'MMM dd, yyyy h:mm a' // Format: Jul 10, 2025 1:21 AM
+    }
   }
 }, {
   timestamps: true

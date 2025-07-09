@@ -42,12 +42,17 @@ L.Icon.Default.mergeOptions({
 
 const Dashboard = () => {
     const user = authService.getCurrentUser();
+    
+    // Extract user preferences with fallbacks
+    const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
+    const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+    
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [lastFetchTime, setLastFetchTime] = useState(null);
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
-    const [currentTime, setCurrentTime] = useState(moment().tz('Asia/Beirut'));
-
+    const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
+    console.log(user);
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
         failedLogins: 0,
@@ -387,11 +392,11 @@ const Dashboard = () => {
     // Update current time every second
     useEffect(() => {
         const timeInterval = setInterval(() => {
-            setCurrentTime(moment().tz('Asia/Beirut'));
+            setCurrentTime(moment().tz(userTimezone));
         }, 1000);
 
         return () => clearInterval(timeInterval);
-    }, []);
+    }, [userTimezone]);
 
     // Measure API response time separately (less frequent)
     useEffect(() => {
@@ -455,7 +460,7 @@ const Dashboard = () => {
                 type: 'bar',
                 data: {
                     labels: chartData.securityEvents.map(item => {
-                        return moment(item.date).tz('Asia/Beirut').format('MMM D');
+                        return moment(item.date).tz(userTimezone).format('MMM D');
                     }),
                     datasets: [
                         {
@@ -589,7 +594,7 @@ const Dashboard = () => {
         if (charts.securityEvents && chartData.securityEvents.length > 0) {
             // Update chart data directly
             charts.securityEvents.data.labels = chartData.securityEvents.map(item => {
-                return moment(item.date).tz('Asia/Beirut').format('MMM D');
+                return moment(item.date).tz(userTimezone).format('MMM D');
             });
             charts.securityEvents.data.datasets[0].data = chartData.securityEvents.map(item => item.events);
             charts.securityEvents.data.datasets[1].data = chartData.securityEvents.map(item => item.failedLogins);
@@ -623,10 +628,10 @@ const Dashboard = () => {
         }
     };
 
-    // Format date for display with Beirut timezone
+    // Format date for display with user's timezone and date format
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        return moment(dateString).tz('Asia/Beirut').format('MMM D, YYYY h:mm A');
+        return moment(dateString).tz(userTimezone).format(userDateFormat);
     };
 
     // Format uptime

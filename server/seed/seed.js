@@ -22,7 +22,13 @@ const adminUser = {
     permissions: AVAILABLE_PAGES.map(page => ({
         page,
         actions: AVAILABLE_ACTIONS
-    }))
+    })),
+    userPreferences: {
+        timezone: 'Asia/Beirut',
+        language: 'english',
+        theme: 'light',
+        dateFormat: 'MMM dd, yyyy h:mm a'
+    }
 };
 
 // Function to create admin user
@@ -79,7 +85,13 @@ const createSampleUsers = async (adminId) => {
                 { page: 'dashboard', actions: ['view', 'add', 'edit'] },
                 { page: 'audit-logs', actions: ['view', 'add', 'edit'] },
                 { page: 'knowledge-guide', actions: ['view', 'add', 'edit'] }
-            ]
+            ],
+            userPreferences: {
+                timezone: 'Asia/Beirut',
+                language: 'english',
+                theme: 'light',
+                dateFormat: 'MMM dd, yyyy h:mm a'
+            }
         },
         {
             username: 'viewer',
@@ -95,7 +107,13 @@ const createSampleUsers = async (adminId) => {
                 { page: 'dashboard', actions: ['view'] },
                 { page: 'audit-logs', actions: ['view'] },
                 { page: 'knowledge-guide', actions: ['view'] }
-            ]
+            ],
+            userPreferences: {
+                timezone: 'Asia/Beirut',
+                language: 'english',
+                theme: 'light',
+                dateFormat: 'MMM dd, yyyy h:mm a'
+            }
         }
     ];
 

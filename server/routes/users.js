@@ -99,7 +99,7 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
             }
         }
 
-        // Create new user
+        // Create new user with default preferences
         const newUser = new User({
             username,
             email: email.toLowerCase(),
@@ -109,7 +109,13 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
             lastName,
             isAdmin,
             permissions,
-            createdBy: req.user._id
+            createdBy: req.user._id,
+            userPreferences: {
+                timezone: 'Asia/Beirut',
+                language: 'english',
+                theme: 'light',
+                dateFormat: 'MMM dd, yyyy h:mm a'
+            }
         });
 
         await newUser.save();
@@ -160,7 +166,8 @@ router.put('/:id', authenticateToken, requirePermission('users', 'edit'), async 
             lastName,
             isAdmin,
             isActive,
-            permissions
+            permissions,
+            userPreferences
         } = req.body;
 
         const user = await User.findById(req.params.id);
@@ -205,18 +212,42 @@ router.put('/:id', authenticateToken, requirePermission('users', 'edit'), async 
         }
 
         // Update user
+        const updateData = {
+            username: username || user.username,
+            email: email ? email.toLowerCase() : user.email,
+            phone: phone || user.phone,
+            firstName: firstName || user.firstName,
+            lastName: lastName || user.lastName,
+            isAdmin: isAdmin !== undefined ? isAdmin : user.isAdmin,
+            isActive: isActive !== undefined ? isActive : user.isActive,
+            permissions: permissions || user.permissions
+        };
+
+        // Handle user preferences update
+        if (userPreferences) {
+            if (userPreferences.timezone !== undefined) {
+                updateData['userPreferences.timezone'] = userPreferences.timezone;
+            }
+            if (userPreferences.language !== undefined) {
+                updateData['userPreferences.language'] = userPreferences.language;
+            }
+            if (userPreferences.theme !== undefined) {
+                if (!['light', 'dark'].includes(userPreferences.theme)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Theme must be either "light" or "dark"'
+                    });
+                }
+                updateData['userPreferences.theme'] = userPreferences.theme;
+            }
+            if (userPreferences.dateFormat !== undefined) {
+                updateData['userPreferences.dateFormat'] = userPreferences.dateFormat;
+            }
+        }
+
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
-            {
-                username: username || user.username,
-                email: email ? email.toLowerCase() : user.email,
-                phone: phone || user.phone,
-                firstName: firstName || user.firstName,
-                lastName: lastName || user.lastName,
-                isAdmin: isAdmin !== undefined ? isAdmin : user.isAdmin,
-                isActive: isActive !== undefined ? isActive : user.isActive,
-                permissions: permissions || user.permissions
-            },
+            updateData,
             { new: true, runValidators: true }
         ).select('-password');
 
@@ -336,6 +367,95 @@ router.get('/permissions/available', authenticateToken, requirePermission('users
             actions: availableActions
         }
     });
+});
+
+// Update user preferences
+router.put('/:id/preferences', authenticateToken, async (req, res) => {
+    try {
+        const { timezone, language, theme, dateFormat } = req.body;
+
+        // Validate theme if provided
+        if (theme && !['light', 'dark'].includes(theme)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Theme must be either "light" or "dark"'
+            });
+        }
+
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Users can only update their own preferences, or admins can update any user's preferences
+        if (user._id.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only update your own preferences'
+            });
+        }
+
+        // Update preferences (only update provided fields)
+        if (timezone !== undefined) user.userPreferences.timezone = timezone;
+        if (language !== undefined) user.userPreferences.language = language;
+        if (theme !== undefined) user.userPreferences.theme = theme;
+        if (dateFormat !== undefined) user.userPreferences.dateFormat = dateFormat;
+
+        await user.save();
+
+        const userResponse = user.toJSON();
+        delete userResponse.password;
+
+        res.json({
+            success: true,
+            message: 'User preferences updated successfully',
+            data: userResponse
+        });
+
+    } catch (error) {
+        console.error('Update preferences error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update user preferences'
+        });
+    }
+});
+
+// Get user preferences
+router.get('/:id/preferences', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('userPreferences');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Users can only view their own preferences, or admins can view any user's preferences
+        if (user._id.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only view your own preferences'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: user.userPreferences
+        });
+
+    } catch (error) {
+        console.error('Get preferences error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get user preferences'
+        });
+    }
 });
 
 module.exports = router; 
