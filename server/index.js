@@ -311,6 +311,24 @@ io.on('connection', (socket) => {
   });
 });
 
+// Helper function to emit real-time updates to a specific user
+async function emitUserUpdate(userId, updateType, data) {
+  try {
+    const user = await User.findById(userId).select('-password');
+    if (!user) return;
+
+    io.to(`user_${userId}`).emit('dashboard-data-update', {
+      type: updateType,
+      data: data
+    });
+  } catch (error) {
+    console.error('Error emitting user update:', error);
+  }
+}
+
+// Export the emit function for use in other modules
+module.exports.emitUserUpdate = emitUserUpdate;
+
 // Helper functions for real-time data
 async function getSecurityStats(user) {
   // Get security events from last 24 hours
@@ -439,6 +457,62 @@ async function getChartData(user) {
   const total = successful + failed;
   const successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
 
+  // Geographic activity
+  const geographicActivity = await AuditLog.aggregate([
+    {
+      $match: {
+        userId: user._id,
+        eventType: 'login_success',
+        timestamp: { $gte: last24Hours },
+        location: { $exists: true, $ne: null }
+      }
+    },
+    {
+      $group: {
+        _id: '$location.country',
+        logins: { $sum: 1 }
+      }
+    },
+    { $sort: { logins: -1 } },
+    { $limit: 10 }
+  ]);
+
+  // Device usage
+  const deviceData = await AuditLog.aggregate([
+    {
+      $match: {
+        userId: user._id,
+        eventType: 'login_success',
+        timestamp: { $gte: last24Hours },
+        device: { $exists: true, $ne: null }
+      }
+    },
+    {
+      $group: {
+        _id: '$device',
+        usage: { $sum: 1 }
+      }
+    },
+    { $sort: { usage: -1 } },
+    { $limit: 10 }
+  ]);
+
+  // Calculate total usage and percentages for device data
+  const totalUsage = deviceData.reduce((sum, item) => sum + item.usage, 0);
+  const deviceUsage = deviceData.map(item => ({
+    device: item._id,
+    usage: item.usage,
+    percentage: totalUsage > 0 ? Math.round((item.usage / totalUsage) * 100) : 0
+  }));
+
+  // Calculate percentages for geographic data
+  const totalLogins = geographicActivity.reduce((sum, item) => sum + item.logins, 0);
+  const geographicActivityWithPercentages = geographicActivity.map(item => ({
+    country: item._id,
+    logins: item.logins,
+    percentage: totalLogins > 0 ? Math.round((item.logins / totalLogins) * 100) : 0
+  }));
+
   return {
     securityEvents: securityEvents.map(item => ({
       date: item._id,
@@ -449,8 +523,8 @@ async function getChartData(user) {
       successful: successRate,
       failed: 100 - successRate
     },
-    geographicActivity,
-    deviceUsage
+    geographicActivity: geographicActivityWithPercentages,
+    deviceUsage: deviceUsage
   };
 }
 

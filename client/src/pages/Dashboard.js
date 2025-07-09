@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
+import '../styles/Dashboard.css';
 
 // Fix for Leaflet marker icons in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -163,7 +164,20 @@ const Dashboard = () => {
                     }));
                     break;
                 case 'chart-data':
-                    setChartData(update.data);
+                    // Update chart data including device usage
+                    setChartData(prev => ({
+                        ...prev,
+                        ...update.data
+                    }));
+
+                    // Clear API errors for chart data since we received real-time updates
+                    setApiErrors(prev => ({
+                        ...prev,
+                        securityEvents: false,
+                        loginSuccessRate: false,
+                        geographicActivity: false,
+                        deviceUsage: false
+                    }));
                     break;
                 default:
                     break;
@@ -332,8 +346,14 @@ const Dashboard = () => {
     useEffect(() => {
         if (!isConnected) {
             debouncedFetchDashboardData();
+        } else {
+            // When connected to real-time, only fetch data once on mount
+            // Real-time updates will handle the rest
+            if (!lastFetchTime) {
+                debouncedFetchDashboardData();
+            }
         }
-    }, [isConnected, debouncedFetchDashboardData]);
+    }, [isConnected, debouncedFetchDashboardData, lastFetchTime]);
 
     // Measure API response time separately (less frequent)
     useEffect(() => {
@@ -686,7 +706,8 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="dashboard-page">
+        <main className="dashboard">
+            {/* Rate Limit Warning */}
             {rateLimitWarning && (
                 <div className="rate-limit-warning">
                     <div className="warning-content">
@@ -698,23 +719,29 @@ const Dashboard = () => {
                     </div>
                 </div>
             )}
-            <div className="status-indicator">
-                <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-                <span className="status-text">
-                    Real-time Status: {isConnected ? 'Connected' : 'Disconnected'}
-                </span>
-                {lastFetchTime && (
-                    <span className="last-update">
-                        Last Update: {formatDate(lastFetchTime)}
-                        {isConnected && ' (Real-time)'}
-                        {!isConnected && ' (Polling)'}
+
+            {/* Connection Status */}
+            <section className="dashboard__connection-status">
+                <div className="status-indicator">
+                    <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
+                    <span className="status-text">
+                        Real-time Status: {isConnected ? 'Connected' : 'Disconnected'}
                     </span>
-                )}
-                {isLoading && <span className="loading-indicator">Loading...</span>}
-            </div>
-            <div className="dashboard-grid">
-                {/* User Profile & Account Management Card */}
-                <div className="dashboard-card profile-card">
+                    {lastFetchTime && (
+                        <span className="last-update">
+                            Last Update: {formatDate(lastFetchTime)}
+                            {isConnected && ' (Real-time)'}
+                            {!isConnected && ' (Polling)'}
+                        </span>
+                    )}
+                    {isLoading && <span className="loading-indicator">Loading...</span>}
+                </div>
+            </section>
+
+            {/* Dashboard Grid */}
+            <section className="dashboard__grid">
+                {/* Profile Card */}
+                <article className="dashboard__card dashboard__card--profile">
                     <div className="card-header">
                         <h3>Profile & Account</h3>
                     </div>
@@ -800,10 +827,10 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </article>
 
-                {/* System Health & Performance Card */}
-                <div className="dashboard-card health-card">
+                {/* Health Card */}
+                <article className="dashboard__card dashboard__card--health">
                     <div className="card-header">
                         <h3>System Health & Performance</h3>
                     </div>
@@ -850,9 +877,8 @@ const Dashboard = () => {
                                 <div className="metric-value">
                                     <span className="metric-main">{formatUptime(systemHealth.uptime.uptime)}</span>
                                     <span className="metric-sub">
-                                        {systemHealth.uptime.lastCheck ?
-                                            `Last check: ${formatDate(systemHealth.uptime.lastCheck)}` :
-                                            'Checking...'
+                                        {systemHealth.uptime.lastCheck &&
+                                            `Last check: ${formatDate(systemHealth.uptime.lastCheck)}`
                                         }
                                     </span>
                                 </div>
@@ -879,10 +905,10 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </article>
 
-                {/* Quick Stats Card */}
-                <div className="dashboard-card stats-card">
+                {/* Stats Card */}
+                <article className="dashboard__card dashboard__card--stats">
                     <div className="card-header">
                         <h3>Quick Stats</h3>
                         <small className="stats-period">({securityStats.period})</small>
@@ -903,45 +929,56 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </article>
 
-                {/* Security Status Card */}
-                <div className="dashboard-card security-card">
+                {/* Security Card */}
+                <article className="dashboard__card dashboard__card--security">
                     <div className="card-header">
                         <h3>Security Status</h3>
                     </div>
                     <div className="card-content">
-                        <div className="security-status">
-                            <div className={`status-item status-${securityStatus.accountSecurity?.status || 'good'}`}>
-                                <span className="status-indicator"></span>
-                                <span className="status-text">
-                                    Account Security: {securityStatus.accountSecurity?.status === 'locked' ? 'Locked' :
-                                        securityStatus.accountSecurity?.status === 'warning' ? 'Warning' : 'Good'}
-                                    {securityStatus.accountSecurity?.failedAttempts > 0 &&
-                                        ` (${securityStatus.accountSecurity.failedAttempts} failed attempts)`}
-                                </span>
+                        <div className="security-status-list">
+                            <div className="security-status-item good">
+                                <span className="status-icon">✅</span>
+                                <div>
+                                    <div className="status-title">Account Security</div>
+                                    <div className="status-desc">Your account is secure.</div>
+                                </div>
                             </div>
-                            <div className={`status-item status-${securityStatus.passwordStrength?.status || 'strong'}`}>
-                                <span className="status-indicator"></span>
-                                <span className="status-text">
-                                    Password Strength: {securityStatus.passwordStrength?.level === 'weak' ? 'Weak' :
-                                        securityStatus.passwordStrength?.level === 'medium' ? 'Medium' : 'Strong'}
-                                </span>
+                            <div className={`security-status-item ${securityStatus.passwordStrength?.status === 'strong' ? 'good' : 'warning'}`}>
+                                <span className="status-icon">{securityStatus.passwordStrength?.status === 'strong' ? '✅' : '⚠️'}</span>
+                                <div>
+                                    <div className="status-title">Password Strength</div>
+                                    <div className="status-desc">
+                                        {securityStatus.passwordStrength?.status === 'strong' ? 
+                                            'Your password is strong and secure.' : 
+                                            <>
+                                                Your password is weak. <a href="#">Change password</a>
+                                            </>
+                                        }
+                                    </div>
+                                </div>
                             </div>
-                            <div className={`status-item status-${securityStatus.twoFactorAuth?.enabled ? 'good' : 'warning'}`}>
-                                <span className="status-indicator"></span>
-                                <span className="status-text">
-                                    Two-Factor Auth: {securityStatus.twoFactorAuth?.enabled ? 'Enabled' : 'Disabled'}
-                                    {securityStatus.twoFactorAuth?.enabled && securityStatus.twoFactorAuth?.backupCodesCount > 0 &&
-                                        ` (${securityStatus.twoFactorAuth.backupCodesCount} backup codes)`}
-                                </span>
+                            <div className={`security-status-item ${profileData.twoFactorEnabled ? 'good' : 'error'}`}>
+                                <span className="status-icon">{profileData.twoFactorEnabled ? '✅' : '🔒'}</span>
+                                <div>
+                                    <div className="status-title">Two-Factor Auth</div>
+                                    <div className="status-desc">
+                                        {profileData.twoFactorEnabled ? 
+                                            '2FA is enabled and active.' : 
+                                            <>
+                                                2FA is disabled. <a href="#">Enable now</a>
+                                            </>
+                                        }
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </article>
 
-                {/* Data Visualization Cards */}
-                <div className="dashboard-card chart-card">
+                {/* Security Events Chart */}
+                <article className="dashboard__card dashboard__card--chart dashboard__card--security-events">
                     <div className="card-header">
                         <h3>Security Events Over Time</h3>
                         {apiErrors.securityEvents && (
@@ -977,9 +1014,10 @@ const Dashboard = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                </article>
 
-                <div className="dashboard-card chart-card">
+                {/* Login Success Rate Chart */}
+                <article className="dashboard__card dashboard__card--chart dashboard__card--login-success">
                     <div className="card-header">
                         <h3>Login Success Rate</h3>
                         {apiErrors.loginSuccessRate && (
@@ -1027,9 +1065,10 @@ const Dashboard = () => {
                             </>
                         )}
                     </div>
-                </div>
+                </article>
 
-                <div className="dashboard-card chart-card">
+                {/* Device Usage Chart */}
+                <article className="dashboard__card dashboard__card--chart dashboard__card--device-usage">
                     <div className="card-header">
                         <h3>Device Usage</h3>
                         {apiErrors.deviceUsage && (
@@ -1065,9 +1104,10 @@ const Dashboard = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                </article>
 
-                <div className="dashboard-card map-card">
+                {/* Geographic Activity Map */}
+                <article className="dashboard__card dashboard__card--map">
                     <div className="card-header">
                         <h3>Geographic Activity</h3>
                         {apiErrors.geographicActivity && (
@@ -1147,9 +1187,9 @@ const Dashboard = () => {
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
-        </div>
+                </article>
+            </section>
+        </main>
     );
 };
 

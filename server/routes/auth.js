@@ -20,6 +20,155 @@ const router = express.Router();
 const loginAttempts = new Map();
 const blockedIPs = new Map();
 
+// Helper functions for real-time data (copied from index.js)
+async function getSecurityStats(user) {
+  // Get security events from last 24 hours
+  const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const securityEvents = await AuditLog.countDocuments({
+    userId: user._id,
+    eventType: { $in: ['login_failed', 'suspicious_activity', 'security_alert'] },
+    timestamp: { $gte: last24Hours }
+  });
+
+  const failedLogins = await AuditLog.countDocuments({
+    userId: user._id,
+    eventType: 'login_failed',
+    timestamp: { $gte: last24Hours }
+  });
+
+  const successfulLogins = await AuditLog.countDocuments({
+    userId: user._id,
+    eventType: 'login_success',
+    timestamp: { $gte: last24Hours }
+  });
+
+  return {
+    securityEvents,
+    failedLogins,
+    successfulLogins,
+    period: '24 hours'
+  };
+}
+
+async function getChartData(user) {
+  const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  // Security events over time
+  const securityEvents = await AuditLog.aggregate([
+    {
+      $match: {
+        userId: user._id,
+        eventType: { $in: ['login_failed', 'suspicious_activity', 'security_alert'] },
+        timestamp: { $gte: last7Days }
+      }
+    },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
+        events: { $sum: 1 },
+        failedLogins: {
+          $sum: { $cond: [{ $eq: ["$eventType", "login_failed"] }, 1, 0] }
+        }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+
+  // Login success rate
+  const loginStats = await AuditLog.aggregate([
+    {
+      $match: {
+        userId: user._id,
+        eventType: { $in: ['login_success', 'login_failed'] },
+        timestamp: { $gte: last24Hours }
+      }
+    },
+    {
+      $group: {
+        _id: "$eventType",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const successful = loginStats.find(stat => stat._id === 'login_success')?.count || 0;
+  const failed = loginStats.find(stat => stat._id === 'login_failed')?.count || 0;
+  const total = successful + failed;
+  const successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
+
+  // Geographic activity
+  const geographicActivity = await AuditLog.aggregate([
+    {
+      $match: {
+        userId: user._id,
+        eventType: 'login_success',
+        timestamp: { $gte: last24Hours },
+        location: { $exists: true, $ne: null }
+      }
+    },
+    {
+      $group: {
+        _id: '$location.country',
+        logins: { $sum: 1 }
+      }
+    },
+    { $sort: { logins: -1 } },
+    { $limit: 10 }
+  ]);
+
+  // Device usage
+  const deviceData = await AuditLog.aggregate([
+    {
+      $match: {
+        userId: user._id,
+        eventType: 'login_success',
+        timestamp: { $gte: last24Hours },
+        device: { $exists: true, $ne: null }
+      }
+    },
+    {
+      $group: {
+        _id: '$device',
+        usage: { $sum: 1 }
+      }
+    },
+    { $sort: { usage: -1 } },
+    { $limit: 10 }
+  ]);
+
+  // Calculate total usage and percentages for device data
+  const totalUsage = deviceData.reduce((sum, item) => sum + item.usage, 0);
+  const deviceUsage = deviceData.map(item => ({
+    device: item._id,
+    usage: item.usage,
+    percentage: totalUsage > 0 ? Math.round((item.usage / totalUsage) * 100) : 0
+  }));
+
+  // Calculate percentages for geographic data
+  const totalLogins = geographicActivity.reduce((sum, item) => sum + item.logins, 0);
+  const geographicActivityWithPercentages = geographicActivity.map(item => ({
+    country: item._id,
+    logins: item.logins,
+    percentage: totalLogins > 0 ? Math.round((item.logins / totalLogins) * 100) : 0
+  }));
+
+  return {
+    securityEvents: securityEvents.map(item => ({
+      date: item._id,
+      events: item.events,
+      failedLogins: item.failedLogins
+    })),
+    loginSuccessRate: {
+      successful: successRate,
+      failed: 100 - successRate
+    },
+    geographicActivity: geographicActivityWithPercentages,
+    deviceUsage: deviceUsage
+  };
+}
+
 // Function to extract device information from user agent
 const extractDeviceInfo = (userAgent) => {
     if (!userAgent) return 'Unknown';
@@ -382,6 +531,23 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
             sessionId,
             details: { twoFactorUsed: user.twoFactorEnabled }
         });
+
+        // Emit real-time dashboard updates
+        try {
+            const { emitUserUpdate } = require('../index');
+            
+            // Emit security stats update
+            const securityStats = await getSecurityStats(user);
+            await emitUserUpdate(user._id, 'security-stats', securityStats);
+            
+            // Emit chart data update (includes device usage)
+            const chartData = await getChartData(user);
+            await emitUserUpdate(user._id, 'chart-data', chartData);
+            
+        } catch (socketError) {
+            console.error('Socket.IO update error:', socketError);
+            // Don't fail the login if socket update fails
+        }
 
         // Return user data (without password) and token
         const userResponse = user.toJSON();
