@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
+import Login from './pages/Login';
+import DashboardLayout from './components/DashboardLayout';
+import Dashboard from './pages/Dashboard';
 import LoadingOverlay from './components/LoadingOverlay';
 import authService from './services/authService';
+import AuditLogs from './pages/AuditLogs';
+import KnowledgeGuide from './pages/KnowledgeGuide';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -92,7 +95,41 @@ const DashboardPage = () => {
     navigate('/login', { replace: true });
   };
 
-  return <Dashboard onLogout={handleLogout} />;
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <Dashboard />
+    </DashboardLayout>
+  );
+};
+
+// Audit Logs Page component
+const AuditLogsPage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <AuditLogs />
+    </DashboardLayout>
+  );
+};
+
+// Knowledge Guide Page component
+const KnowledgeGuidePage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <KnowledgeGuide />
+    </DashboardLayout>
+  );
 };
 
 function App() {
@@ -105,6 +142,22 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute>
+              <AuditLogsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/knowledge-guide"
+          element={
+            <ProtectedRoute>
+              <KnowledgeGuidePage />
             </ProtectedRoute>
           }
         />

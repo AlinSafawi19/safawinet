@@ -26,10 +26,11 @@ const authenticateToken = async (req, res, next) => {
         }
 
         // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production');
         
         // Check token issuer and audience
-        if (decoded.issuer !== 'safawinet' || decoded.audience !== 'safawinet-users') {
+        console.log("decoded: ", decoded);
+        if (decoded.iss !== 'safawinet' || decoded.aud !== 'safawinet-users') {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid token'
@@ -140,7 +141,7 @@ const optionalAuth = async (req, res, next) => {
         }
 
         if (token) {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production');
             const user = await User.findById(decoded.userId).select('-password');
             
             if (user && user.isActive) {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
-import './Login.css';
+import '../styles/Login.css';
 import logo from '../assets/images/logo.png';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
+import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 
 const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
@@ -180,7 +180,7 @@ const Login = ({ onLoginSuccess }) => {
       <div className="login-card">
         <div className="login-header">
           <div className="logo">
-            <img src={logo} alt="SafawiNet Logo" className="logo-image" />
+            <img src={logo} alt="SafawiNet Logo" className="logo-image-login" />
           </div>
           <p><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
         </div>

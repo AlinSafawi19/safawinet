@@ -845,4 +845,36 @@ router.delete('/sessions/:sessionId', authenticateToken, async (req, res) => {
     }
 });
 
+// Debug endpoint to check user permissions
+router.get('/debug/permissions', authenticateToken, (req, res) => {
+    try {
+        const user = req.user;
+        const permissions = user.permissions || [];
+        const isAdmin = user.isAdmin;
+        
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    isAdmin: isAdmin,
+                    isActive: user.isActive
+                },
+                permissions: permissions,
+                hasAuditLogsPermission: user.hasPermission('audit-logs', 'view'),
+                hasAuditPermission: user.hasPermission('audit-logs', 'view'),
+                allPermissions: permissions.map(p => `${p.page}: ${p.actions.join(', ')}`)
+            }
+        });
+    } catch (error) {
+        console.error('Debug permissions error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get debug info'
+        });
+    }
+});
+
 module.exports = router; 

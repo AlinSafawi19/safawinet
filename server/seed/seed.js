@@ -4,7 +4,7 @@ const { config } = require('../config/config');
 
 // Available pages and actions for the system
 const AVAILABLE_PAGES = [
-    'dashboard', 'users'
+    'dashboard', 'audit-logs', 'knowledge-guide'
 ];
 
 const AVAILABLE_ACTIONS = ['view', 'add', 'edit', 'delete'];
@@ -77,7 +77,8 @@ const createSampleUsers = async (adminId) => {
             createdBy: adminId,
             permissions: [
                 { page: 'dashboard', actions: ['view', 'add', 'edit'] },
-                { page: 'users', actions: ['view', 'add', 'edit'] }
+                { page: 'audit-logs', actions: ['view', 'add', 'edit'] },
+                { page: 'knowledge-guide', actions: ['view', 'add', 'edit'] }
             ]
         },
         {
@@ -92,7 +93,8 @@ const createSampleUsers = async (adminId) => {
             createdBy: adminId,
             permissions: [
                 { page: 'dashboard', actions: ['view'] },
-                { page: 'users', actions: ['view'] }
+                { page: 'audit-logs', actions: ['view'] },
+                { page: 'knowledge-guide', actions: ['view'] }
             ]
         }
     ];
@@ -135,8 +137,8 @@ const seedDatabase = async () => {
         console.log('✅ Database seeding completed successfully!');
         console.log('\n📋 Available users:');
         console.log('1. Admin - Full access to all pages and actions');
-        console.log('2. Manager - Limited access (view + add/edit on dashboard and users)');
-        console.log('3. Viewer - Read-only access to dashboard and users');
+        console.log('2. Manager - Limited access (view + add/edit on dashboard, audit-logs and knowledge-guide)');
+        console.log('3. Viewer - Read-only access to dashboard, audit-logs and knowledge-guide');
 
     } catch (error) {
         console.error('❌ Database seeding failed:', error.message);
