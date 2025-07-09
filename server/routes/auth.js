@@ -9,7 +9,9 @@ const AuditLog = require('../models/AuditLog');
 const { authenticateToken } = require('../middleware/auth');
 const { validateInput, sanitizeInput } = require('../middleware/validation');
 const emailService = require('../services/emailService');
+const geolocationService = require('../services/geolocationService');
 const securityConfig = require('../config/security');
+const passwordStrengthAnalyzer = require('../utils/passwordStrength');
 const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
@@ -17,6 +19,97 @@ const router = express.Router();
 // In-memory store for rate limiting (in production, use Redis)
 const loginAttempts = new Map();
 const blockedIPs = new Map();
+
+// Function to extract device information from user agent
+const extractDeviceInfo = (userAgent) => {
+    if (!userAgent) return 'Unknown';
+    
+    const ua = userAgent.toLowerCase();
+    
+    // Browser detection - check Edge first since it contains "chrome" in its user agent
+    if (ua.includes('edg/') || ua.includes('edge')) {
+        return 'Edge';
+    }
+    if (ua.includes('chrome') && !ua.includes('edg/')) {
+        return 'Chrome';
+    }
+    if (ua.includes('firefox')) {
+        return 'Firefox';
+    }
+    if (ua.includes('safari') && !ua.includes('chrome') && !ua.includes('edg/')) {
+        return 'Safari';
+    }
+    if (ua.includes('opera')) {
+        return 'Opera';
+    }
+    if (ua.includes('ie') || ua.includes('trident')) {
+        return 'Internet Explorer';
+    }
+    
+    // Mobile detection
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('ipad')) {
+        if (ua.includes('android')) {
+            return 'Android';
+        }
+        if (ua.includes('iphone')) {
+            return 'iPhone';
+        }
+        if (ua.includes('ipad')) {
+            return 'iPad';
+        }
+        return 'Mobile';
+    }
+    
+    // Desktop OS detection
+    if (ua.includes('windows')) {
+        return 'Windows';
+    }
+    if (ua.includes('macintosh') || ua.includes('mac os')) {
+        return 'Mac';
+    }
+    if (ua.includes('linux')) {
+        return 'Linux';
+    }
+    
+    return 'Other';
+};
+
+// Function to extract geographic location from IP address using real geolocation service
+const extractLocationFromIP = async (ip) => {
+    if (!ip) return null;
+    
+    try {
+        const location = await geolocationService.getLocationFromIP(ip);
+        return {
+            country: location.country,
+            city: location.city,
+            region: location.region,
+            countryCode: location.countryCode,
+            regionCode: location.regionCode,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            timezone: location.timezone,
+            isp: location.isp,
+            asn: location.asn,
+            accuracy: location.accuracy
+        };
+    } catch (error) {
+        console.error('Geolocation error:', error);
+        return {
+            country: 'Unknown',
+            city: 'Unknown',
+            region: 'Unknown',
+            countryCode: 'UNKNOWN',
+            regionCode: 'UNKNOWN',
+            latitude: null,
+            longitude: null,
+            timezone: 'Unknown',
+            isp: 'Unknown',
+            asn: 'Unknown',
+            accuracy: 'unknown'
+        };
+    }
+};
 
 // Enhanced rate limiting middleware
 const enhancedRateLimit = (req, res, next) => {
@@ -85,6 +178,8 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 action: 'login_failed',
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
+                device: extractDeviceInfo(req.headers['user-agent']),
+                location: await extractLocationFromIP(req.ip),
                 success: false,
                 details: { reason: 'user_not_found' },
                 riskLevel: 'medium'
@@ -104,6 +199,8 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 action: 'login_failed',
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
+                device: extractDeviceInfo(req.headers['user-agent']),
+                location: await extractLocationFromIP(req.ip),
                 success: false,
                 details: { reason: 'account_locked' },
                 riskLevel: 'high'
@@ -122,6 +219,8 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 action: 'login_failed',
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
+                device: extractDeviceInfo(req.headers['user-agent']),
+                location: await extractLocationFromIP(req.ip),
                 success: false,
                 details: { reason: 'account_inactive' },
                 riskLevel: 'medium'
@@ -151,6 +250,8 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 action: 'login_failed',
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
+                device: extractDeviceInfo(req.headers['user-agent']),
+                location: await extractLocationFromIP(req.ip),
                 success: false,
                 details: { reason: 'invalid_password' },
                 riskLevel: 'medium'
@@ -181,16 +282,18 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
             });
 
             if (!verified) {
-                await AuditLog.logEvent({
-                    userId: user._id,
-                    username: user.username,
-                    action: 'login_failed',
-                    ip: req.ip,
-                    userAgent: req.headers['user-agent'],
-                    success: false,
-                    details: { reason: 'invalid_2fa_code' },
-                    riskLevel: 'high'
-                });
+                            await AuditLog.logEvent({
+                userId: user._id,
+                username: user.username,
+                action: 'login_failed',
+                ip: req.ip,
+                userAgent: req.headers['user-agent'],
+                device: extractDeviceInfo(req.headers['user-agent']),
+                location: await extractLocationFromIP(req.ip),
+                success: false,
+                details: { reason: 'invalid_2fa_code' },
+                riskLevel: 'high'
+            });
 
                 return res.status(401).json({
                     success: false,
@@ -212,6 +315,7 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
         // Add session to user
         await user.addSession({
             sessionId,
+            location: await extractLocationFromIP(req.ip),
             device: req.headers['user-agent'],
             ip: req.ip,
             userAgent: req.headers['user-agent']
@@ -228,7 +332,7 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 twoFactorEnabled: user.twoFactorEnabled
             },
             securityConfig.jwt.secret,
-            { 
+            {
                 expiresIn: tokenExpiry,
                 issuer: securityConfig.jwt.issuer,
                 audience: securityConfig.jwt.audience,
@@ -272,6 +376,8 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
             action: 'login',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true,
             sessionId,
             details: { twoFactorUsed: user.twoFactorEnabled }
@@ -316,6 +422,8 @@ router.post('/logout', authenticateToken, async (req, res) => {
             action: 'logout',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true,
             sessionId: req.token ? jwt.verify(req.token, securityConfig.jwt.secret).sessionId : null
         });
@@ -377,6 +485,8 @@ router.post('/forgot-password', sanitizeInput, validateInput({
             action: 'password_reset_request',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true
         });
 
@@ -404,13 +514,14 @@ router.post('/reset-password', sanitizeInput, validateInput({
     try {
         const { token, newPassword } = req.body;
 
-        // Validate password strength
-        const passwordValidation = securityConfig.validatePassword(newPassword);
+        // Validate password strength using the new analyzer
+        const passwordValidation = passwordStrengthAnalyzer.validatePassword(newPassword);
         if (!passwordValidation.isValid) {
             return res.status(400).json({
                 success: false,
                 message: 'Password does not meet security requirements',
-                errors: passwordValidation.errors
+                errors: passwordValidation.errors,
+                strength: passwordValidation.analysis
             });
         }
 
@@ -439,6 +550,8 @@ router.post('/reset-password', sanitizeInput, validateInput({
             action: 'password_reset_complete',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true
         });
 
@@ -549,6 +662,8 @@ router.post('/2fa/enable', authenticateToken, sanitizeInput, validateInput({
             action: 'two_factor_enable',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true
         });
 
@@ -611,6 +726,8 @@ router.post('/2fa/disable', authenticateToken, sanitizeInput, validateInput({
             action: 'two_factor_disable',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true
         });
 
@@ -705,6 +822,8 @@ router.put('/profile', authenticateToken, sanitizeInput, validateInput({
             action: 'profile_update',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true
         });
 
@@ -733,13 +852,14 @@ router.put('/change-password', authenticateToken, sanitizeInput, validateInput({
     try {
         const { currentPassword, newPassword } = req.body;
 
-        // Validate password strength
-        const passwordValidation = securityConfig.validatePassword(newPassword);
+        // Validate password strength using the new analyzer
+        const passwordValidation = passwordStrengthAnalyzer.validatePassword(newPassword);
         if (!passwordValidation.isValid) {
             return res.status(400).json({
                 success: false,
                 message: 'Password does not meet security requirements',
-                errors: passwordValidation.errors
+                errors: passwordValidation.errors,
+                strength: passwordValidation.analysis
             });
         }
 
@@ -765,6 +885,8 @@ router.put('/change-password', authenticateToken, sanitizeInput, validateInput({
             action: 'password_change',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true
         });
 
@@ -828,6 +950,8 @@ router.delete('/sessions/:sessionId', authenticateToken, async (req, res) => {
             action: 'session_destroy',
             ip: req.ip,
             userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
             success: true,
             details: { sessionId }
         });
@@ -845,13 +969,387 @@ router.delete('/sessions/:sessionId', authenticateToken, async (req, res) => {
     }
 });
 
+// Get user security events count
+router.get('/security-events', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hours = parseInt(req.query.hours) || 24; // Default to 24 hours
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        // Count security events for this user
+        const securityEventsCount = await AuditLog.countDocuments({
+            userId: userId,
+            timestamp: { $gte: cutoff },
+            $or: [
+                { riskLevel: { $in: ['high', 'critical'] } },
+                { action: 'suspicious_activity' },
+                { action: 'rate_limit_exceeded' },
+                { action: 'security_alert' },
+                { action: 'account_lock' }
+            ]
+        });
+
+        // Count failed login attempts
+        const failedLoginCount = await AuditLog.countDocuments({
+            userId: userId,
+            action: 'login_failed',
+            timestamp: { $gte: cutoff }
+        });
+
+        // Count successful logins
+        const successfulLoginCount = await AuditLog.countDocuments({
+            userId: userId,
+            action: 'login',
+            success: true,
+            timestamp: { $gte: cutoff }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                securityEvents: securityEventsCount,
+                failedLogins: failedLoginCount,
+                successfulLogins: successfulLoginCount,
+                period: `${hours} hours`
+            }
+        });
+    } catch (error) {
+        console.error('Security events fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch security events'
+        });
+    }
+});
+
+// Get security events chart data (daily breakdown for the last 7 days)
+router.get('/security-events-chart', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const days = parseInt(req.query.days) || 7; // Default to 7 days
+        const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+        // Get daily security events for the last 7 days
+        const securityEventsData = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    timestamp: { $gte: cutoff },
+                    $or: [
+                        { riskLevel: { $in: ['high', 'critical'] } },
+                        { action: 'suspicious_activity' },
+                        { action: 'rate_limit_exceeded' },
+                        { action: 'security_alert' },
+                        { action: 'account_lock' }
+                    ]
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%d",
+                            date: "$timestamp"
+                        }
+                    },
+                    events: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Get daily failed logins
+        const failedLoginsData = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    action: 'login_failed',
+                    timestamp: { $gte: cutoff }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%d",
+                            date: "$timestamp"
+                        }
+                    },
+                    failedLogins: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Get daily successful logins
+        const successfulLoginsData = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    action: 'login',
+                    success: true,
+                    timestamp: { $gte: cutoff }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%d",
+                            date: "$timestamp"
+                        }
+                    },
+                    successfulLogins: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Create a complete date range and merge data
+        const dateRange = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            dateRange.push(date.toISOString().split('T')[0]);
+        }
+
+        const chartData = dateRange.map(date => {
+            const securityEvent = securityEventsData.find(item => item._id === date);
+            const failedLogin = failedLoginsData.find(item => item._id === date);
+            const successfulLogin = successfulLoginsData.find(item => item._id === date);
+
+            return {
+                date: date,
+                events: securityEvent ? securityEvent.events : 0,
+                failedLogins: failedLogin ? failedLogin.failedLogins : 0,
+                successfulLogins: successfulLogin ? successfulLogin.successfulLogins : 0
+            };
+        });
+
+        res.json({
+            success: true,
+            data: chartData
+        });
+    } catch (error) {
+        console.error('Security events chart fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch security events chart data'
+        });
+    }
+});
+
+// Get login success rate data
+router.get('/login-success-rate', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hours = parseInt(req.query.hours) || 24; // Default to 24 hours
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        // Count successful logins
+        const successfulLogins = await AuditLog.countDocuments({
+            userId: userId,
+            action: 'login',
+            success: true,
+            timestamp: { $gte: cutoff }
+        });
+
+        // Count failed logins
+        const failedLogins = await AuditLog.countDocuments({
+            userId: userId,
+            action: 'login_failed',
+            timestamp: { $gte: cutoff }
+        });
+
+        const totalLogins = successfulLogins + failedLogins;
+        const successRate = totalLogins > 0 ? Math.round((successfulLogins / totalLogins) * 100) : 0;
+        const failureRate = 100 - successRate;
+
+        res.json({
+            success: true,
+            data: {
+                successful: successRate,
+                failed: failureRate,
+                totalLogins: totalLogins,
+                successfulCount: successfulLogins,
+                failedCount: failedLogins
+            }
+        });
+    } catch (error) {
+        console.error('Login success rate fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch login success rate'
+        });
+    }
+});
+
+// Get geographic activity data
+router.get('/geographic-activity', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hours = parseInt(req.query.hours) || 24; // Default to 24 hours
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        // Get login activity by location
+        const geographicData = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    action: 'login',
+                    success: true,
+                    timestamp: { $gte: cutoff },
+                    'location.country': { $exists: true, $ne: null }
+                }
+            },
+            {
+                $group: {
+                    _id: '$location.country',
+                    logins: { $sum: 1 }
+                }
+            },
+            { $sort: { logins: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Calculate total logins and percentages
+        const totalLogins = geographicData.reduce((sum, item) => sum + item.logins, 0);
+
+        const chartData = geographicData.map(item => ({
+            country: item._id,
+            logins: item.logins,
+            percentage: totalLogins > 0 ? Math.round((item.logins / totalLogins) * 100) : 0
+        }));
+
+        res.json({
+            success: true,
+            data: chartData
+        });
+    } catch (error) {
+        console.error('Geographic activity fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch geographic activity'
+        });
+    }
+});
+
+// Get device usage data
+router.get('/device-usage', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hours = parseInt(req.query.hours) || 24; // Default to 24 hours
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        // Get login activity by device
+        const deviceData = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    action: 'login',
+                    success: true,
+                    timestamp: { $gte: cutoff },
+                    device: { $exists: true, $ne: null }
+                }
+            },
+            {
+                $group: {
+                    _id: '$device',
+                    usage: { $sum: 1 }
+                }
+            },
+            { $sort: { usage: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Calculate total usage and percentages
+        const totalUsage = deviceData.reduce((sum, item) => sum + item.usage, 0);
+
+        const chartData = deviceData.map(item => ({
+            device: item._id,
+            usage: item.usage,
+            percentage: totalUsage > 0 ? Math.round((item.usage / totalUsage) * 100) : 0
+        }));
+
+        res.json({
+            success: true,
+            data: chartData
+        });
+    } catch (error) {
+        console.error('Device usage fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch device usage'
+        });
+    }
+});
+
+// Get user security status
+router.get('/security-status', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        // Check account security status
+        const accountSecurityStatus = user.isAccountLocked() ? 'locked' :
+            user.failedLoginAttempts > 0 ? 'warning' : 'good';
+
+        // Check password strength using the user model's method
+        const passwordStrength = user.getPasswordStrength();
+
+        // Check two-factor authentication status
+        const twoFactorStatus = user.twoFactorEnabled ? 'enabled' : 'disabled';
+
+        // Get recent security events for additional context
+        const hours = 24;
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        const recentSecurityEvents = await AuditLog.countDocuments({
+            userId: user._id,
+            timestamp: { $gte: cutoff },
+            $or: [
+                { riskLevel: { $in: ['high', 'critical'] } },
+                { action: 'suspicious_activity' },
+                { action: 'rate_limit_exceeded' },
+                { action: 'security_alert' },
+                { action: 'account_lock' }
+            ]
+        });
+
+        res.json({
+            success: true,
+            data: {
+                accountSecurity: {
+                    status: accountSecurityStatus,
+                    failedAttempts: user.failedLoginAttempts,
+                    isLocked: user.accountLocked,
+                    lockedUntil: user.lockedUntil
+                },
+                passwordStrength: passwordStrength,
+                twoFactorAuth: {
+                    status: twoFactorStatus,
+                    enabled: user.twoFactorEnabled,
+                    backupCodesCount: user.twoFactorBackupCodes?.filter(code => !code.used).length || 0
+                },
+                recentSecurityEvents: recentSecurityEvents,
+                lastLogin: user.lastLogin
+            }
+        });
+    } catch (error) {
+        console.error('Security status fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch security status'
+        });
+    }
+});
+
 // Debug endpoint to check user permissions
 router.get('/debug/permissions', authenticateToken, (req, res) => {
     try {
         const user = req.user;
         const permissions = user.permissions || [];
         const isAdmin = user.isAdmin;
-        
+
         res.json({
             success: true,
             data: {

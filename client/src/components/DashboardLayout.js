@@ -3,7 +3,7 @@ import authService from '../services/authService';
 import LoadingOverlay from './LoadingOverlay';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import '../styles/Dashboard.css';
+import '../styles/DashboardLayout.css';
 
 const DashboardLayout = ({ onLogout, children }) => {
     const user = authService.getCurrentUser();

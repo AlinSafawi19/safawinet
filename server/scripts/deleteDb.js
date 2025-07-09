@@ -104,13 +104,20 @@ const getDatabaseStats = async () => {
     const db = mongoose.connection.db;
     const stats = await db.stats();
     
+    // Extract database name from URI as fallback
+    const dbNameFromUri = config.database.uri.split('/').pop().split('?')[0];
+    const dbName = stats.dbName || dbNameFromUri;
+    
     log.info('Database Statistics:');
-    log.info(`- Database Name: ${stats.dbName}`);
+    log.info(`- Database Name: ${dbName}`);
     log.info(`- Collections: ${stats.collections}`);
     log.info(`- Data Size: ${(stats.dataSize / 1024 / 1024).toFixed(2)} MB`);
     log.info(`- Storage Size: ${(stats.storageSize / 1024 / 1024).toFixed(2)} MB`);
     log.info(`- Indexes: ${stats.indexes}`);
     log.info(`- Index Size: ${(stats.indexSize / 1024 / 1024).toFixed(2)} MB`);
+    
+    // Add database name to stats object for use in confirmation
+    stats.dbName = dbName;
     
     return stats;
   } catch (error) {

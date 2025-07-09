@@ -28,6 +28,39 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  // Password Strength Tracking
+  passwordStrength: {
+    score: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+    },
+    level: {
+      type: String,
+      enum: ['very_weak', 'weak', 'medium', 'strong', 'very_strong'],
+      default: 'very_weak'
+    },
+    lastChecked: {
+      type: Date,
+      default: Date.now
+    },
+    details: {
+      length: { type: Number, default: 0 },
+      hasUppercase: { type: Boolean, default: false },
+      hasLowercase: { type: Boolean, default: false },
+      hasNumbers: { type: Boolean, default: false },
+      hasSpecialChars: { type: Boolean, default: false },
+      hasRepeatingChars: { type: Boolean, default: false },
+      hasSequentialChars: { type: Boolean, default: false },
+      hasCommonPatterns: { type: Boolean, default: false },
+      entropy: { type: Number, default: 0 }
+    }
+  },
+  passwordLastChanged: {
+    type: Date,
+    default: Date.now
+  },
   firstName: {
     type: String,
     required: true,
@@ -132,11 +165,29 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Hash password before saving
+// Import password strength analyzer
+const passwordStrengthAnalyzer = require('../utils/passwordStrength');
+
+// Hash password and analyze strength before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
+    // Analyze password strength before hashing
+    const strengthAnalysis = passwordStrengthAnalyzer.analyzePassword(this.password);
+    
+    // Update password strength tracking
+    this.passwordStrength = {
+      score: strengthAnalysis.score,
+      level: strengthAnalysis.level,
+      lastChecked: new Date(),
+      details: strengthAnalysis.details
+    };
+    
+    // Update password last changed timestamp
+    this.passwordLastChanged = new Date();
+    
+    // Hash the password
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
@@ -247,6 +298,40 @@ userSchema.methods.generateBackupCodes = function() {
   
   this.twoFactorBackupCodes = codes;
   return this.save();
+};
+
+// Method to get password strength information
+userSchema.methods.getPasswordStrength = function() {
+  return {
+    score: this.passwordStrength?.score || 0,
+    level: this.passwordStrength?.level || 'very_weak',
+    lastChecked: this.passwordStrength?.lastChecked || this.createdAt,
+    lastChanged: this.passwordLastChanged || this.createdAt,
+    details: this.passwordStrength?.details || {
+      length: 0,
+      hasUppercase: false,
+      hasLowercase: false,
+      hasNumbers: false,
+      hasSpecialChars: false,
+      hasRepeatingChars: false,
+      hasSequentialChars: false,
+      hasCommonPatterns: false,
+      entropy: 0
+    }
+  };
+};
+
+// Method to check if password needs to be changed
+userSchema.methods.shouldChangePassword = function() {
+  const strength = this.getPasswordStrength();
+  const daysSinceChange = (Date.now() - this.passwordLastChanged.getTime()) / (1000 * 60 * 60 * 24);
+  
+  return {
+    shouldChange: strength.score < 40 || daysSinceChange > 90, // Weak password or older than 90 days
+    reason: strength.score < 40 ? 'weak_password' : 'password_expired',
+    strength: strength,
+    daysSinceChange: Math.floor(daysSinceChange)
+  };
 };
 
 // Virtual for full name
