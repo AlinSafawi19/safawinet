@@ -77,6 +77,13 @@ BCRYPT_SALT_ROUNDS=12
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_ATTEMPTS=5
 RATE_LIMIT_BLOCK_DURATION_MS=1800000
+
+# =============================================================================
+# SMS CONFIGURATION (TWILIO)
+# =============================================================================
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_PHONE_NUMBER=your-twilio-phone-number
 ```
 ## Variable Descriptions
 
@@ -123,6 +130,11 @@ RATE_LIMIT_BLOCK_DURATION_MS=1800000
 - `RATE_LIMIT_MAX_ATTEMPTS`: Maximum attempts allowed in window
 - `RATE_LIMIT_BLOCK_DURATION_MS`: Block duration after max attempts (30 minutes)
 
+### SMS Configuration (Twilio)
+- `TWILIO_ACCOUNT_SID`: Your Twilio Account SID from Twilio Console
+- `TWILIO_AUTH_TOKEN`: Your Twilio Auth Token from Twilio Console
+- `TWILIO_PHONE_NUMBER`: Your Twilio phone number for sending SMS (format: +1234567890)
+
 ## Production Configuration
 
 For production deployment, update these variables:
@@ -141,6 +153,9 @@ COOKIE_DOMAIN=yourdomain.com
 JWT_SECRET=your-production-jwt-secret-256-bit-key
 COOKIE_SECRET=your-production-cookie-secret-256-bit-key
 CSRF_SECRET=your-production-csrf-secret-256-bit-key
+TWILIO_ACCOUNT_SID=your-production-twilio-sid
+TWILIO_AUTH_TOKEN=your-production-twilio-token
+TWILIO_PHONE_NUMBER=your-production-twilio-number
 ```
 
 ## Security Requirements
@@ -192,4 +207,5 @@ The application validates these environment variables on startup. Missing requir
 2. **Invalid URLs**: Ensure URLs are properly formatted
 3. **Database connection**: Verify MongoDB URI and credentials
 4. **Email sending**: Check SMTP configuration and credentials
-5. **JWT errors**: Verify JWT secret is set and strong enough 
+5. **SMS sending**: Verify Twilio credentials and phone number format
+6. **JWT errors**: Verify JWT secret is set and strong enough 

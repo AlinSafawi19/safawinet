@@ -6,6 +6,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test-server": "node test-server.js",
+    "test-sms": "node test-sms.js",
     "seed": "node seed/seed.js",
     "check-db": "node scripts/checkDb.js",
     "backup-db": "node scripts/backupDb.js",
@@ -32,6 +33,7 @@
     "nodemailer": "^6.9.0",
     "qrcode": "^1.5.3",
     "socket.io": "^4.8.1",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "twilio": "^4.19.0"
   }
 }

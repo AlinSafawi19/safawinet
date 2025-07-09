@@ -350,6 +350,90 @@ class EmailService {
       return { success: false, error: error.message };
     }
   }
+
+  async sendEmailVerification(user, verificationToken) {
+    const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+    const content = `
+      <h2>📧 Verify Your Email Address</h2>
+      <p>Hello <strong>${user.firstName}</strong>,</p>
+      <p>Please verify your email address to complete your SafawiNet account setup. This helps us ensure the security of your account.</p>
+      
+      <div class="info-box">
+        <p><strong>⚠️ Important:</strong> This verification link will expire in <span class="highlight">24 hours</span> for your protection.</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${verificationUrl}" class="btn">Verify My Email</a>
+      </div>
+      
+      <div class="alert-box">
+        <p><strong>🔒 Security Notice:</strong></p>
+        <ul>
+          <li>Only click this link if you created a SafawiNet account</li>
+          <li>This link is unique to your account and should not be shared</li>
+          <li>If you didn't create an account, please ignore this email</li>
+        </ul>
+      </div>
+      
+      <p><strong>Best regards,</strong><br>SafawiNet Security Team</p>
+    `;
+
+    const mailOptions = {
+      from: `"SafawiNet Security" <${process.env.SMTP_USER || 'alinsafawi19@gmail.com'}>`,
+      to: user.email,
+      subject: '📧 Verify Your Email - SafawiNet',
+      html: this.getEmailTemplate(content, 'Email Verification', '#17a2b8')
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return { success: true };
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendEmailVerifiedConfirmation(user) {
+    const content = `
+      <h2>✅ Email Verified Successfully</h2>
+      <p>Hello <strong>${user.firstName}</strong>,</p>
+      <p>Your email address has been successfully verified! Your SafawiNet account is now more secure.</p>
+      
+      <div class="success-box">
+        <h3>✅ Verification Complete</h3>
+        <p><strong>Email:</strong> ${user.email}</p>
+        <p><strong>Verified:</strong> ${new Date().toLocaleString()}</p>
+      </div>
+      
+      <div class="info-box">
+        <h3>🔐 Next Steps for Enhanced Security:</h3>
+        <ul>
+          <li><strong>Verify your phone number</strong> (if provided)</li>
+          <li><strong>Enable two-factor authentication</strong></li>
+          <li><strong>Review your security settings</strong></li>
+          <li><strong>Set up backup codes</strong> for 2FA</li>
+        </ul>
+      </div>
+      
+      <p><strong>Best regards,</strong><br>SafawiNet Security Team</p>
+    `;
+
+    const mailOptions = {
+      from: `"SafawiNet Security" <${process.env.SMTP_USER || 'alinsafawi19@gmail.com'}>`,
+      to: user.email,
+      subject: '✅ Email Verified - SafawiNet',
+      html: this.getEmailTemplate(content, 'Email Verified', '#28a745')
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return { success: true };
+    } catch (error) {
+      console.error('Email verified confirmation error:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = new EmailService(); 

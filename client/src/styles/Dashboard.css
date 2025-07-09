@@ -33,6 +33,29 @@
 .last-update { color: #64748b; font-size: 13px; margin-left: auto; }
 .loading-indicator { color: #2563eb; font-size: 13px; margin-left: 10px; }
 
+.timezone-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 12px 20px;
+  font-size: 15px;
+  margin-top: 12px;
+}
+.timezone-label { color: #64748b; font-weight: 500; }
+.timezone-value { font-weight: 600; color: #2563eb; }
+.current-time { 
+  color: #64748b; 
+  font-size: 13px; 
+  margin-left: auto; 
+  font-family: 'Courier New', monospace;
+  background: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
 .dashboard__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));

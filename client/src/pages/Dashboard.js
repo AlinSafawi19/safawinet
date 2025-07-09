@@ -6,6 +6,30 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { io } from 'socket.io-client';
+import config from '../config/config';
+import moment from 'moment';
+import 'moment-timezone';
+import {
+    FiAlertTriangle,
+    FiCheckCircle,
+    FiLock,
+    FiMail,
+    //FiSmartphone, 
+    FiShield,
+    FiWifi,
+    // FiWifiOff,
+    FiRefreshCw,
+    FiUser,
+    //FiSettings,
+    FiKey,
+    FiShield as FiShieldCheck,
+    FiAlertCircle,
+    FiGlobe,
+    // FiMonitor,
+    FiServer,
+    FiClock,
+    FiActivity
+} from 'react-icons/fi';
 import '../styles/Dashboard.css';
 
 // Fix for Leaflet marker icons in React
@@ -20,9 +44,9 @@ const Dashboard = () => {
     const user = authService.getCurrentUser();
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [lastFetchTime, setLastFetchTime] = useState(null);
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
+    const [currentTime, setCurrentTime] = useState(moment().tz('Asia/Beirut'));
 
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
@@ -47,7 +71,9 @@ const Dashboard = () => {
         isActive: user?.isActive || true,
         createdAt: user?.createdAt || '',
         lastLogin: user?.lastLogin || '',
-        twoFactorEnabled: user?.twoFactorEnabled || false
+        twoFactorEnabled: user?.twoFactorEnabled || false,
+        emailVerified: user?.emailVerified || false,
+        phoneVerified: user?.phoneVerified || false
     });
 
     const [systemHealth, setSystemHealth] = useState({
@@ -120,7 +146,7 @@ const Dashboard = () => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
 
-        const socketInstance = io('http://localhost:5000', {
+        const socketInstance = io(config.serverUrl, {
             auth: {
                 token: token
             },
@@ -191,8 +217,8 @@ const Dashboard = () => {
         setSocket(socketInstance);
 
         return () => {
-            if (socketInstance) {
-                socketInstance.disconnect();
+            if (socket) {
+                socket.disconnect();
             }
         };
     }, []);
@@ -202,7 +228,6 @@ const Dashboard = () => {
         if (!authService.isUserAuthenticated()) return;
 
         try {
-            setIsLoading(true);
             const api = createApiInstance();
 
             // Fetch all data in parallel to reduce total request time
@@ -332,7 +357,6 @@ const Dashboard = () => {
                 });
             }
         } finally {
-            setIsLoading(false);
         }
     }, [createApiInstance]);
 
@@ -354,6 +378,20 @@ const Dashboard = () => {
             }
         }
     }, [isConnected, debouncedFetchDashboardData, lastFetchTime]);
+
+    // Refresh profile data on mount and when returning to dashboard
+    useEffect(() => {
+        refreshProfileData();
+    }, []);
+
+    // Update current time every second
+    useEffect(() => {
+        const timeInterval = setInterval(() => {
+            setCurrentTime(moment().tz('Asia/Beirut'));
+        }, 1000);
+
+        return () => clearInterval(timeInterval);
+    }, []);
 
     // Measure API response time separately (less frequent)
     useEffect(() => {
@@ -417,8 +455,7 @@ const Dashboard = () => {
                 type: 'bar',
                 data: {
                     labels: chartData.securityEvents.map(item => {
-                        const date = new Date(item.date);
-                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return moment(item.date).tz('Asia/Beirut').format('MMM D');
                     }),
                     datasets: [
                         {
@@ -552,8 +589,7 @@ const Dashboard = () => {
         if (charts.securityEvents && chartData.securityEvents.length > 0) {
             // Update chart data directly
             charts.securityEvents.data.labels = chartData.securityEvents.map(item => {
-                const date = new Date(item.date);
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return moment(item.date).tz('Asia/Beirut').format('MMM D');
             });
             charts.securityEvents.data.datasets[0].data = chartData.securityEvents.map(item => item.events);
             charts.securityEvents.data.datasets[1].data = chartData.securityEvents.map(item => item.failedLogins);
@@ -587,17 +623,10 @@ const Dashboard = () => {
         }
     };
 
-    // Format date for display
+    // Format date for display with Beirut timezone
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        return moment(dateString).tz('Asia/Beirut').format('MMM D, YYYY h:mm A');
     };
 
     // Format uptime
@@ -684,10 +713,97 @@ const Dashboard = () => {
                 // TODO: Implement 2FA toggle
                 console.log('Toggle 2FA clicked');
                 break;
+            case 'verify-email':
+                handleEmailVerification();
+                break;
+            // --- PHONE VERIFICATION UI & LOGIC DISABLED ---
+            // case 'verify-phone':
+            //     handlePhoneVerification();
+            //     break;
             default:
                 break;
         }
     };
+
+    // Refresh profile data from server
+    const refreshProfileData = async () => {
+        try {
+            const result = await authService.getProfile();
+            if (result.success) {
+                setProfileData({
+                    firstName: result.user.firstName || '',
+                    lastName: result.user.lastName || '',
+                    email: result.user.email || '',
+                    phone: result.user.phone || '',
+                    username: result.user.username || '',
+                    isAdmin: result.user.isAdmin || false,
+                    isActive: result.user.isActive || true,
+                    createdAt: result.user.createdAt || '',
+                    lastLogin: result.user.lastLogin || '',
+                    twoFactorEnabled: result.user.twoFactorEnabled || false,
+                    emailVerified: result.user.emailVerified || false,
+                    phoneVerified: result.user.phoneVerified || false
+                });
+            }
+        } catch (error) {
+            console.error('Error refreshing profile data:', error);
+        } finally {
+        }
+    };
+
+    // Handle email verification
+    const handleEmailVerification = async () => {
+        try {
+            const api = createApiInstance();
+            const response = await api.post('/auth/send-email-verification');
+
+            if (response.data.success) {
+                alert('Email verification sent! Please check your inbox and click the verification link.');
+            } else {
+                alert('Failed to send email verification. Please try again.');
+            }
+        } catch (error) {
+            console.error('Email verification error:', error);
+            alert('Failed to send email verification. Please try again.');
+        }
+    };
+
+    // --- PHONE VERIFICATION UI & LOGIC DISABLED ---
+    // Handle phone verification
+    /*
+    const handlePhoneVerification = async () => {
+        const phoneNumber = prompt('Please enter your phone number (with country code):');
+        if (!phoneNumber) return;
+
+        try {
+            const api = createApiInstance();
+            const response = await api.post('/auth/send-phone-verification', {
+                phoneNumber: phoneNumber
+            });
+
+            if (response.data.success) {
+                alert('Verification code sent! Please check your phone for the SMS.');
+
+                const code = prompt('Please enter the verification code:');
+                if (code) {
+                    const verifyResponse = await api.post('/auth/verify-phone', { code });
+                    if (verifyResponse.data.success) {
+                        alert('Phone number verified successfully!');
+                        // Refresh profile data
+                        setProfileData(prev => ({ ...prev, phoneVerified: true }));
+                    } else {
+                        alert('Invalid verification code. Please try again.');
+                    }
+                }
+            } else {
+                alert('Failed to send verification code. Please try again.');
+            }
+        } catch (error) {
+            console.error('Phone verification error:', error);
+            alert('Failed to send verification code. Please try again.');
+        }
+    };
+    */
 
     // Handle refresh for specific chart with rate limit consideration
     const handleRefreshChart = (chartType) => {
@@ -699,10 +815,15 @@ const Dashboard = () => {
 
         setApiErrors(prev => ({ ...prev, [chartType]: false }));
 
-        // Add a small delay to prevent rapid successive requests
-        setTimeout(() => {
-            fetchDashboardData();
-        }, 1000);
+        // If connected to real-time, request data via socket
+        if (socket && isConnected) {
+            socket.emit('request-dashboard-data');
+        } else {
+            // Add a small delay to prevent rapid successive requests
+            setTimeout(() => {
+                fetchDashboardData();
+            }, 1000);
+        }
     };
 
     return (
@@ -711,7 +832,7 @@ const Dashboard = () => {
             {rateLimitWarning && (
                 <div className="rate-limit-warning">
                     <div className="warning-content">
-                        <span className="warning-icon">⚠️</span>
+                        <span className="warning-icon"><FiAlertTriangle /></span>
                         <span className="warning-text">
                             Too many requests from this IP. Please wait a few minutes before refreshing.
                             API calls have been reduced to prevent further rate limiting.
@@ -734,7 +855,15 @@ const Dashboard = () => {
                             {!isConnected && ' (Polling)'}
                         </span>
                     )}
-                    {isLoading && <span className="loading-indicator">Loading...</span>}
+                </div>
+                <div className="timezone-info">
+                    <span className="timezone-label">Timezone:</span>
+                    <span className="timezone-value">
+                        {currentTime.format('z')} ({currentTime.format('Z')})
+                    </span>
+                    <span className="current-time">
+                        {currentTime.format('h:mm:ss A')}
+                    </span>
                 </div>
             </section>
 
@@ -810,19 +939,19 @@ const Dashboard = () => {
                                     className="action-btn edit-profile"
                                     onClick={() => handleQuickAction('edit-profile')}
                                 >
-                                    Edit Profile
+                                    <FiUser /> Edit Profile
                                 </button>
                                 <button
                                     className="action-btn change-password"
                                     onClick={() => handleQuickAction('change-password')}
                                 >
-                                    Change Password
+                                    <FiKey /> Change Password
                                 </button>
                                 <button
                                     className={`action-btn toggle-2fa ${profileData.twoFactorEnabled ? 'enabled' : 'disabled'}`}
                                     onClick={() => handleQuickAction('toggle-2fa')}
                                 >
-                                    {profileData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+                                    <FiShield /> {profileData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
                                 </button>
                             </div>
                         </div>
@@ -838,7 +967,7 @@ const Dashboard = () => {
                         <div className="health-metrics">
                             <div className="metric-item">
                                 <div className="metric-header">
-                                    <span className="metric-title">Database Status</span>
+                                    <span className="metric-title"><FiServer /> Database Status</span>
                                     <span className={`status-indicator ${getStatusColor(systemHealth.database.status)}`}></span>
                                 </div>
                                 <div className="metric-value">
@@ -849,7 +978,7 @@ const Dashboard = () => {
 
                             <div className="metric-item">
                                 <div className="metric-header">
-                                    <span className="metric-title">Email Service</span>
+                                    <span className="metric-title"><FiMail /> Email Service</span>
                                     <span className={`status-indicator ${getStatusColor(systemHealth.emailService.status)}`}></span>
                                 </div>
                                 <div className="metric-value">
@@ -860,7 +989,7 @@ const Dashboard = () => {
 
                             <div className="metric-item">
                                 <div className="metric-header">
-                                    <span className="metric-title">API Response</span>
+                                    <span className="metric-title"><FiActivity /> API Response</span>
                                     <span className={`status-indicator ${getStatusColor(systemHealth.apiResponse.status)}`}></span>
                                 </div>
                                 <div className="metric-value">
@@ -871,7 +1000,7 @@ const Dashboard = () => {
 
                             <div className="metric-item">
                                 <div className="metric-header">
-                                    <span className="metric-title">System Uptime</span>
+                                    <span className="metric-title"><FiClock /> System Uptime</span>
                                     <span className={`status-indicator ${getStatusColor(systemHealth.uptime.status)}`}></span>
                                 </div>
                                 <div className="metric-value">
@@ -917,15 +1046,15 @@ const Dashboard = () => {
                         <div className="stats-grid">
                             <div className="stat-item">
                                 <span className="stat-number">{activeSessionsCount}/{maxSessions}</span>
-                                <span className="stat-label">Active Sessions</span>
+                                <span className="stat-label"><FiWifi /> Active Sessions</span>
                             </div>
                             <div className="stat-item">
                                 <span className="stat-number">{securityStats.failedLogins || 0}</span>
-                                <span className="stat-label">Failed Logins</span>
+                                <span className="stat-label"><FiAlertCircle /> Failed Logins</span>
                             </div>
                             <div className="stat-item">
                                 <span className="stat-number">{securityStats.securityEvents || 0}</span>
-                                <span className="stat-label">Security Events</span>
+                                <span className="stat-label"><FiShield /> Security Events</span>
                             </div>
                         </div>
                     </div>
@@ -939,19 +1068,19 @@ const Dashboard = () => {
                     <div className="card-content">
                         <div className="security-status-list">
                             <div className="security-status-item good">
-                                <span className="status-icon">✅</span>
+                                <span className="status-icon"><FiShieldCheck /></span>
                                 <div>
                                     <div className="status-title">Account Security</div>
                                     <div className="status-desc">Your account is secure.</div>
                                 </div>
                             </div>
                             <div className={`security-status-item ${securityStatus.passwordStrength?.status === 'strong' ? 'good' : 'warning'}`}>
-                                <span className="status-icon">{securityStatus.passwordStrength?.status === 'strong' ? '✅' : '⚠️'}</span>
+                                <span className="status-icon">{securityStatus.passwordStrength?.status === 'strong' ? <FiCheckCircle /> : <FiAlertCircle />}</span>
                                 <div>
                                     <div className="status-title">Password Strength</div>
                                     <div className="status-desc">
-                                        {securityStatus.passwordStrength?.status === 'strong' ? 
-                                            'Your password is strong and secure.' : 
+                                        {securityStatus.passwordStrength?.status === 'strong' ?
+                                            'Your password is strong and secure.' :
                                             <>
                                                 Your password is weak. <a href="#">Change password</a>
                                             </>
@@ -960,12 +1089,12 @@ const Dashboard = () => {
                                 </div>
                             </div>
                             <div className={`security-status-item ${profileData.twoFactorEnabled ? 'good' : 'error'}`}>
-                                <span className="status-icon">{profileData.twoFactorEnabled ? '✅' : '🔒'}</span>
+                                <span className="status-icon">{profileData.twoFactorEnabled ? <FiCheckCircle /> : <FiLock />}</span>
                                 <div>
                                     <div className="status-title">Two-Factor Auth</div>
                                     <div className="status-desc">
-                                        {profileData.twoFactorEnabled ? 
-                                            '2FA is enabled and active.' : 
+                                        {profileData.twoFactorEnabled ?
+                                            '2FA is enabled and active.' :
                                             <>
                                                 2FA is disabled. <a href="#">Enable now</a>
                                             </>
@@ -973,6 +1102,35 @@ const Dashboard = () => {
                                     </div>
                                 </div>
                             </div>
+                            <div className={`security-status-item ${profileData.emailVerified ? 'good' : 'warning'}`}>
+                                <span className="status-icon">{profileData.emailVerified ? <FiCheckCircle /> : <FiMail />}</span>
+                                <div>
+                                    <div className="status-title">Email Verification</div>
+                                    <div className="status-desc">
+                                        {profileData.emailVerified ?
+                                            'Email is verified and secure.' :
+                                            <>
+                                                Email not verified. <a href="#" onClick={() => handleQuickAction('verify-email')}>Verify now</a>
+                                            </>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            {/* --- PHONE VERIFICATION UI & LOGIC DISABLED --- */}
+                            {/* <div className={`security-status-item ${profileData.phoneVerified ? 'good' : 'warning'}`}>
+                                <span className="status-icon">{profileData.phoneVerified ? <FiCheckCircle /> : <FiSmartphone />}</span>
+                                <div>
+                                    <div className="status-title">Phone Verification</div>
+                                    <div className="status-desc">
+                                        {profileData.phoneVerified ? 
+                                            'Phone is verified and secure.' : 
+                                            <>
+                                                Phone not verified. <a href="#" onClick={() => handleQuickAction('verify-phone')}>Verify now</a>
+                                            </>
+                                        }
+                                    </div>
+                                </div>
+                            </div> */}
                         </div>
                     </div>
                 </article>
@@ -987,7 +1145,7 @@ const Dashboard = () => {
                                 onClick={() => handleRefreshChart('securityEvents')}
                                 title="Refresh security events data"
                             >
-                                Refresh
+                                <FiRefreshCw /> Refresh
                             </button>
                         )}
                     </div>
@@ -995,7 +1153,7 @@ const Dashboard = () => {
                         {apiErrors.securityEvents ? (
                             <div className="chart-error">
                                 <div className="error-content">
-                                    <span className="error-icon">⚠️</span>
+                                    <span className="error-icon"><FiAlertTriangle /></span>
                                     <div className="error-text">
                                         <h4>Security Events Data Unavailable</h4>
                                         <p>Unable to load security events statistics. The API may be temporarily unavailable.</p>
@@ -1026,7 +1184,7 @@ const Dashboard = () => {
                                 onClick={() => handleRefreshChart('loginSuccessRate')}
                                 title="Refresh login success rate data"
                             >
-                                Refresh
+                                <FiRefreshCw /> Refresh
                             </button>
                         )}
                     </div>
@@ -1034,7 +1192,7 @@ const Dashboard = () => {
                         {apiErrors.loginSuccessRate ? (
                             <div className="chart-error">
                                 <div className="error-content">
-                                    <span className="error-icon">⚠️</span>
+                                    <span className="error-icon"><FiAlertTriangle /></span>
                                     <div className="error-text">
                                         <h4>Login Success Rate Data Unavailable</h4>
                                         <p>Unable to load login success rate statistics. The API may be temporarily unavailable.</p>
@@ -1077,7 +1235,7 @@ const Dashboard = () => {
                                 onClick={() => handleRefreshChart('deviceUsage')}
                                 title="Refresh device usage data"
                             >
-                                Refresh
+                                <FiRefreshCw /> Refresh
                             </button>
                         )}
                     </div>
@@ -1085,7 +1243,7 @@ const Dashboard = () => {
                         {apiErrors.deviceUsage ? (
                             <div className="chart-error">
                                 <div className="error-content">
-                                    <span className="error-icon">⚠️</span>
+                                    <span className="error-icon"><FiAlertTriangle /></span>
                                     <div className="error-text">
                                         <h4>Device Usage Data Unavailable</h4>
                                         <p>Unable to load device usage statistics. The API may be temporarily unavailable.</p>
@@ -1116,7 +1274,7 @@ const Dashboard = () => {
                                 onClick={() => handleRefreshChart('geographicActivity')}
                                 title="Refresh geographic activity data"
                             >
-                                Refresh
+                                <FiRefreshCw /> Refresh
                             </button>
                         )}
                     </div>
@@ -1124,7 +1282,7 @@ const Dashboard = () => {
                         {apiErrors.geographicActivity ? (
                             <div className="chart-error">
                                 <div className="error-content">
-                                    <span className="error-icon">⚠️</span>
+                                    <span className="error-icon"><FiAlertTriangle /></span>
                                     <div className="error-text">
                                         <h4>Geographic Activity Data Unavailable</h4>
                                         <p>Unable to load geographic activity statistics. The API may be temporarily unavailable.</p>
@@ -1179,7 +1337,7 @@ const Dashboard = () => {
                                     </MapContainer>
                                 ) : (
                                     <div className="map-placeholder">
-                                        <h4>Geographic Activity Map</h4>
+                                        <h4><FiGlobe /> Geographic Activity Map</h4>
                                         <p>No geographic data available</p>
                                         <p className="placeholder-subtitle">Login activity by location will appear here</p>
                                     </div>

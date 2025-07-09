@@ -8,6 +8,7 @@ import LoadingOverlay from './components/LoadingOverlay';
 import authService from './services/authService';
 import AuditLogs from './pages/AuditLogs';
 import KnowledgeGuide from './pages/KnowledgeGuide';
+import EmailVerification from './pages/EmailVerification';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -137,6 +138,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
         <Route
           path="/dashboard"
           element={

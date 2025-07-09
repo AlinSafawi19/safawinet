@@ -9,6 +9,7 @@ const AuditLog = require('../models/AuditLog');
 const { authenticateToken } = require('../middleware/auth');
 const { validateInput, sanitizeInput } = require('../middleware/validation');
 const emailService = require('../services/emailService');
+const smsService = require('../services/smsService');
 const geolocationService = require('../services/geolocationService');
 const securityConfig = require('../config/security');
 const passwordStrengthAnalyzer = require('../utils/passwordStrength');
@@ -1537,6 +1538,245 @@ router.get('/debug/permissions', authenticateToken, (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to get debug info'
+        });
+    }
+});
+
+// Email verification endpoints
+router.post('/send-email-verification', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('+emailVerificationToken');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        if (user.emailVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is already verified'
+            });
+        }
+
+        // Generate verification token
+        await user.generateEmailVerificationToken();
+        
+        // Send verification email
+        const emailResult = await emailService.sendEmailVerification(user, user.emailVerificationToken);
+        
+        if (emailResult.success) {
+            res.json({
+                success: true,
+                message: 'Email verification sent successfully'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to send verification email'
+            });
+        }
+    } catch (error) {
+        console.error('Send email verification error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send email verification'
+        });
+    }
+});
+
+router.post('/verify-email', async (req, res) => {
+    try {
+        const { token } = req.body;
+        
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Verification token is required'
+            });
+        }
+
+        const user = await User.findOne({
+            emailVerificationToken: token,
+            emailVerificationExpires: { $gt: new Date() }
+        }).select('+emailVerificationToken +emailVerificationExpires');
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired verification token'
+            });
+        }
+
+        // Verify the email
+        const verificationResult = await user.verifyEmail(token);
+        
+        if (verificationResult) {
+            // Send confirmation email
+            await emailService.sendEmailVerifiedConfirmation(user);
+            
+            res.json({
+                success: true,
+                message: 'Email verified successfully'
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: 'Email verification failed'
+            });
+        }
+    } catch (error) {
+        console.error('Verify email error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to verify email'
+        });
+    }
+});
+
+// --- PHONE VERIFICATION ENDPOINTS DISABLED ---
+// router.post('/send-phone-verification', authenticateToken, sanitizeInput, validateInput({
+//     body: {
+//         phoneNumber: { required: true, type: 'string', minLength: 10, maxLength: 15 }
+//     }
+// }), async (req, res) => {
+//     try {
+//         const { phoneNumber } = req.body;
+//         const user = await User.findById(req.user._id).select('+phoneVerificationCode');
+//         
+//         if (!user) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'User not found'
+//             });
+//         }
+//
+//         // Validate phone number format
+//         if (!smsService.validatePhoneNumber(phoneNumber)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid phone number format'
+//             });
+//         }
+//
+//         // Check if phone number is already verified
+//         if (user.phoneVerified && user.phone === phoneNumber) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Phone number is already verified'
+//             });
+//         }
+//
+//         // Update user's phone number if different
+//         if (user.phone !== phoneNumber) {
+//             user.phone = phoneNumber;
+//             user.phoneVerified = false;
+//         }
+//
+//         // Generate verification code
+//         await user.generatePhoneVerificationCode();
+//         
+//         // Send verification SMS
+//         const smsResult = await smsService.sendVerificationCode(phoneNumber, user.phoneVerificationCode);
+//         
+//         if (smsResult.success) {
+//             res.json({
+//                 success: true,
+//                 message: 'Phone verification code sent successfully'
+//             });
+//         } else {
+//             res.status(500).json({
+//                 success: false,
+//                 message: 'Failed to send verification code',
+//                 error: smsResult.error
+//             });
+//         }
+//     } catch (error) {
+//         console.error('Send phone verification error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Failed to send phone verification'
+//         });
+//     }
+// });
+
+// router.post('/verify-phone', authenticateToken, sanitizeInput, validateInput({
+//     body: {
+//         code: { required: true, type: 'string', minLength: 6, maxLength: 6 }
+//     }
+// }), async (req, res) => {
+//     try {
+//         const { code } = req.body;
+//         const user = await User.findById(req.user._id).select('+phoneVerificationCode');
+//         
+//         if (!user) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'User not found'
+//             });
+//         }
+//
+//         if (!user.phoneVerificationCode) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'No verification code found. Please request a new code.'
+//             });
+//         }
+//
+//         // Verify the phone
+//         const verificationResult = await user.verifyPhone(code);
+//         
+//         if (verificationResult) {
+//             // Send confirmation SMS
+//             await smsService.sendVerificationSuccess(user.phone);
+//             
+//             res.json({
+//                 success: true,
+//                 message: 'Phone number verified successfully'
+//             });
+//         } else {
+//             res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid or expired verification code'
+//             });
+//         }
+//     } catch (error) {
+//         console.error('Verify phone error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Failed to verify phone number'
+//         });
+//     }
+// });
+
+// Get verification status
+router.get('/verification-status', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                emailVerified: user.emailVerified,
+                phoneVerified: user.phoneVerified,
+                phone: user.phone,
+                isFullyVerified: user.isFullyVerified()
+            }
+        });
+    } catch (error) {
+        console.error('Get verification status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get verification status'
         });
     }
 });

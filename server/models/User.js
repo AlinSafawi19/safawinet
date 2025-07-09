@@ -17,11 +17,33 @@ const userSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false
+  },
+  emailVerificationExpires: {
+    type: Date
+  },
   phone: {
     type: String,
     trim: true,
     unique: true,
     sparse: true
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneVerificationCode: {
+    type: String,
+    select: false
+  },
+  phoneVerificationExpires: {
+    type: Date
   },
   password: {
     type: String,
@@ -332,6 +354,51 @@ userSchema.methods.shouldChangePassword = function() {
     strength: strength,
     daysSinceChange: Math.floor(daysSinceChange)
   };
+};
+
+// Method to generate email verification token
+userSchema.methods.generateEmailVerificationToken = function() {
+  const crypto = require('crypto');
+  this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
+  this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  return this.save();
+};
+
+// Method to verify email
+userSchema.methods.verifyEmail = function(token) {
+  if (this.emailVerificationToken === token && 
+      this.emailVerificationExpires > new Date()) {
+    this.emailVerified = true;
+    this.emailVerificationToken = null;
+    this.emailVerificationExpires = null;
+    return this.save();
+  }
+  return false;
+};
+
+// Method to generate phone verification code
+userSchema.methods.generatePhoneVerificationCode = function() {
+  const crypto = require('crypto');
+  this.phoneVerificationCode = crypto.randomInt(100000, 999999).toString(); // 6-digit code
+  this.phoneVerificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  return this.save();
+};
+
+// Method to verify phone
+userSchema.methods.verifyPhone = function(code) {
+  if (this.phoneVerificationCode === code && 
+      this.phoneVerificationExpires > new Date()) {
+    this.phoneVerified = true;
+    this.phoneVerificationCode = null;
+    this.phoneVerificationExpires = null;
+    return this.save();
+  }
+  return false;
+};
+
+// Method to check if account is fully verified
+userSchema.methods.isFullyVerified = function() {
+  return this.emailVerified && (this.phoneVerified || !this.phone);
 };
 
 // Virtual for full name

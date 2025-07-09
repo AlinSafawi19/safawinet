@@ -234,6 +234,9 @@ npm run restore-db
 - `CLIENT_URL` - Frontend URL for email links
 - `DB_USER` - Database username (production)
 - `DB_PASSWORD` - Database password (production)
+- `TWILIO_ACCOUNT_SID` - Twilio Account SID for SMS
+- `TWILIO_AUTH_TOKEN` - Twilio Auth Token for SMS
+- `TWILIO_PHONE_NUMBER` - Twilio phone number for SMS
 
 ## Email Services
 
@@ -257,6 +260,31 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 CLIENT_URL=http://localhost:3000
 ```
+
+## SMS Services
+
+The server includes SMS verification functionality using Twilio:
+
+- **Phone Verification**: Send verification codes via SMS
+- **Verification Confirmation**: Confirm successful phone verification
+- **Phone Number Validation**: Validate phone number formats
+- **International Support**: Support for international phone numbers
+
+### SMS Configuration
+
+Configure SMS settings in your `.env` file:
+
+```env
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_PHONE_NUMBER=your-twilio-phone-number
+```
+
+### SMS Setup
+
+For detailed SMS setup instructions, see [SMS_SETUP.md](./SMS_SETUP.md).
+
+**Note**: SMS functionality requires a Twilio account and proper configuration. The system will not start without valid Twilio credentials.
 
 ## Audit Logging
 
@@ -326,15 +354,19 @@ For production deployment:
 
 1. **MongoDB Connection**: Ensure MongoDB is running and accessible
 2. **Email Configuration**: Verify SMTP settings and credentials
-3. **JWT Issues**: Check JWT_SECRET configuration
-4. **Permission Errors**: Verify user permissions and roles
-5. **Rate Limiting**: Check for excessive API calls
+3. **SMS Configuration**: Verify Twilio credentials and phone number format
+4. **JWT Issues**: Check JWT_SECRET configuration
+5. **Permission Errors**: Verify user permissions and roles
+6. **Rate Limiting**: Check for excessive API calls
 
 ### Debug Commands
 
 ```bash
 # Test server configuration
 npm run test-server
+
+# Test SMS configuration
+npm run test-sms
 
 # Check database connection
 npm run check-db
