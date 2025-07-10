@@ -1,172 +1,307 @@
+/* Email Verification Page Styles */
+
+/* CSS Variables for Light Mode */
+:root {
+  --bg-main: #FFFFFF;
+  --bg-sidebar: #F5F5F5;
+  --bg-header: #FFFFFF;
+  --text-main: #0A0A0A;
+  --text-muted: #6B6B6B;
+  --border-color: #D1D1D1;
+  --accent-red: #D72638;
+  --success-green: #28a745;
+  --error-red: #dc3545;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow-hover: rgba(0, 0, 0, 0.15);
+}
+
+/* CSS Variables for Dark Mode */
+:root.dark {
+  --bg-main: #0A0A0A;
+  --bg-sidebar: #1A1A1A;
+  --bg-header: #1A1A1A;
+  --text-main: #F4F4F4;
+  --text-muted: #999999;
+  --border-color: #2D2D2D;
+  --accent-red: #FF4C5B;
+  --success-green: #4CAF50;
+  --error-red: #FF4C5B;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-hover: rgba(0, 0, 0, 0.4);
+}
+
+/* Main Container */
 .email-verification {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 20px;
+  min-height: 100vh;
+  background: var(--bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .verification-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    padding: 40px;
-    max-width: 500px;
-    width: 100%;
-    text-align: center;
+  background: var(--bg-header);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px var(--shadow);
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.verification-container:hover {
+  box-shadow: 0 12px 40px var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Header Section */
+.verification-header {
+  margin-bottom: 32px;
 }
 
 .verification-header h1 {
-    color: #2c3e50;
-    margin-bottom: 10px;
-    font-size: 28px;
-    font-weight: 600;
+  color: var(--text-main);
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
 }
 
 .verification-header p {
-    color: #7f8c8d;
-    margin-bottom: 30px;
-    font-size: 16px;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin: 0;
+  font-weight: 400;
 }
 
+/* Content Section */
 .verification-content {
-    margin: 30px 0;
+  margin-bottom: 32px;
 }
 
+/* Verifying State */
 .verifying-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
 .loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top: 4px solid var(--accent-red);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
+.verifying-state p {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Success State */
 .success-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
 .success-icon {
-    font-size: 60px;
-    color: #27ae60;
+  font-size: 4rem;
+  animation: bounceIn 0.6s ease-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .success-state h2 {
-    color: #27ae60;
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
+  color: var(--success-green);
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .success-state p {
-    color: #7f8c8d;
-    margin: 0;
-    line-height: 1.6;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
 }
 
+/* Error State */
 .error-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 }
 
 .error-icon {
-    font-size: 60px;
-    color: #e74c3c;
+  font-size: 4rem;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 .error-state h2 {
-    color: #e74c3c;
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
+  color: var(--error-red);
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .error-message {
-    color: #e74c3c;
-    margin: 0;
-    line-height: 1.6;
-    font-weight: 500;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  padding: 16px;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid var(--error-red);
 }
 
 .error-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
 }
 
-.btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 6px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #2980b9;
-    transform: translateY(-2px);
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #7f8c8d;
-    transform: translateY(-2px);
-}
-
+/* Footer */
 .verification-footer {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #ecf0f1;
+  border-top: 1px solid var(--border-color);
+  padding-top: 24px;
 }
 
 .verification-footer p {
-    color: #7f8c8d;
-    margin: 0;
-    font-size: 14px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
-@media (max-width: 600px) {
-    .verification-container {
-        padding: 30px 20px;
-    }
-    
-    .verification-header h1 {
-        font-size: 24px;
-    }
-    
-    .error-actions {
-        flex-direction: column;
-    }
-} 
+/* Button Styles */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  min-width: 140px;
+}
+
+.btn-primary {
+  background: var(--accent-red);
+  color: white;
+  box-shadow: 0 4px 12px rgba(215, 38, 56, 0.3);
+}
+
+.btn-primary:hover {
+  background: #b91c2e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(215, 38, 56, 0.4);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-main);
+  border: 2px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--border-color);
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .verification-container {
+    padding: 24px;
+    margin: 16px;
+  }
+  
+  .verification-header h1 {
+    font-size: 2rem;
+  }
+  
+  .success-icon,
+  .error-icon {
+    font-size: 3rem;
+  }
+  
+  .success-state h2,
+  .error-state h2 {
+    font-size: 1.5rem;
+  }
+  
+  .error-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .email-verification {
+    padding: 16px;
+  }
+  
+  .verification-container {
+    padding: 20px;
+  }
+  
+  .verification-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .btn {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+/* Dark mode specific adjustments */
+@media (prefers-color-scheme: dark) {
+  .email-verification {
+    background: var(--bg-main);
+  }
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
