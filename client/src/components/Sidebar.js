@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { HiMenu, HiX, HiViewBoards, HiLogout, HiClipboardList, HiBookOpen, HiShieldCheck } from 'react-icons/hi';
 import authService from '../services/authService';
 
-const Sidebar = () => {
+const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
     const [isCollapsed, setIsCollapsed] = useState(() => {
         // Get the collapsed state from localStorage, default to false
         const saved = localStorage.getItem('sidebarCollapsed');
@@ -62,6 +62,11 @@ const Sidebar = () => {
     const handleMenuClick = (sectionId) => {
         setActiveSection(sectionId);
 
+        // Close mobile menu when item is clicked
+        if (onCloseMobileMenu) {
+            onCloseMobileMenu();
+        }
+
         // Update URL based on section
         switch (sectionId) {
             case 'dashboard':
@@ -85,67 +90,133 @@ const Sidebar = () => {
     };
 
     return (
-        <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-            <div className="sidebar-header">
-                {!isCollapsed && (
-                    <div className="sidebar-brand">
-                        <div className="brand-logo">
-                            <HiShieldCheck className="brand-icon" />
+        <>
+            {/* Mobile Menu Overlay */}
+            {isMobileMenuOpen && (
+                <div className="mobile-menu-overlay" onClick={onCloseMobileMenu}>
+                    <div className="mobile-menu-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="mobile-menu-header">
+                            <div className="mobile-menu-brand">
+                                <div className="brand-logo">
+                                    <HiShieldCheck className="brand-icon" />
+                                </div>
+                                <div className="brand-text">
+                                    <span className="brand-name">SafawiNet</span>
+                                    <span className="brand-tagline">Secure & Smart</span>
+                                </div>
+                            </div>
+                            <button
+                                className="mobile-menu-close"
+                                onClick={onCloseMobileMenu}
+                                aria-label="Close mobile menu"
+                            >
+                                <HiX />
+                            </button>
                         </div>
-                        <div className="brand-text">
-                            <span className="brand-name">SafawiNet</span>
-                            <span className="brand-tagline">Secure & Smart</span>
+                        
+                        <nav className="mobile-menu-nav">
+                            <ul className="mobile-nav-menu">
+                                {menuItems.map((item) => (
+                                    <li key={item.id} className="mobile-nav-item">
+                                        <button
+                                            className={`mobile-nav-link ${activeSection === item.id ? 'active' : ''}`}
+                                            onClick={() => handleMenuClick(item.id)}
+                                        >
+                                            <span className="mobile-nav-icon">{item.icon}</span>
+                                            <span className="mobile-nav-label">{item.label}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </nav>
+
+                        <div className="mobile-menu-footer">
+                            <ul className="mobile-footer-menu">
+                                {footerItems.map((item) => (
+                                    <li key={item.id} className="mobile-footer-item">
+                                        <button
+                                            className={`mobile-footer-link ${item.id === 'logout' ? 'logout-link' : ''} ${activeSection === item.id ? 'active' : ''}`}
+                                            onClick={() => {
+                                                handleFooterClick(item);
+                                                if (onCloseMobileMenu) {
+                                                    onCloseMobileMenu();
+                                                }
+                                            }}
+                                        >
+                                            <span className="mobile-footer-icon">{item.icon}</span>
+                                            <span className="mobile-footer-label">{item.label}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     </div>
-                )}
-                <button
-                    className="sidebar-toggle"
-                    onClick={() => {
-                        const newCollapsedState = !isCollapsed;
-                        setIsCollapsed(newCollapsedState);
-                        // Save the collapsed state to localStorage
-                        localStorage.setItem('sidebarCollapsed', JSON.stringify(newCollapsedState));
-                    }}
-                    title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-                >
-                    {isCollapsed ? <HiMenu /> : <HiX />}
-                </button>
-            </div>
+                </div>
+            )}
 
-            <nav className="sidebar-nav">
-                <ul className="nav-menu">
-                    {menuItems.map((item) => (
-                        <li key={item.id} className="nav-item">
-                            <button
-                                className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
-                                onClick={() => handleMenuClick(item.id)}
-                                title={item.label}
-                            >
-                                <span className="nav-icon">{item.icon}</span>
-                                {!isCollapsed && <span className="nav-label">{item.label}</span>}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
+            {/* Desktop Sidebar */}
+            <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+                <div className="sidebar-header">
+                    {!isCollapsed && (
+                        <div className="sidebar-brand">
+                            <div className="brand-logo">
+                                <HiShieldCheck className="brand-icon" />
+                            </div>
+                            <div className="brand-text">
+                                <span className="brand-name">SafawiNet</span>
+                                <span className="brand-tagline">Secure & Smart</span>
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        className="sidebar-toggle"
+                        onClick={() => {
+                            const newCollapsedState = !isCollapsed;
+                            setIsCollapsed(newCollapsedState);
+                            // Save the collapsed state to localStorage
+                            localStorage.setItem('sidebarCollapsed', JSON.stringify(newCollapsedState));
+                        }}
+                        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                    >
+                        {isCollapsed ? <HiMenu /> : <HiX />}
+                    </button>
+                </div>
 
-            <div className="sidebar-footer">
-                <ul className="footer-menu">
-                    {footerItems.map((item) => (
-                        <li key={item.id} className="footer-item">
-                            <button
-                                className={`footer-link ${item.id === 'logout' ? 'logout-link' : ''} ${activeSection === item.id ? 'active' : ''}`}
-                                onClick={() => handleFooterClick(item)}
-                                title={item.label}
-                            >
-                                <span className="footer-icon">{item.icon}</span>
-                                {!isCollapsed && <span className="footer-label">{item.label}</span>}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        </aside>
+                <nav className="sidebar-nav">
+                    <ul className="nav-menu">
+                        {menuItems.map((item) => (
+                            <li key={item.id} className="nav-item">
+                                <button
+                                    className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
+                                    onClick={() => handleMenuClick(item.id)}
+                                    title={item.label}
+                                >
+                                    <span className="nav-icon">{item.icon}</span>
+                                    {!isCollapsed && <span className="nav-label">{item.label}</span>}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+
+                <div className="sidebar-footer">
+                    <ul className="footer-menu">
+                        {footerItems.map((item) => (
+                            <li key={item.id} className="footer-item">
+                                <button
+                                    className={`footer-link ${item.id === 'logout' ? 'logout-link' : ''} ${activeSection === item.id ? 'active' : ''}`}
+                                    onClick={() => handleFooterClick(item)}
+                                    title={item.label}
+                                >
+                                    <span className="footer-icon">{item.icon}</span>
+                                    {!isCollapsed && <span className="footer-label">{item.label}</span>}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </aside>
+        </>
     );
 };
 

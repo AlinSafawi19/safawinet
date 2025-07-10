@@ -6,19 +6,38 @@ import {
     FiUser,
     FiLogOut,
     FiChevronDown,
-    //FiMail,
-    FiTool
+    FiMenu,
+    FiTool,
+    FiPlus,
+    FiCalendar,
+    FiClock,
+    FiFileText,
+    FiDollarSign,
+    FiTrendingUp,
+    FiGrid
 } from 'react-icons/fi';
 import authService from '../services/authService';
 import logo from '../assets/images/logo.png';
 
-const Header = ({ onLogout }) => {
+const Header = ({ onLogout, onMobileMenuToggle }) => {
     const user = authService.getCurrentUser();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+    const [showToolsDropdown, setShowToolsDropdown] = useState(false);
     const [notificationCount, setNotificationCount] = useState(3);
     const [inboxCount, setInboxCount] = useState(7);
     const profileRef = useRef(null);
+    const toolsRef = useRef(null);
+
+    const tools = [
+        { id: 'calculator', label: 'Calculator', icon: <FiPlus />, action: () => console.log('Calculator clicked') },
+        { id: 'kanban', label: 'Kanban Board', icon: <FiGrid />, action: () => console.log('Kanban clicked') },
+        { id: 'calendar', label: 'Calendar', icon: <FiCalendar />, action: () => console.log('Calendar clicked') },
+        { id: 'reminder', label: 'Reminder', icon: <FiClock />, action: () => console.log('Reminder clicked') },
+        { id: 'files', label: 'Files', icon: <FiFileText />, action: () => console.log('Files clicked') },
+        { id: 'lira-converter', label: 'Lira Rate Converter', icon: <FiDollarSign />, action: () => console.log('Lira Converter clicked') },
+        { id: 'lira-saver', label: 'Lira Rate Saver', icon: <FiTrendingUp />, action: () => console.log('Lira Saver clicked') }
+    ];
 
     const handleLogout = async () => {
         try {
@@ -39,13 +58,27 @@ const Header = ({ onLogout }) => {
 
     const toggleProfileDropdown = () => {
         setShowProfileDropdown(!showProfileDropdown);
+        setShowToolsDropdown(false);
     };
 
-    // Handle clicking outside to close dropdown
+    const toggleToolsDropdown = () => {
+        setShowToolsDropdown(!showToolsDropdown);
+        setShowProfileDropdown(false);
+    };
+
+    const handleToolClick = (tool) => {
+        tool.action();
+        setShowToolsDropdown(false);
+    };
+
+    // Handle clicking outside to close dropdowns
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
                 setShowProfileDropdown(false);
+            }
+            if (toolsRef.current && !toolsRef.current.contains(event.target)) {
+                setShowToolsDropdown(false);
             }
         };
 
@@ -59,6 +92,13 @@ const Header = ({ onLogout }) => {
         <header className="dashboard-header">
             <div className="header-content">
                 <div className="header-left">
+                    <button 
+                        className="mobile-menu-button"
+                        onClick={onMobileMenuToggle}
+                        aria-label="Toggle mobile menu"
+                    >
+                        <FiMenu />
+                    </button>
                     <img src={logo} alt="SafawiNet Logo" className="logo-image" />
                 </div>
                 <div className="header-right">
@@ -67,29 +107,50 @@ const Header = ({ onLogout }) => {
                             className={`nav-tab ${activeTab === 'inbox' ? 'active' : ''}`}
                             onClick={() => handleTabClick('inbox')}
                         >
-                            <FiInbox className="nav-icon" />
-                            <span>Inbox</span>
-                            {inboxCount > 0 && (
-                                <span className="badge">{inboxCount}</span>
-                            )}
+                            <div className="nav-icon-container">
+                                <FiInbox className="nav-icon" />
+                                {inboxCount > 0 && (
+                                    <span className="badge">{inboxCount}</span>
+                                )}
+                            </div>
+                            <span className="nav-tab-text">Inbox</span>
                         </button>
                         <button
                             className={`nav-tab ${activeTab === 'notifications' ? 'active' : ''}`}
                             onClick={() => handleTabClick('notifications')}
                         >
-                            <FiBell className="nav-icon" />
-                            <span>Notifications</span>
-                            {notificationCount > 0 && (
-                                <span className="badge">{notificationCount}</span>
+                            <div className="nav-icon-container">
+                                <FiBell className="nav-icon" />
+                                {notificationCount > 0 && (
+                                    <span className="badge">{notificationCount}</span>
+                                )}
+                            </div>
+                            <span className="nav-tab-text">Notifications</span>
+                        </button>
+                        <div className="tools-dropdown-container" ref={toolsRef}>
+                            <button
+                                className={`nav-tab tools-dropdown-btn ${showToolsDropdown ? 'active' : ''}`}
+                                onClick={toggleToolsDropdown}
+                            >
+                                <FiTool className="nav-icon" />
+                                <span className="nav-tab-text">Tools</span>
+                                <FiChevronDown className={`dropdown-icon ${showToolsDropdown ? 'rotated' : ''}`} />
+                            </button>
+                            {showToolsDropdown && (
+                                <div className="tools-dropdown">
+                                    {tools.map((tool) => (
+                                        <button
+                                            key={tool.id}
+                                            className="tools-dropdown-item"
+                                            onClick={() => handleToolClick(tool)}
+                                        >
+                                            <span className="tools-dropdown-icon">{tool.icon}</span>
+                                            <span>{tool.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             )}
-                        </button>
-                        <button
-                            className={`nav-tab ${activeTab === 'tools' ? 'active' : ''}`}
-                            onClick={() => handleTabClick('tools')}
-                        >
-                            <FiTool className="nav-icon" />
-                            <span>Tools</span>
-                        </button>
+                        </div>
                     </div>
                     <div className="user-profile-container" ref={profileRef}>
                         <button
