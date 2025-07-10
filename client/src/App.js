@@ -10,6 +10,7 @@ import AuditLogs from './pages/AuditLogs';
 import KnowledgeGuide from './pages/KnowledgeGuide';
 import EmailVerification from './pages/EmailVerification';
 import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
 import { applyUserTheme } from './utils/themeUtils';
 
 // Protected Route component
@@ -135,6 +136,21 @@ const KnowledgeGuidePage = () => {
   );
 };
 
+// Profile Page component
+const ProfilePage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <Profile />
+    </DashboardLayout>
+  );
+};
+
 function App() {
   // Apply user theme on app load
   useEffect(() => {
@@ -171,6 +187,14 @@ function App() {
           element={
             <ProtectedRoute>
               <KnowledgeGuidePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

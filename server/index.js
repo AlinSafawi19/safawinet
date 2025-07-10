@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const { config, env, isDevelopment } = require('./config/config');
 const securityConfig = require('./config/security');
 const securityMonitor = require('./services/securityMonitor');
@@ -108,6 +109,9 @@ if (isDevelopment) {
     next();
   });
 }
+
+// Static file serving for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);

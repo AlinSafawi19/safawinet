@@ -229,18 +229,10 @@ html {
   margin-bottom: 18px;
 }
 
-.profile-avatar .avatar-circle {
-  width: 56px;
-  height: 56px;
-  background: var(--accent-red);
-  color: #fff;
+.profile-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  border-radius: 50%;
-  box-shadow: none;
 }
 
 .profile-info .profile-name {

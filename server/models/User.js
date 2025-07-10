@@ -95,6 +95,31 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: 50
   },
+  // Profile Picture
+  profilePicture: {
+    url: {
+      type: String,
+      default: null
+    },
+    filename: {
+      type: String,
+      default: null
+    },
+    uploadedAt: {
+      type: Date,
+      default: null
+    }
+  },
+  // Profile Picture Initials (for default avatar)
+  profileInitials: {
+    type: String,
+    default: function() {
+      if (this.firstName && this.lastName) {
+        return `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase();
+      }
+      return this.username ? this.username.charAt(0).toUpperCase() : 'U';
+    }
+  },
   isAdmin: {
     type: Boolean,
     default: false
@@ -419,6 +444,18 @@ userSchema.methods.verifyPhone = function(code) {
 // Method to check if account is fully verified
 userSchema.methods.isFullyVerified = function() {
   return this.emailVerified && (this.phoneVerified || !this.phone);
+};
+
+// Method to update profile initials
+userSchema.methods.updateProfileInitials = function() {
+  if (this.firstName && this.lastName) {
+    this.profileInitials = `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase();
+  } else if (this.username) {
+    this.profileInitials = this.username.charAt(0).toUpperCase();
+  } else {
+    this.profileInitials = 'U';
+  }
+  return this.save();
 };
 
 // Virtual for full name

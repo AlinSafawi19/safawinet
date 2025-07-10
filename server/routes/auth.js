@@ -14,6 +14,7 @@ const geolocationService = require('../services/geolocationService');
 const securityConfig = require('../config/security');
 const passwordStrengthAnalyzer = require('../utils/passwordStrength');
 const rateLimit = require('express-rate-limit');
+const { uploadProfilePicture, handleUploadError, deleteOldProfilePicture, getProfilePictureUrl } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -982,6 +983,11 @@ router.put('/profile', authenticateToken, sanitizeInput, validateInput({
             { new: true, runValidators: true }
         ).select('-password');
 
+        // Update profile initials if name changed
+        if ((firstName && firstName !== req.user.firstName) || (lastName && lastName !== req.user.lastName)) {
+            await updatedUser.updateProfileInitials();
+        }
+
         // Log profile update
         await AuditLog.logEvent({
             userId: req.user._id,
@@ -1005,6 +1011,128 @@ router.put('/profile', authenticateToken, sanitizeInput, validateInput({
         res.status(500).json({
             success: false,
             message: 'Failed to update profile'
+        });
+    }
+});
+
+// Upload profile picture
+router.post('/profile-picture', authenticateToken, uploadProfilePicture.single('profilePicture'), handleUploadError, async (req, res) => {
+    try {
+        console.log('=== Profile Picture Upload Debug ===');
+        console.log('Request file:', req.file);
+        console.log('Request body:', req.body);
+        console.log('User ID:', req.user._id);
+        
+        if (!req.file) {
+            console.log('No file uploaded');
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded'
+            });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Delete old profile picture if it exists
+        await deleteOldProfilePicture(user);
+
+        // Update user with new profile picture
+        const profilePictureUrl = getProfilePictureUrl(req.file.filename);
+        console.log('Profile picture URL:', profilePictureUrl);
+        console.log('File saved as:', req.file.filename);
+        console.log('File path:', req.file.path);
+        
+        user.profilePicture = {
+            url: profilePictureUrl,
+            filename: req.file.filename,
+            uploadedAt: new Date()
+        };
+
+        await user.save();
+        console.log('User profile picture updated in database');
+
+        // Log profile picture upload
+        await AuditLog.logEvent({
+            userId: user._id,
+            username: user.username,
+            action: 'profile_update',
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
+            success: true,
+            details: { action: 'profile_picture_upload' }
+        });
+
+        res.json({
+            success: true,
+            message: 'Profile picture uploaded successfully',
+            data: {
+                profilePicture: user.profilePicture
+            }
+        });
+
+    } catch (error) {
+        console.error('Profile picture upload error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload profile picture'
+        });
+    }
+});
+
+// Remove profile picture
+router.delete('/profile-picture', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Delete the file from storage
+        await deleteOldProfilePicture(user);
+
+        // Remove profile picture from user
+        user.profilePicture = {
+            url: null,
+            filename: null,
+            uploadedAt: null
+        };
+
+        await user.save();
+
+        // Log profile picture removal
+        await AuditLog.logEvent({
+            userId: user._id,
+            username: user.username,
+            action: 'profile_update',
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
+            success: true,
+            details: { action: 'profile_picture_removal' }
+        });
+
+        res.json({
+            success: true,
+            message: 'Profile picture removed successfully'
+        });
+
+    } catch (error) {
+        console.error('Profile picture removal error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to remove profile picture'
         });
     }
 });

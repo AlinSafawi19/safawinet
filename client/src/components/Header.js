@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     FiInbox,
     FiBell,
@@ -17,10 +18,12 @@ import {
     FiGrid
 } from 'react-icons/fi';
 import authService from '../services/authService';
+import ProfilePicture from './ProfilePicture';
 import logo from '../assets/images/logo.png';
 
 const Header = ({ onLogout, onMobileMenuToggle }) => {
     const user = authService.getCurrentUser();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showToolsDropdown, setShowToolsDropdown] = useState(false);
@@ -92,7 +95,7 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
         <header className="dashboard-header">
             <div className="header-content">
                 <div className="header-left">
-                    <button 
+                    <button
                         className="mobile-menu-button"
                         onClick={onMobileMenuToggle}
                         aria-label="Toggle mobile menu"
@@ -157,9 +160,7 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
                             className="profile-button"
                             onClick={toggleProfileDropdown}
                         >
-                            <div className="user-avatar">
-                                <FiUser className="avatar-icon" />
-                            </div>
+                            <ProfilePicture user={user} size="small" />
                             <div className="user-info">
                                 <span className="user-name">{user?.fullName || `${user?.firstName} ${user?.lastName}` || user?.username}</span>
                                 <span className="user-role">{user?.isAdmin ? 'Administrator' : 'User'}</span>
@@ -169,7 +170,13 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
 
                         {showProfileDropdown && (
                             <div className="profile-dropdown">
-                                <button className="dropdown-item">
+                                <button
+                                    className="dropdown-item"
+                                    onClick={() => {
+                                        setShowProfileDropdown(false);
+                                        navigate('/profile');
+                                    }}
+                                >
                                     <FiUser className="dropdown-icon" />
                                     <span>Profile</span>
                                 </button>

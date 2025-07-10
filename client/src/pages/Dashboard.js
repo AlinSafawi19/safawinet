@@ -10,6 +10,7 @@ import config from '../config/config';
 import moment from 'moment';
 import 'moment-timezone';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import ProfilePicture from '../components/ProfilePicture';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import {
@@ -981,12 +982,7 @@ const Dashboard = () => {
                     <div className="card-content">
                         <div className="profile-summary">
                             <div className="profile-avatar">
-                                <div className="avatar-circle">
-                                    {profileData.firstName && profileData.lastName ?
-                                        `${profileData.firstName.charAt(0)}${profileData.lastName.charAt(0)}` :
-                                        profileData.username ? profileData.username.charAt(0).toUpperCase() : 'U'
-                                    }
-                                </div>
+                                <ProfilePicture user={profileData} size="large" />
                             </div>
                             <div className="profile-info">
                                 <h4 className="profile-name">
@@ -1187,7 +1183,10 @@ const Dashboard = () => {
                                         {securityStatus.passwordStrength?.status === 'strong' ?
                                             'Your password is strong and secure.' :
                                             <>
-                                                Your password is weak. <a href="#">Change password</a>
+                                                Your password is weak. <a href="#" onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleQuickAction('change-password');
+                                                }}>Change password</a>
                                             </>
                                         }
                                     </div>

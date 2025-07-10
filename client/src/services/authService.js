@@ -318,6 +318,55 @@ class AuthService {
         }
     }
 
+    // Upload profile picture
+    async uploadProfilePicture(file) {
+        try {
+            const formData = new FormData();
+            formData.append('profilePicture', file);
+
+            const response = await api.post('/auth/profile-picture', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            if (response.data.success) {
+                this.user.profilePicture = response.data.data.profilePicture;
+                this.saveToStorage();
+                return {
+                    success: true,
+                    profilePicture: response.data.data.profilePicture
+                };
+            }
+        } catch (error) {
+            console.error('Profile picture upload error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to upload profile picture'
+            };
+        }
+    }
+
+    // Remove profile picture
+    async removeProfilePicture() {
+        try {
+            const response = await api.delete('/auth/profile-picture');
+            if (response.data.success) {
+                this.user.profilePicture = null;
+                this.saveToStorage();
+                return {
+                    success: true
+                };
+            }
+        } catch (error) {
+            console.error('Profile picture removal error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to remove profile picture'
+            };
+        }
+    }
+
     // Initialize auth state
     async init() {
         // Only validate token if we have stored auth data
