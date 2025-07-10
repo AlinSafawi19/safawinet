@@ -1,27 +1,14 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import authService from '../services/authService';
 import LoadingOverlay from './LoadingOverlay';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { initializeTheme } from '../utils/themeUtils';
-import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import '../styles/DashboardLayout.css';
-
-// Create Toast Context
-const ToastContext = createContext();
-
-export const useToast = () => {
-    const context = useContext(ToastContext);
-    if (!context) {
-        throw new Error('useToast must be used within a DashboardLayout');
-    }
-    return context;
-};
 
 const DashboardLayout = ({ onLogout, children }) => {
     const user = authService.getCurrentUser();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     console.log(user);
 
     // Apply theme based on user preferences
@@ -49,38 +36,18 @@ const DashboardLayout = ({ onLogout, children }) => {
     }
 
     return (
-        <ToastContext.Provider value={{ setToast }}>
-            <div className="App">
-                <div className="dashboard-layout">
-                    <Header onLogout={onLogout} onMobileMenuToggle={toggleMobileMenu} />
-                    
-                    {/* Toast Notification */}
-                    {toast.show && (
-                        <div className={`toast-notification ${toast.type}`}>
-                            <div className="toast-content">
-                                <span className={`toast-icon ${toast.type}`}>
-                                    {toast.type === 'success' ? <FiCheckCircle /> : <FiAlertCircle />}
-                                </span>
-                                <span className="toast-message">{toast.message}</span>
-                                <button 
-                                    className="toast-close" 
-                                    onClick={() => setToast({ show: false, message: '', type: 'success' })}
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    <div className="dashboard-body">
-                        <Sidebar isMobileMenuOpen={isMobileMenuOpen} onCloseMobileMenu={closeMobileMenu} />
-                        <main className="dashboard-content">
-                            {children}
-                        </main>
-                    </div>
+        <div className="App">
+            <div className="dashboard-layout">
+                <Header onLogout={onLogout} onMobileMenuToggle={toggleMobileMenu} />
+                
+                <div className="dashboard-body">
+                    <Sidebar isMobileMenuOpen={isMobileMenuOpen} onCloseMobileMenu={closeMobileMenu} />
+                    <main className="dashboard-content">
+                        {children}
+                    </main>
                 </div>
             </div>
-        </ToastContext.Provider>
+        </div>
     );
 };
 

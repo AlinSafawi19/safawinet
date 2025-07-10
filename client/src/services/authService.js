@@ -258,6 +258,45 @@ class AuthService {
         }
     }
 
+    // Forgot password
+    async forgotPassword(email) {
+        try {
+            const response = await api.post('/auth/forgot-password', {
+                email
+            });
+            return {
+                success: response.data.success,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to send reset email'
+            };
+        }
+    }
+
+    // Reset password
+    async resetPassword(token, newPassword) {
+        try {
+            const response = await api.post('/auth/reset-password', {
+                token,
+                newPassword
+            });
+            return {
+                success: response.data.success,
+                message: response.data.message
+            };
+        } catch (error) {
+            console.error('Password reset error:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to reset password'
+            };
+        }
+    }
+
     // Get user profile
     async getProfile() {
         try {

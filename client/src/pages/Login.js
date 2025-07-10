@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
+import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import '../styles/Login.css';
 import logo from '../assets/images/logo.png';
 import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
@@ -17,6 +18,7 @@ const Login = ({ onLoginSuccess }) => {
   const [attempts, setAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockTime, setBlockTime] = useState(0);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -256,6 +258,7 @@ const Login = ({ onLoginSuccess }) => {
               type="button"
               className="forgot-password"
               disabled={isLoading || isBlocked}
+              onClick={() => setShowForgotPassword(true)}
             >
               Forgot password?
             </button>
@@ -282,6 +285,16 @@ const Login = ({ onLoginSuccess }) => {
           </div>
         )}
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        onSuccess={() => {
+          setShowForgotPassword(false);
+          // Optionally show a success message
+        }}
+      />
     </div>
   );
 };

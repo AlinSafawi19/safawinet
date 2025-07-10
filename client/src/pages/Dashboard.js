@@ -9,7 +9,8 @@ import { io } from 'socket.io-client';
 import config from '../config/config';
 import moment from 'moment';
 import 'moment-timezone';
-import { useToast } from '../components/DashboardLayout';
+import { useToast } from '../contexts/ToastContext';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 import {
     FiAlertTriangle,
     FiCheckCircle,
@@ -53,6 +54,7 @@ const Dashboard = () => {
     const [lastFetchTime, setLastFetchTime] = useState(null);
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
     const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
+    const [showChangePassword, setShowChangePassword] = useState(false);
     const { setToast } = useToast();
     //console.log(user);
     const [securityStats, setSecurityStats] = useState({
@@ -796,8 +798,7 @@ const Dashboard = () => {
                 console.log('Edit profile clicked');
                 break;
             case 'change-password':
-                // TODO: Implement password change modal
-                console.log('Change password clicked');
+                setShowChangePassword(true);
                 break;
             case 'toggle-2fa':
                 // TODO: Implement 2FA toggle
@@ -1416,6 +1417,17 @@ const Dashboard = () => {
                     </div>
                 </article>
             </section>
+
+            {/* Change Password Modal */}
+            <ChangePasswordModal
+                isOpen={showChangePassword}
+                onClose={() => setShowChangePassword(false)}
+                onSuccess={() => {
+                    setShowChangePassword(false);
+                    // Refresh profile data after password change
+                    refreshProfileData();
+                }}
+            />
         </main>
     );
 };
