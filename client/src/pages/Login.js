@@ -4,6 +4,8 @@ import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import '../styles/Login.css';
 import logo from '../assets/images/logo.png';
 import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
+import { showErrorToast } from '../utils/sweetAlertConfig';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
@@ -11,7 +13,6 @@ const Login = ({ onLoginSuccess }) => {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [identifierType, setIdentifierType] = useState('username');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +40,6 @@ const Login = ({ onLoginSuccess }) => {
       ...prev,
       [name]: value
     }));
-    setError(''); // Clear error when user types
   };
 
   const handleIdentifierChange = (e) => {
@@ -57,8 +57,6 @@ const Login = ({ onLoginSuccess }) => {
     } else {
       setIdentifierType('username');
     }
-
-    setError(''); // Clear error when user types
   };
 
   const getInputType = () => {
@@ -96,17 +94,12 @@ const Login = ({ onLoginSuccess }) => {
 
   const validateForm = () => {
     if (!formData.identifier.trim()) {
-      setError('Please enter your username, email, or phone number');
+      showErrorToast('Validation Error', 'Please enter your username, email, or phone number');
       return false;
     }
 
     if (!formData.password) {
-      setError('Please enter your password');
-      return false;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      showErrorToast('Validation Error', 'Please enter your password');
       return false;
     }
 
@@ -121,7 +114,6 @@ const Login = ({ onLoginSuccess }) => {
     }
 
     setIsLoading(true);
-    setError('');
 
     try {
       const result = await authService.login(
@@ -136,7 +128,7 @@ const Login = ({ onLoginSuccess }) => {
           onLoginSuccess();
         }
       } else {
-        setError(result.message);
+        showErrorToast('Login Failed', result.message);
 
         if (result.retryAfter) {
           setIsBlocked(true);
@@ -159,7 +151,7 @@ const Login = ({ onLoginSuccess }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('An unexpected error occurred. Please try again.');
+      showErrorToast('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -167,7 +159,36 @@ const Login = ({ onLoginSuccess }) => {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      handleSubmit(e);
+      e.preventDefault();
+      
+      const { name } = e.target;
+      
+      // Navigate to next field or submit form
+      switch (name) {
+        case 'identifier':
+          if (formData.identifier.trim()) {
+            document.getElementById('password').focus();
+          } else {
+            // Stay on current field if empty
+            return;
+          }
+          break;
+          
+        case 'password':
+          if (formData.password.trim()) {
+            // Submit form if password is filled
+            handleSubmit(e);
+          } else {
+            // Stay on current field if empty
+            return;
+          }
+          break;
+          
+        default:
+          // For any other field, submit the form
+          handleSubmit(e);
+          break;
+      }
     }
   };
 
@@ -184,17 +205,10 @@ const Login = ({ onLoginSuccess }) => {
           <div className="logo">
             <img src={logo} alt="SafawiNet Logo" className="logo-image-login" />
           </div>
-          <p><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
-        </div>
+                  <p><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
+      </div>
 
-        {error && (
-          <div className="error-message">
-            <span className="error-icon">⚠️</span>
-            {error}
-          </div>
-        )}
-
-        {isBlocked && (
+      {isBlocked && (
           <div className="blocked-message">
             <span className="blocked-icon">🔒</span>
             Too many login attempts. Please try again in {formatTime(blockTime)}.
@@ -239,7 +253,7 @@ const Login = ({ onLoginSuccess }) => {
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading || isBlocked}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                {showPassword ? <FiEyeOff /> : <FiEye />}
               </button>
             </div>
           </div>
@@ -281,7 +295,10 @@ const Login = ({ onLoginSuccess }) => {
 
         {attempts > 0 && !isBlocked && (
           <div className="attempts-warning">
-            Failed login attempts: {attempts}/5
+            <span>Failed login attempts: {attempts}/5</span>
+            <span style={{ fontSize: '10px', opacity: 0.8 }}>
+              {attempts >= 3 ? 'Account will be temporarily locked after 5 attempts' : 'Please check your credentials'}
+            </span>
           </div>
         )}
       </div>
