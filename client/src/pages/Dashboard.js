@@ -102,6 +102,14 @@ const Dashboard = () => {
         deviceUsage: false
     });
 
+    // Loading states for charts
+    const [chartLoading, setChartLoading] = useState({
+        securityEvents: true,
+        loginSuccessRate: true,
+        geographicActivity: true,
+        deviceUsage: true
+    });
+
     // Chart refs
     const securityEventsChartRef = useRef(null);
     const loginSuccessChartRef = useRef(null);
@@ -164,6 +172,14 @@ const Dashboard = () => {
 
             // Request initial dashboard data
             socketInstance.emit('request-dashboard-data');
+
+            // Set loading states when requesting data via socket
+            setChartLoading({
+                securityEvents: true,
+                loginSuccessRate: true,
+                geographicActivity: true,
+                deviceUsage: true
+            });
         });
 
         socketInstance.on('disconnect', () => {
@@ -209,6 +225,15 @@ const Dashboard = () => {
                         geographicActivity: false,
                         deviceUsage: false
                     }));
+
+                    // Clear loading states for chart data since we received real-time updates
+                    setChartLoading(prev => ({
+                        ...prev,
+                        securityEvents: false,
+                        loginSuccessRate: false,
+                        geographicActivity: false,
+                        deviceUsage: false
+                    }));
                     break;
                 default:
                     break;
@@ -231,6 +256,24 @@ const Dashboard = () => {
     // Combined data fetching function to reduce API calls
     const fetchDashboardData = useCallback(async () => {
         if (!authService.isUserAuthenticated()) return;
+
+        // Set all charts to loading state
+        setChartLoading({
+            securityEvents: true,
+            loginSuccessRate: true,
+            geographicActivity: true,
+            deviceUsage: true
+        });
+
+        // Add a timeout to clear loading states if API calls take too long
+        const loadingTimeout = setTimeout(() => {
+            setChartLoading({
+                securityEvents: false,
+                loginSuccessRate: false,
+                geographicActivity: false,
+                deviceUsage: false
+            });
+        }, 10000); // 10 second timeout
 
         try {
             const api = createApiInstance();
@@ -296,8 +339,10 @@ const Dashboard = () => {
                     securityEvents: securityEventsChartResponse.data.data
                 }));
                 setApiErrors(prev => ({ ...prev, securityEvents: false }));
+                setChartLoading(prev => ({ ...prev, securityEvents: false }));
             } else {
                 setApiErrors(prev => ({ ...prev, securityEvents: true }));
+                setChartLoading(prev => ({ ...prev, securityEvents: false }));
             }
 
             if (loginSuccessResponse.data.success) {
@@ -306,8 +351,10 @@ const Dashboard = () => {
                     loginSuccessRate: loginSuccessResponse.data.data
                 }));
                 setApiErrors(prev => ({ ...prev, loginSuccessRate: false }));
+                setChartLoading(prev => ({ ...prev, loginSuccessRate: false }));
             } else {
                 setApiErrors(prev => ({ ...prev, loginSuccessRate: true }));
+                setChartLoading(prev => ({ ...prev, loginSuccessRate: false }));
             }
 
             if (geographicResponse.data.success) {
@@ -316,8 +363,10 @@ const Dashboard = () => {
                     geographicActivity: geographicResponse.data.data
                 }));
                 setApiErrors(prev => ({ ...prev, geographicActivity: false }));
+                setChartLoading(prev => ({ ...prev, geographicActivity: false }));
             } else {
                 setApiErrors(prev => ({ ...prev, geographicActivity: true }));
+                setChartLoading(prev => ({ ...prev, geographicActivity: false }));
             }
 
             if (deviceUsageResponse.data.success) {
@@ -326,13 +375,21 @@ const Dashboard = () => {
                     deviceUsage: deviceUsageResponse.data.data
                 }));
                 setApiErrors(prev => ({ ...prev, deviceUsage: false }));
+                setChartLoading(prev => ({ ...prev, deviceUsage: false }));
             } else {
                 setApiErrors(prev => ({ ...prev, deviceUsage: true }));
+                setChartLoading(prev => ({ ...prev, deviceUsage: false }));
             }
 
             setLastFetchTime(new Date());
+
+            // Clear the loading timeout since API calls completed
+            clearTimeout(loadingTimeout);
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
+
+            // Clear the loading timeout since API calls failed
+            clearTimeout(loadingTimeout);
 
             // Handle rate limiting specifically
             if (error.response?.status === 429) {
@@ -349,6 +406,12 @@ const Dashboard = () => {
                     geographicActivity: true,
                     deviceUsage: true
                 });
+                setChartLoading({
+                    securityEvents: false,
+                    loginSuccessRate: false,
+                    geographicActivity: false,
+                    deviceUsage: false
+                });
 
                 // Show user-friendly message
                 console.log('Dashboard data temporarily unavailable due to rate limiting. Please try again in a few minutes.');
@@ -359,6 +422,12 @@ const Dashboard = () => {
                     loginSuccessRate: true,
                     geographicActivity: true,
                     deviceUsage: true
+                });
+                setChartLoading({
+                    securityEvents: false,
+                    loginSuccessRate: false,
+                    geographicActivity: false,
+                    deviceUsage: false
                 });
             }
         } finally {
@@ -374,11 +443,25 @@ const Dashboard = () => {
     // Fetch data on mount and when not connected to real-time
     useEffect(() => {
         if (!isConnected) {
+            // Set loading states when starting to fetch data
+            setChartLoading({
+                securityEvents: true,
+                loginSuccessRate: true,
+                geographicActivity: true,
+                deviceUsage: true
+            });
             debouncedFetchDashboardData();
         } else {
             // When connected to real-time, only fetch data once on mount
             // Real-time updates will handle the rest
             if (!lastFetchTime) {
+                // Set loading states when starting to fetch data
+                setChartLoading({
+                    securityEvents: true,
+                    loginSuccessRate: true,
+                    geographicActivity: true,
+                    deviceUsage: true
+                });
                 debouncedFetchDashboardData();
             }
         }
@@ -810,26 +893,30 @@ const Dashboard = () => {
     };
     */
 
-    // Handle refresh for specific chart with rate limit consideration
-    const handleRefreshChart = (chartType) => {
-        // Check if we're currently rate limited
-        if (rateLimitWarning) {
-            console.log('Still rate limited, please wait before retrying');
-            return;
-        }
+    // Loading placeholder components
+    const ChartLoadingPlaceholder = ({ title, icon: Icon }) => (
+        <div className="chart-loading-placeholder">
+            <div className="loading-spinner">
+                <div className="spinner-ring"></div>
+            </div>
+            <div className="loading-content">
+                <h4>{Icon && <Icon />} {title}</h4>
+                <p>Loading chart data...</p>
+            </div>
+        </div>
+    );
 
-        setApiErrors(prev => ({ ...prev, [chartType]: false }));
-
-        // If connected to real-time, request data via socket
-        if (socket && isConnected) {
-            socket.emit('request-dashboard-data');
-        } else {
-            // Add a small delay to prevent rapid successive requests
-            setTimeout(() => {
-                fetchDashboardData();
-            }, 1000);
-        }
-    };
+    const MapLoadingPlaceholder = () => (
+        <div className="map-loading-placeholder">
+            <div className="loading-spinner">
+                <div className="spinner-ring"></div>
+            </div>
+            <div className="loading-content">
+                <h4><FiGlobe /> Geographic Activity Map</h4>
+                <p>Loading geographic data...</p>
+            </div>
+        </div>
+    );
 
     return (
         <main className="dashboard">
@@ -1147,15 +1234,6 @@ const Dashboard = () => {
                 <article className="dashboard__card dashboard__card--chart dashboard__card--security-events">
                     <div className="card-header">
                         <h3>Security Events Over Time</h3>
-                        {apiErrors.securityEvents && (
-                            <button
-                                className="refresh-btn"
-                                onClick={() => handleRefreshChart('securityEvents')}
-                                title="Refresh security events data"
-                            >
-                                <FiRefreshCw /> Refresh
-                            </button>
-                        )}
                     </div>
                     <div className="card-content">
                         {apiErrors.securityEvents ? (
@@ -1165,18 +1243,20 @@ const Dashboard = () => {
                                     <div className="error-text">
                                         <h4>Security Events Data Unavailable</h4>
                                         <p>Unable to load security events statistics. The API may be temporarily unavailable.</p>
-                                        <button
-                                            className="retry-btn"
-                                            onClick={() => handleRefreshChart('securityEvents')}
-                                        >
-                                            Try Again
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        ) : (
+                        ) : chartData.securityEvents.length > 0 ? (
                             <div className="chart-container">
                                 <canvas ref={securityEventsChartRef} height="300"></canvas>
+                            </div>
+                        ) : (
+                            <div className="chart-loading-placeholder">
+                                <div className="loading-content">
+                                    <h4><FiShield /> Security Events Over Time</h4>
+                                    <p>No security events data available</p>
+                                    <p className="placeholder-subtitle">Security events over time will appear here</p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1186,15 +1266,6 @@ const Dashboard = () => {
                 <article className="dashboard__card dashboard__card--chart dashboard__card--login-success">
                     <div className="card-header">
                         <h3>Login Success Rate</h3>
-                        {apiErrors.loginSuccessRate && (
-                            <button
-                                className="refresh-btn"
-                                onClick={() => handleRefreshChart('loginSuccessRate')}
-                                title="Refresh login success rate data"
-                            >
-                                <FiRefreshCw /> Refresh
-                            </button>
-                        )}
                     </div>
                     <div className="card-content">
                         {apiErrors.loginSuccessRate ? (
@@ -1204,16 +1275,10 @@ const Dashboard = () => {
                                     <div className="error-text">
                                         <h4>Login Success Rate Data Unavailable</h4>
                                         <p>Unable to load login success rate statistics. The API may be temporarily unavailable.</p>
-                                        <button
-                                            className="retry-btn"
-                                            onClick={() => handleRefreshChart('loginSuccessRate')}
-                                        >
-                                            Try Again
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        ) : (
+                        ) : (chartData.loginSuccessRate.totalLogins > 0) ? (
                             <>
                                 <div className="chart-container">
                                     <canvas ref={loginSuccessChartRef} height="300"></canvas>
@@ -1229,6 +1294,14 @@ const Dashboard = () => {
                                     </div>
                                 </div>
                             </>
+                        ) : (
+                            <div className="chart-loading-placeholder">
+                                <div className="loading-content">
+                                    <h4><FiCheckCircle /> Login Success Rate</h4>
+                                    <p>No login success rate data available</p>
+                                    <p className="placeholder-subtitle">Login success rate statistics will appear here</p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </article>
@@ -1237,15 +1310,6 @@ const Dashboard = () => {
                 <article className="dashboard__card dashboard__card--chart dashboard__card--device-usage">
                     <div className="card-header">
                         <h3>Device Usage</h3>
-                        {apiErrors.deviceUsage && (
-                            <button
-                                className="refresh-btn"
-                                onClick={() => handleRefreshChart('deviceUsage')}
-                                title="Refresh device usage data"
-                            >
-                                <FiRefreshCw /> Refresh
-                            </button>
-                        )}
                     </div>
                     <div className="card-content">
                         {apiErrors.deviceUsage ? (
@@ -1255,18 +1319,20 @@ const Dashboard = () => {
                                     <div className="error-text">
                                         <h4>Device Usage Data Unavailable</h4>
                                         <p>Unable to load device usage statistics. The API may be temporarily unavailable.</p>
-                                        <button
-                                            className="retry-btn"
-                                            onClick={() => handleRefreshChart('deviceUsage')}
-                                        >
-                                            Try Again
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        ) : (
+                        ) : chartData.deviceUsage.length > 0 ? (
                             <div className="chart-container">
                                 <canvas ref={deviceUsageChartRef} height="300"></canvas>
+                            </div>
+                        ) : (
+                            <div className="chart-loading-placeholder">
+                                <div className="loading-content">
+                                    <h4><FiActivity /> Device Usage</h4>
+                                    <p>No device usage data available</p>
+                                    <p className="placeholder-subtitle">Device usage statistics will appear here</p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1276,30 +1342,17 @@ const Dashboard = () => {
                 <article className="dashboard__card dashboard__card--map">
                     <div className="card-header">
                         <h3>Geographic Activity</h3>
-                        {apiErrors.geographicActivity && (
-                            <button
-                                className="refresh-btn"
-                                onClick={() => handleRefreshChart('geographicActivity')}
-                                title="Refresh geographic activity data"
-                            >
-                                <FiRefreshCw /> Refresh
-                            </button>
-                        )}
                     </div>
                     <div className="card-content">
-                        {apiErrors.geographicActivity ? (
+                        {chartLoading.geographicActivity ? (
+                            <MapLoadingPlaceholder />
+                        ) : apiErrors.geographicActivity ? (
                             <div className="chart-error">
                                 <div className="error-content">
                                     <span className="error-icon"><FiAlertTriangle /></span>
                                     <div className="error-text">
                                         <h4>Geographic Activity Data Unavailable</h4>
                                         <p>Unable to load geographic activity statistics. The API may be temporarily unavailable.</p>
-                                        <button
-                                            className="retry-btn"
-                                            onClick={() => handleRefreshChart('geographicActivity')}
-                                        >
-                                            Try Again
-                                        </button>
                                     </div>
                                 </div>
                             </div>
