@@ -3,6 +3,7 @@ import authService from '../services/authService';
 import { FiMail, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { showSuccessToast } from '../utils/sweetAlertConfig';
 import '../styles/ForgotPasswordModal.css';
+import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 
 const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [email, setEmail] = useState('');
@@ -46,7 +47,6 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
 
             if (result.success) {
                 setIsSubmitted(true);
-                showSuccessToast('Password Reset Email Sent!', 'Check your inbox and spam folder.');
             } else {
                 setError(result.message || 'Failed to send reset email');
             }
@@ -129,7 +129,6 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                     onChange={handleChange}
                                     placeholder="Enter your email address"
                                     disabled={isLoading}
-                                    required
                                     autoComplete="email"
                                 />
                                 {error && (
@@ -149,9 +148,8 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 <button
                                     type="submit"
                                     className="btn-primary"
-                                    disabled={isLoading || !email.trim()}
                                 >
-                                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                                    {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Send Reset Link'}
                                 </button>
                             </div>
                         </form>
