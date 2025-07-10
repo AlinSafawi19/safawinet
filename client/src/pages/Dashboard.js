@@ -10,6 +10,7 @@ import config from '../config/config';
 import moment from 'moment';
 import 'moment-timezone';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import { applyUserTheme } from '../utils/themeUtils';
 import {
     FiAlertTriangle,
     FiCheckCircle,
@@ -44,6 +45,13 @@ L.Icon.Default.mergeOptions({
 
 const Dashboard = () => {
     const user = authService.getCurrentUser();
+
+    // Apply user theme preference
+    useEffect(() => {
+        if (user) {
+            applyUserTheme(user);
+        }
+    }, [user]);
 
     // Extract user preferences with fallbacks
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
@@ -854,7 +862,14 @@ const Dashboard = () => {
                     text: 'Check your email inbox (and spam/junk folder if not found).',
                     timer: 6000,
                     timerProgressBar: true,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    position: 'top-end',
+                    toast: true,
+                    width: '400px',
+                    padding: '1rem',
+                    customClass: {
+                        popup: 'swal-under-header'
+                    }
                 });
             } else {
                 Swal.fire({
@@ -863,7 +878,14 @@ const Dashboard = () => {
                     text: 'Failed to send verification email. Please try again.',
                     timer: 4000,
                     timerProgressBar: true,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    position: 'top-end',
+                    toast: true,
+                    width: '400px',
+                    padding: '1rem',
+                    customClass: {
+                        popup: 'swal-under-header'
+                    }
                 });
             }
         } catch (error) {
@@ -874,7 +896,14 @@ const Dashboard = () => {
                 text: 'Failed to send verification email. Please try again.',
                 timer: 4000,
                 timerProgressBar: true,
-                showConfirmButton: false
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true,
+                width: '400px',
+                padding: '1rem',
+                customClass: {
+                    popup: 'swal-under-header'
+                }
             });
         }
     };

@@ -133,7 +133,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     text: 'Your password has been updated.',
                     timer: 3000,
                     timerProgressBar: true,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    position: 'top-end',
+                    toast: true,
+                    width: '400px',
+                    padding: '1rem',
+                    customClass: {
+                        popup: 'swal-under-header'
+                    }
                 });
 
                 // Reset form

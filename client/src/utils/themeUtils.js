@@ -22,29 +22,25 @@ export const applyTheme = (theme) => {
 };
 
 /**
- * Get current theme from DOM or localStorage
+ * Apply user theme preference to document for SweetAlert styling
+ * @param {Object} user - User object with preferences
+ */
+export const applyUserTheme = (user) => {
+  if (user && user.userPreferences && user.userPreferences.theme) {
+    const theme = user.userPreferences.theme;
+    document.documentElement.setAttribute('data-theme', theme);
+  } else {
+    // Default to light theme if no preference is set
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+};
+
+/**
+ * Get current theme from document
  * @returns {string} Current theme ('light' or 'dark')
  */
 export const getCurrentTheme = () => {
-    const root = document.documentElement;
-    
-    if (root.classList.contains('dark')) {
-        return 'dark';
-    }
-    
-    if (root.classList.contains('light')) {
-        return 'light';
-    }
-    
-    // Fallback to localStorage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        return savedTheme;
-    }
-    
-    // Check system preference
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return systemPrefersDark ? 'dark' : 'light';
+  return document.documentElement.getAttribute('data-theme') || 'light';
 };
 
 /**

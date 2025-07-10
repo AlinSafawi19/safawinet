@@ -38,3 +38,82 @@
     transform: rotate(360deg);
   }
 }
+
+/* SweetAlert positioning under header */
+.swal-under-header {
+  top: 80px !important;
+  right: 20px !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  position: fixed !important;
+  width: 400px !important;
+  max-width: 400px !important;
+}
+
+/* Override SweetAlert's default top-end positioning */
+.swal2-toast.swal2-icon-success.swal2-show,
+.swal2-toast.swal2-icon-error.swal2-show {
+  top: 80px !important;
+  right: 20px !important;
+  left: auto !important;
+  transform: none !important;
+  width: 400px !important;
+  max-width: 400px !important;
+}
+
+/* Theme-aware SweetAlert styling */
+/* Light theme (default) */
+.swal2-toast {
+  background: #ffffff !important;
+  color: #333333 !important;
+  border: 1px solid #e1e5e9 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.swal2-toast .swal2-title {
+  color: #333333 !important;
+}
+
+.swal2-toast .swal2-content {
+  color: #666666 !important;
+}
+
+/* Dark theme */
+[data-theme="dark"] .swal2-toast {
+  background: #2d3748 !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #4a5568 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .swal2-toast .swal2-title {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .swal2-toast .swal2-content {
+  color: #a0aec0 !important;
+}
+
+/* Success toast specific styling */
+.swal2-toast.swal2-icon-success {
+  border-left: 4px solid #10b981 !important;
+}
+
+[data-theme="dark"] .swal2-toast.swal2-icon-success {
+  border-left: 4px solid #34d399 !important;
+}
+
+/* Error toast specific styling */
+.swal2-toast.swal2-icon-error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+[data-theme="dark"] .swal2-toast.swal2-icon-error {
+  border-left: 4px solid #f87171 !important;
+}
+
+/* Ensure SweetAlert appears above other content */
+.swal2-container {
+  z-index: 9999 !important;
+}

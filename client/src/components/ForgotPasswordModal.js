@@ -52,7 +52,14 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     text: 'Check your inbox and spam folder.',
                     timer: 5000,
                     timerProgressBar: true,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    position: 'top-end',
+                    toast: true,
+                    width: '400px',
+                    padding: '1rem',
+                    customClass: {
+                        popup: 'swal-under-header'
+                    }
                 });
             } else {
                 setError(result.message || 'Failed to send reset email');

@@ -10,6 +10,7 @@ import AuditLogs from './pages/AuditLogs';
 import KnowledgeGuide from './pages/KnowledgeGuide';
 import EmailVerification from './pages/EmailVerification';
 import ResetPassword from './pages/ResetPassword';
+import { applyUserTheme } from './utils/themeUtils';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -135,6 +136,14 @@ const KnowledgeGuidePage = () => {
 };
 
 function App() {
+  // Apply user theme on app load
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    if (user) {
+      applyUserTheme(user);
+    }
+  }, []);
+
   return (
     <Router>
       <Routes>
