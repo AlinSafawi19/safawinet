@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from '../services/authService';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
@@ -10,6 +10,10 @@ const ResetPassword = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
+
+    // Add refs for input fields
+    const newPasswordRef = useRef(null);
+    const confirmPasswordRef = useRef(null);
 
     const [formData, setFormData] = useState({
         newPassword: '',
@@ -85,6 +89,21 @@ const ResetPassword = () => {
         // Check password strength for new password
         if (name === 'newPassword') {
             checkPasswordStrength(value);
+        }
+    };
+
+    // Handle input clicks
+    const handleNewPasswordClick = () => {
+        // Focus on confirm password field
+        if (confirmPasswordRef.current) {
+            confirmPasswordRef.current.focus();
+        }
+    };
+
+    const handleConfirmPasswordClick = () => {
+        // Trigger form submission
+        if (formData.newPassword && formData.confirmPassword) {
+            handleSubmit(new Event('submit'));
         }
     };
 
@@ -229,14 +248,15 @@ const ResetPassword = () => {
                         <label htmlFor="newPassword">New Password</label>
                         <div className="password-input-container">
                             <input
+                                ref={newPasswordRef}
                                 type={showPasswords.new ? 'text' : 'password'}
                                 id="newPassword"
                                 name="newPassword"
                                 value={formData.newPassword}
                                 onChange={handleChange}
+                                onClick={handleNewPasswordClick}
                                 placeholder="Enter your new password"
                                 disabled={isLoading}
-                                required
                                 autoComplete="new-password"
                             />
                             <button
@@ -257,7 +277,7 @@ const ResetPassword = () => {
                     {passwordStrength && (
                         <div className="password-strength">
                             <div className="strength-bar">
-                                <div 
+                                <div
                                     className={`strength-fill ${passwordStrength.strength}`}
                                     style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
                                 ></div>
@@ -296,14 +316,15 @@ const ResetPassword = () => {
                         <label htmlFor="confirmPassword">Confirm New Password</label>
                         <div className="password-input-container">
                             <input
+                                ref={confirmPasswordRef}
                                 type={showPasswords.confirm ? 'text' : 'password'}
                                 id="confirmPassword"
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
+                                onClick={handleConfirmPasswordClick}
                                 placeholder="Confirm your new password"
                                 disabled={isLoading}
-                                required
                                 autoComplete="new-password"
                             />
                             <button

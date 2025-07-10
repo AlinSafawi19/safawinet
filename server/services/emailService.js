@@ -56,33 +56,36 @@ class EmailService {
         <title>${title}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #0A0A0A; }
-          .email-container { max-width: 600px; margin: 0 auto; background: #FFFFFF; }
-          .header { background: ${headerColor}; color: #FFFFFF; padding: 30px 20px; text-align: center; }
-          .logo { width: 60px; height: 60px; margin: 0 auto 15px; background: #FFFFFF; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }
-          .header h1 { font-size: 28px; font-weight: 600; margin-bottom: 10px; }
-          .header .subtitle { font-size: 16px; opacity: 0.9; }
-          .content { padding: 40px 30px; background: #F5F5F5; }
-          .content h2 { color: #0A0A0A; margin-bottom: 20px; font-size: 24px; }
-          .content p { margin-bottom: 15px; font-size: 16px; color: #0A0A0A; }
-          .alert-box { background: #FFFFFF; border-left: 4px solid #FF6B6B; padding: 20px; margin: 20px 0; border-radius: 4px; }
-          .info-box { background: #FFFFFF; border-left: 4px solid #8A8A8A; padding: 20px; margin: 20px 0; border-radius: 4px; }
-          .warning-box { background: #FFFFFF; border-left: 4px solid #D72638; padding: 20px; margin: 20px 0; border-radius: 4px; }
-          .success-box { background: #FFFFFF; border-left: 4px solid #4D4D4D; padding: 20px; margin: 20px 0; border-radius: 4px; }
-          .btn { display: inline-block; padding: 12px 30px; background: ${headerColor}; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #2c3e50; background: #f8f9fa; }
+          .email-container { max-width: 500px; margin: 0 auto; background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+          .header { background: ${headerColor}; color: #ffffff; padding: 40px 30px; text-align: center; }
+          .logo { width: 50px; height: 50px; margin: 0 auto 20px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: ${headerColor}; text-align: center; line-height: 1; }
+          .header h1 { font-size: 24px; font-weight: 500; margin-bottom: 8px; letter-spacing: -0.5px; }
+          .header .subtitle { font-size: 14px; opacity: 0.9; font-weight: 300; }
+          .content { padding: 40px 30px; background: #ffffff; }
+          .content h2 { color: #2c3e50; margin-bottom: 24px; font-size: 20px; font-weight: 500; }
+          .content p { margin-bottom: 16px; font-size: 15px; color: #5a6c7d; line-height: 1.7; }
+          .alert-box { background: #fff5f5; border: 1px solid #fed7d7; padding: 16px; margin: 20px 0; border-radius: 6px; }
+          .info-box { background: #f0f9ff; border: 1px solid #bae6fd; padding: 16px; margin: 20px 0; border-radius: 6px; }
+          .warning-box { background: #fffaf0; border: 1px solid #fed7aa; padding: 16px; margin: 20px 0; border-radius: 6px; }
+          .success-box { background: #f0fff4; border: 1px solid #9ae6b4; padding: 16px; margin: 20px 0; border-radius: 6px; }
+          .btn { display: inline-block; padding: 12px 30px; background: ${headerColor}; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
           .btn:hover { opacity: 0.9; }
-          .code-block { background: #FFFFFF; border: 1px solid #D1D1D1; padding: 15px; margin: 15px 0; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 14px; color: #0A0A0A; }
-          .footer { background: #1F1F1F; color: #FFFFFF; padding: 20px; text-align: center; font-size: 14px; }
-          .footer p { margin-bottom: 10px; }
-          .social-links { margin-top: 15px; }
-          .social-links a { color: #FFFFFF; text-decoration: none; margin: 0 10px; }
-          ul, ol { margin-left: 20px; margin-bottom: 15px; }
-          li { margin-bottom: 8px; color: #0A0A0A; }
-          .highlight { background: #F5F5F5; padding: 2px 4px; border-radius: 3px; color: #0A0A0A; }
+          .link-btn { color: #1976d2; text-decoration: underline; font-weight: 500; }
+          .link-btn:hover { color: #1565c0; }
+          .code-block { background: #f8f9fa; border: 1px solid #e9ecef; padding: 16px; margin: 16px 0; border-radius: 6px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace; font-size: 13px; color: #495057; }
+          .footer { background: #f8f9fa; color: #6c757d; padding: 24px; text-align: center; font-size: 13px; border-top: 1px solid #e9ecef; }
+          .footer p { margin-bottom: 8px; }
+          .social-links { margin-top: 12px; }
+          .social-links a { color: #6c757d; text-decoration: none; margin: 0 8px; font-size: 12px; }
+          ul, ol { margin-left: 16px; margin-bottom: 16px; }
+          li { margin-bottom: 6px; color: #5a6c7d; }
+          .highlight { background: #e3f2fd; padding: 2px 6px; border-radius: 4px; color: #1976d2; font-weight: 500; }
           @media (max-width: 600px) {
-            .content { padding: 20px 15px; }
-            .header { padding: 20px 15px; }
-            .header h1 { font-size: 24px; }
+            .content { padding: 24px 20px; }
+            .header { padding: 30px 20px; }
+            .header h1 { font-size: 20px; }
+            .email-container { margin: 10px; border-radius: 6px; }
           }
         </style>
       </head>
@@ -121,7 +124,7 @@ class EmailService {
       </div>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetUrl}" class="btn">Reset My Password</a>
+        <a href="${resetUrl}" class="link-btn">Reset My Password</a>
       </div>
       
       <div class="warning-box">
@@ -366,7 +369,7 @@ class EmailService {
       </div>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${verificationUrl}" class="btn">Verify My Email</a>
+        <a href="${verificationUrl}" class="link-btn">Verify My Email</a>
       </div>
       
       <div class="alert-box">
