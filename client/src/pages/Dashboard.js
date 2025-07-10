@@ -11,6 +11,7 @@ import moment from 'moment';
 import 'moment-timezone';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import { applyUserTheme } from '../utils/themeUtils';
+import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import {
     FiAlertTriangle,
     FiCheckCircle,
@@ -33,7 +34,6 @@ import {
     FiActivity
 } from 'react-icons/fi';
 import '../styles/Dashboard.css';
-import Swal from 'sweetalert2';
 
 // Fix for Leaflet marker icons in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -856,55 +856,13 @@ const Dashboard = () => {
             const response = await api.post('/auth/send-email-verification');
 
             if (response.data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Verification Email Sent!',
-                    text: 'Check your email inbox (and spam/junk folder if not found).',
-                    timer: 6000,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    position: 'top-end',
-                    toast: true,
-                    width: '400px',
-                    padding: '1rem',
-                    customClass: {
-                        popup: 'swal-under-header'
-                    }
-                });
+                showSuccessToast('Verification Email Sent!', 'Check your email inbox (and spam/junk folder if not found).');
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Failed to Send Email',
-                    text: 'Failed to send verification email. Please try again.',
-                    timer: 4000,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    position: 'top-end',
-                    toast: true,
-                    width: '400px',
-                    padding: '1rem',
-                    customClass: {
-                        popup: 'swal-under-header'
-                    }
-                });
+                showErrorToast('Failed to Send Email', 'Failed to send verification email. Please try again.');
             }
         } catch (error) {
             console.error('Email verification error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Failed to Send Email',
-                text: 'Failed to send verification email. Please try again.',
-                timer: 4000,
-                timerProgressBar: true,
-                showConfirmButton: false,
-                position: 'top-end',
-                toast: true,
-                width: '400px',
-                padding: '1rem',
-                customClass: {
-                    popup: 'swal-under-header'
-                }
-            });
+            showErrorToast('Failed to Send Email', 'Failed to send verification email. Please try again.');
         }
     };
 

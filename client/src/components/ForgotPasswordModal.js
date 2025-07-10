@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { FiMail, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
-import Swal from 'sweetalert2';
-import './ForgotPasswordModal.css';
+import { showSuccessToast } from '../utils/sweetAlertConfig';
+import '../styles/ForgotPasswordModal.css';
 
 const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [email, setEmail] = useState('');
@@ -46,21 +46,7 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
 
             if (result.success) {
                 setIsSubmitted(true);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Password Reset Email Sent!',
-                    text: 'Check your inbox and spam folder.',
-                    timer: 5000,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    position: 'top-end',
-                    toast: true,
-                    width: '400px',
-                    padding: '1rem',
-                    customClass: {
-                        popup: 'swal-under-header'
-                    }
-                });
+                showSuccessToast('Password Reset Email Sent!', 'Check your inbox and spam folder.');
             } else {
                 setError(result.message || 'Failed to send reset email');
             }

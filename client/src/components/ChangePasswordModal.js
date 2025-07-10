@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
-import Swal from 'sweetalert2';
-import './ChangePasswordModal.css';
+import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+import '../styles/ChangePasswordModal.css';
+import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 
 const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
@@ -83,6 +84,58 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         }));
     };
 
+    // Handle Enter key navigation
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            const { name } = e.target;
+            
+            // Navigate to next field or submit form
+            switch (name) {
+                case 'currentPassword':
+                    if (formData.currentPassword.trim()) {
+                        document.getElementById('newPassword').focus();
+                    } else {
+                        // Stay on current field if empty
+                        return;
+                    }
+                    break;
+                    
+                case 'newPassword':
+                    if (formData.newPassword.trim()) {
+                        document.getElementById('confirmPassword').focus();
+                    } else {
+                        // Stay on current field if empty
+                        return;
+                    }
+                    break;
+                    
+                case 'confirmPassword':
+                    // Check for empty fields and navigate to them
+                    if (!formData.currentPassword.trim()) {
+                        document.getElementById('currentPassword').focus();
+                        return;
+                    }
+                    if (!formData.newPassword.trim()) {
+                        document.getElementById('newPassword').focus();
+                        return;
+                    }
+                    if (!formData.confirmPassword.trim()) {
+                        // Stay on confirm field if empty
+                        return;
+                    }
+                    
+                    // All fields are filled, trigger form submission
+                    handleSubmit(e);
+                    break;
+                    
+                default:
+                    break;
+            }
+        }
+    };
+
     // Validate form
     const validateForm = () => {
         const newErrors = {};
@@ -114,7 +167,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         e.preventDefault();
 
         if (!validateForm()) {
-            return;
+            return; // Errors are displayed inline, no need for SweetAlert
         }
 
         setIsLoading(true);
@@ -127,21 +180,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
             );
 
             if (result.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Password Changed Successfully!',
-                    text: 'Your password has been updated.',
-                    timer: 3000,
-                    timerProgressBar: true,
-                    showConfirmButton: false,
-                    position: 'top-end',
-                    toast: true,
-                    width: '400px',
-                    padding: '1rem',
-                    customClass: {
-                        popup: 'swal-under-header'
-                    }
-                });
+                showSuccessToast('Password Changed Successfully!', 'Your password has been updated.');
 
                 // Reset form
                 setFormData({
@@ -165,12 +204,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                 setErrors({
                     currentPassword: result.message || 'Failed to change password'
                 });
+                showErrorToast('Password Change Failed', result.message || 'Failed to change password');
             }
         } catch (error) {
             console.error('Password change error:', error);
             setErrors({
                 currentPassword: 'An unexpected error occurred. Please try again.'
             });
+            showErrorToast('Password Change Failed', 'An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -236,6 +277,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 name="currentPassword"
                                 value={formData.currentPassword}
                                 onChange={handleChange}
+                                onKeyPress={handleKeyPress}
                                 placeholder="Enter your current password"
                                 disabled={isLoading}
                                 required
@@ -264,6 +306,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 name="newPassword"
                                 value={formData.newPassword}
                                 onChange={handleChange}
+                                onKeyPress={handleKeyPress}
                                 placeholder="Enter your new password"
                                 disabled={isLoading}
                                 required
@@ -287,7 +330,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     {passwordStrength && (
                         <div className="password-strength">
                             <div className="strength-bar">
-                                <div 
+                                <div
                                     className={`strength-fill ${passwordStrength.strength}`}
                                     style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
                                 ></div>
@@ -331,6 +374,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
+                                onKeyPress={handleKeyPress}
                                 placeholder="Confirm your new password"
                                 disabled={isLoading}
                                 required
@@ -349,25 +393,30 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                             <span className="error-message">{errors.confirmPassword}</span>
                         )}
                     </div>
-
-                    <div className="form-actions">
-                        <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={handleClose}
-                            disabled={isLoading}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn-primary"
-                            disabled={isLoading || !formData.currentPassword || !formData.newPassword || !formData.confirmPassword}
-                        >
-                            {isLoading ? 'Changing Password...' : 'Change Password'}
-                        </button>
-                    </div>
                 </form>
+
+                <div className="form-actions">
+                    <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={handleClose}
+                        disabled={isLoading}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        className="btn-primary"
+                        onClick={handleSubmit}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <ButtonLoadingOverlay isLoading={isLoading} />
+                        ) : (
+                            'Change Password'
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );
