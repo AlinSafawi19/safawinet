@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
-import { useToast } from '../contexts/ToastContext';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
+import Swal from 'sweetalert2';
 import './ChangePasswordModal.css';
 
 const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
@@ -18,7 +18,6 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [passwordStrength, setPasswordStrength] = useState(null);
-    const { setToast } = useToast();
 
     // Password strength requirements
     const requirements = {
@@ -128,10 +127,13 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
             );
 
             if (result.success) {
-                setToast({
-                    show: true,
-                    message: 'Password changed successfully!',
-                    type: 'success'
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Password Changed Successfully!',
+                    text: 'Your password has been updated.',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
                 });
 
                 // Reset form

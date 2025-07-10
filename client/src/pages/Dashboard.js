@@ -9,7 +9,6 @@ import { io } from 'socket.io-client';
 import config from '../config/config';
 import moment from 'moment';
 import 'moment-timezone';
-import { useToast } from '../contexts/ToastContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import {
     FiAlertTriangle,
@@ -33,6 +32,7 @@ import {
     FiActivity
 } from 'react-icons/fi';
 import '../styles/Dashboard.css';
+import Swal from 'sweetalert2';
 
 // Fix for Leaflet marker icons in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -55,7 +55,6 @@ const Dashboard = () => {
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
     const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
     const [showChangePassword, setShowChangePassword] = useState(false);
-    const { setToast } = useToast();
     //console.log(user);
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
@@ -849,19 +848,34 @@ const Dashboard = () => {
             const response = await api.post('/auth/send-email-verification');
 
             if (response.data.success) {
-                setToast({ show: true, message: 'Verification email sent! Check your email inbox (and spam/junk folder if not found).', type: 'success' });
-                // Auto-hide toast after 6 seconds (longer for more detailed message)
-                setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 6000);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Verification Email Sent!',
+                    text: 'Check your email inbox (and spam/junk folder if not found).',
+                    timer: 6000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
             } else {
-                setToast({ show: true, message: 'Failed to send verification email. Please try again.', type: 'error' });
-                // Auto-hide toast after 4 seconds
-                setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 4000);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to Send Email',
+                    text: 'Failed to send verification email. Please try again.',
+                    timer: 4000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
             }
         } catch (error) {
             console.error('Email verification error:', error);
-            setToast({ show: true, message: 'Failed to send verification email. Please try again.', type: 'error' });
-            // Auto-hide toast after 4 seconds
-            setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 4000);
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed to Send Email',
+                text: 'Failed to send verification email. Please try again.',
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
         }
     };
 

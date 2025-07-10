@@ -10,7 +10,6 @@ import AuditLogs from './pages/AuditLogs';
 import KnowledgeGuide from './pages/KnowledgeGuide';
 import EmailVerification from './pages/EmailVerification';
 import ResetPassword from './pages/ResetPassword';
-import { ToastProvider } from './contexts/ToastContext';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -137,41 +136,39 @@ const KnowledgeGuidePage = () => {
 
 function App() {
   return (
-    <ToastProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/verify-email" element={<EmailVerification />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/audit-logs"
-            element={
-              <ProtectedRoute>
-                <AuditLogsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/knowledge-guide"
-            element={
-              <ProtectedRoute>
-                <KnowledgeGuidePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Router>
-    </ToastProvider>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute>
+              <AuditLogsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/knowledge-guide"
+          element={
+            <ProtectedRoute>
+              <KnowledgeGuidePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

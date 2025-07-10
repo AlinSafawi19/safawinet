@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
-import { useToast } from '../contexts/ToastContext';
 import { FiMail, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import Swal from 'sweetalert2';
 import './ForgotPasswordModal.css';
 
 const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
@@ -9,7 +9,6 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [error, setError] = useState('');
-    const { setToast } = useToast();
 
     // Handle input changes
     const handleChange = (e) => {
@@ -47,10 +46,13 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
 
             if (result.success) {
                 setIsSubmitted(true);
-                setToast({
-                    show: true,
-                    message: 'Password reset email sent! Check your inbox and spam folder.',
-                    type: 'success'
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Password Reset Email Sent!',
+                    text: 'Check your inbox and spam folder.',
+                    timer: 5000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
                 });
             } else {
                 setError(result.message || 'Failed to send reset email');
