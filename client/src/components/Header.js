@@ -15,7 +15,8 @@ import {
     FiFileText,
     FiDollarSign,
     FiTrendingUp,
-    FiGrid
+    FiGrid,
+    FiChevronUp
 } from 'react-icons/fi';
 import authService from '../services/authService';
 import ProfilePicture from './ProfilePicture';
@@ -24,7 +25,6 @@ import logo from '../assets/images/logo.png';
 const Header = ({ onLogout, onMobileMenuToggle }) => {
     const user = authService.getCurrentUser();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('dashboard');
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showToolsDropdown, setShowToolsDropdown] = useState(false);
     const [notificationCount, setNotificationCount] = useState(3);
@@ -54,7 +54,6 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
     };
 
     const handleTabClick = (tab) => {
-        setActiveTab(tab);
         // Here you can add navigation logic for each tab
         console.log(`Switched to ${tab} tab`);
     };
@@ -92,101 +91,100 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
     }, []);
 
     return (
-        <header className="dashboard-header">
-            <div className="header-content">
+        <header className="header">
+            <div className="header-container">
                 <div className="header-left">
                     <button
-                        className="mobile-menu-button"
                         onClick={onMobileMenuToggle}
                         aria-label="Toggle mobile menu"
+                        className="mobile-menu-btn"
                     >
                         <FiMenu />
                     </button>
-                    <img src={logo} alt="SafawiNet Logo" className="logo-image" />
+                    <img src={logo} alt="SafawiNet Logo" className="header-logo" />
                 </div>
                 <div className="header-right">
-                    <div className="header-right-content">
+                    <div className="header-actions">
                         <button
-                            className={`nav-tab ${activeTab === 'inbox' ? 'active' : ''}`}
                             onClick={() => handleTabClick('inbox')}
+                            className="action-btn"
                         >
-                            <div className="nav-icon-container">
-                                <FiInbox className="nav-icon" />
+                            <div className="action-icon">
+                                <FiInbox />
                                 {inboxCount > 0 && (
-                                    <span className="badge">{inboxCount}</span>
+                                    <span className="notification-badge">{inboxCount}</span>
                                 )}
                             </div>
-                            <span className="nav-tab-text">Inbox</span>
+                            <span className="action-label">Inbox</span>
                         </button>
                         <button
-                            className={`nav-tab ${activeTab === 'notifications' ? 'active' : ''}`}
                             onClick={() => handleTabClick('notifications')}
+                            className="action-btn"
                         >
-                            <div className="nav-icon-container">
-                                <FiBell className="nav-icon" />
+                            <div className="action-icon">
+                                <FiBell />
                                 {notificationCount > 0 && (
-                                    <span className="badge">{notificationCount}</span>
+                                    <span className="notification-badge">{notificationCount}</span>
                                 )}
                             </div>
-                            <span className="nav-tab-text">Notifications</span>
+                            <span className="action-label">Notifications</span>
                         </button>
-                        <div className="tools-dropdown-container" ref={toolsRef}>
+                        <div ref={toolsRef} className="dropdown-container">
                             <button
-                                className={`nav-tab tools-dropdown-btn ${showToolsDropdown ? 'active' : ''}`}
                                 onClick={toggleToolsDropdown}
+                                className="dropdown-btn"
                             >
-                                <FiTool className="nav-icon" />
-                                <span className="nav-tab-text">Tools</span>
-                                <FiChevronDown className={`dropdown-icon ${showToolsDropdown ? 'rotated' : ''}`} />
-                            </button>
+                                <FiTool />
+                                <span className="dropdown-label">Tools</span>
+                                {showToolsDropdown ? <FiChevronUp /> : <FiChevronDown />}                            </button>
                             {showToolsDropdown && (
-                                <div className="tools-dropdown">
+                                <div className="dropdown-menu">
                                     {tools.map((tool) => (
                                         <button
                                             key={tool.id}
-                                            className="tools-dropdown-item"
                                             onClick={() => handleToolClick(tool)}
+                                            className="dropdown-item"
                                         >
-                                            <span className="tools-dropdown-icon">{tool.icon}</span>
-                                            <span>{tool.label}</span>
+                                            <span className="item-icon">{tool.icon}</span>
+                                            <span className="item-label">{tool.label}</span>
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <div className="user-profile-container" ref={profileRef}>
+                    <div ref={profileRef} className="dropdown-container">
                         <button
-                            className="profile-button"
                             onClick={toggleProfileDropdown}
+                            className="dropdown-btn"
                         >
                             <ProfilePicture user={user} size="small" />
-                            <div className="user-info">
-                                <span className="user-name">{user?.fullName || `${user?.firstName} ${user?.lastName}` || user?.username}</span>
-                                <span className="user-role">{user?.isAdmin ? 'Administrator' : 'User'}</span>
+                            <div className="profile-info">
+                                <span className="profile-name">{user?.fullName || `${user?.firstName} ${user?.lastName}` || user?.username}</span>
+                                <span className="profile-role">{user?.isAdmin ? 'Administrator' : 'User'}</span>
                             </div>
-                            <FiChevronDown className={`dropdown-icon ${showProfileDropdown ? 'rotated' : ''}`} />
+                            {showProfileDropdown ? <FiChevronUp /> : <FiChevronDown />}
                         </button>
 
                         {showProfileDropdown && (
-                            <div className="profile-dropdown">
+                            <div className="dropdown-menu">
                                 <button
-                                    className="dropdown-item"
                                     onClick={() => {
                                         setShowProfileDropdown(false);
                                         navigate('/profile');
                                     }}
+                                    className="dropdown-item"
                                 >
-                                    <FiUser className="dropdown-icon" />
+                                    <FiUser />
                                     <span>Profile</span>
                                 </button>
                                 <button className="dropdown-item">
-                                    <FiSettings className="dropdown-icon" />
+                                    <FiSettings />
                                     <span>Settings</span>
                                 </button>
-                                <div className="dropdown-divider"></div>
-                                <button className="dropdown-item logout" onClick={handleLogout}>
-                                    <FiLogOut className="dropdown-icon" />
+                                <div className="menu-divider"></div>
+                                <button onClick={handleLogout} className="dropdown-item menu-item-danger">
+                                    <FiLogOut />
                                     <span>Logout</span>
                                 </button>
                             </div>

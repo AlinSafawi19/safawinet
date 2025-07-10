@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
-import '../styles/Login.css';
 import logo from '../assets/images/logo.png';
 import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 import { showErrorToast } from '../utils/sweetAlertConfig';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { FaLock } from 'react-icons/fa';
 
 const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
@@ -160,9 +160,9 @@ const Login = ({ onLoginSuccess }) => {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      
+
       const { name } = e.target;
-      
+
       // Navigate to next field or submit form
       switch (name) {
         case 'identifier':
@@ -173,7 +173,7 @@ const Login = ({ onLoginSuccess }) => {
             return;
           }
           break;
-          
+
         case 'password':
           if (formData.password.trim()) {
             // Submit form if password is filled
@@ -183,7 +183,7 @@ const Login = ({ onLoginSuccess }) => {
             return;
           }
           break;
-          
+
         default:
           // For any other field, submit the form
           handleSubmit(e);
@@ -199,25 +199,24 @@ const Login = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="logo">
-            <img src={logo} alt="SafawiNet Logo" className="logo-image-login" />
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <img src={logo} alt="SafawiNet Logo" className="logo-image" />
           </div>
-                  <p><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
-      </div>
+          <p className="auth-welcome"><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
+        </div>
 
-      {isBlocked && (
-          <div className="blocked-message">
-            <span className="blocked-icon">🔒</span>
+        {isBlocked && (
+          <div className="auth-blocked">
+            <span className="blocked-icon"><FaLock /></span>
             Too many login attempts. Please try again in {formatTime(blockTime)}.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="identifier">{getLabel()}</label>
             <input
               type={getInputType()}
               id="identifier"
@@ -225,16 +224,16 @@ const Login = ({ onLoginSuccess }) => {
               value={formData.identifier}
               onChange={handleIdentifierChange}
               onKeyPress={handleKeyPress}
-              placeholder={getPlaceholder()}
+              placeholder=" "
               disabled={isLoading || isBlocked}
-              required
               autoComplete="username"
+              className="form-input"
             />
+            <label htmlFor="identifier" className="form-label">{getLabel()}</label>
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="password-input-container">
+            <div className="input-group">
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
@@ -242,20 +241,21 @@ const Login = ({ onLoginSuccess }) => {
                 value={formData.password}
                 onChange={handleChange}
                 onKeyPress={handleKeyPress}
-                placeholder="Enter your password"
+                placeholder=" "
                 disabled={isLoading || isBlocked}
-                required
                 autoComplete="current-password"
+                className="form-input"
               />
               <button
                 type="button"
-                className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading || isBlocked}
+                className="input-toggle-btn"
               >
                 {showPassword ? <FiEyeOff /> : <FiEye />}
               </button>
             </div>
+            <label htmlFor="password" className="form-label">Password</label>
           </div>
 
           <div className="form-options">
@@ -265,14 +265,15 @@ const Login = ({ onLoginSuccess }) => {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={isLoading || isBlocked}
+                className="form-checkbox"
               />
-              <span>Remember me</span>
+              <span className="checkbox-text">Remember me</span>
             </label>
             <button
               type="button"
-              className="forgot-password"
               disabled={isLoading || isBlocked}
               onClick={() => setShowForgotPassword(true)}
+              className="link-btn"
             >
               Forgot password?
             </button>
@@ -280,23 +281,17 @@ const Login = ({ onLoginSuccess }) => {
 
           <button
             type="submit"
-            className="login-button"
             disabled={isLoading || isBlocked}
-            style={{ position: 'relative', minHeight: '44px' }}
+            className="btn btn-primary btn-full"
           >
-            <span style={{ visibility: isLoading ? 'hidden' : 'visible' }}>
-              Sign In
-            </span>
-            {isLoading && (
-              <ButtonLoadingOverlay isLoading={true} />
-            )}
+            {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Sign In'}
           </button>
         </form>
 
         {attempts > 0 && !isBlocked && (
-          <div className="attempts-warning">
-            <span>Failed login attempts: {attempts}/5</span>
-            <span style={{ fontSize: '10px', opacity: 0.8 }}>
+          <div className="auth-attempts">
+            <span className="attempts-count">Failed login attempts: {attempts}/5</span>
+            <span className="attempts-warning">
               {attempts >= 3 ? 'Account will be temporarily locked after 5 attempts' : 'Please check your credentials'}
             </span>
           </div>

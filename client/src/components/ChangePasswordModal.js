@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
-import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiX } from 'react-icons/fi';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
-import '../styles/ChangePasswordModal.css';
 import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 
 const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
@@ -88,9 +87,9 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const handleKeyPress = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            
+
             const { name } = e.target;
-            
+
             // Navigate to next field or submit form
             switch (name) {
                 case 'currentPassword':
@@ -101,7 +100,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                         return;
                     }
                     break;
-                    
+
                 case 'newPassword':
                     if (formData.newPassword.trim()) {
                         document.getElementById('confirmPassword').focus();
@@ -110,7 +109,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                         return;
                     }
                     break;
-                    
+
                 case 'confirmPassword':
                     // Check for empty fields and navigate to them
                     if (!formData.currentPassword.trim()) {
@@ -125,11 +124,11 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                         // Stay on confirm field if empty
                         return;
                     }
-                    
+
                     // All fields are filled, trigger form submission
                     handleSubmit(e);
                     break;
-                    
+
                 default:
                     break;
             }
@@ -254,23 +253,23 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
 
     return (
         <div className="modal-overlay" onClick={handleClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-container" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2><FiLock /> Change Password</h2>
+                    <h2 className="modal-title"><FiLock /> Change Password</h2>
                     <button
                         type="button"
-                        className="modal-close"
                         onClick={handleClose}
                         disabled={isLoading}
+                        className="modal-close-btn"
                     >
                         <FiX />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="password-form">
+                <form onSubmit={handleSubmit} className="modal-form">
                     <div className="form-group">
-                        <label htmlFor="currentPassword">Current Password</label>
-                        <div className="password-input-container">
+                        <label htmlFor="currentPassword" className="form-label">Current Password</label>
+                        <div className="input-group">
                             <input
                                 type={showPasswords.current ? 'text' : 'password'}
                                 id="currentPassword"
@@ -282,24 +281,25 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 disabled={isLoading}
                                 required
                                 autoComplete="current-password"
+                                className="form-input"
                             />
                             <button
                                 type="button"
-                                className="password-toggle"
                                 onClick={() => togglePasswordVisibility('current')}
                                 disabled={isLoading}
+                                className="input-toggle-btn"
                             >
                                 {showPasswords.current ? <FiEyeOff /> : <FiEye />}
                             </button>
                         </div>
                         {errors.currentPassword && (
-                            <span className="error-message">{errors.currentPassword}</span>
+                            <span className="form-error">{errors.currentPassword}</span>
                         )}
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="newPassword">New Password</label>
-                        <div className="password-input-container">
+                        <label htmlFor="newPassword" className="form-label">New Password</label>
+                        <div className="input-group">
                             <input
                                 type={showPasswords.new ? 'text' : 'password'}
                                 id="newPassword"
@@ -311,18 +311,19 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 disabled={isLoading}
                                 required
                                 autoComplete="new-password"
+                                className="form-input"
                             />
                             <button
                                 type="button"
-                                className="password-toggle"
                                 onClick={() => togglePasswordVisibility('new')}
                                 disabled={isLoading}
+                                className="input-toggle-btn"
                             >
                                 {showPasswords.new ? <FiEyeOff /> : <FiEye />}
                             </button>
                         </div>
                         {errors.newPassword && (
-                            <span className="error-message">{errors.newPassword}</span>
+                            <span className="form-error">{errors.newPassword}</span>
                         )}
                     </div>
 
@@ -330,35 +331,35 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     {passwordStrength && (
                         <div className="password-strength">
                             <div className="strength-bar">
-                                <div
-                                    className={`strength-fill ${passwordStrength.strength}`}
+                                <div 
+                                    className={`strength-fill strength-${passwordStrength.strength}`}
                                     style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
                                 ></div>
                             </div>
                             <div className="strength-text">
-                                Password Strength: <span className={passwordStrength.strength}>
+                                Password Strength: <span className={`strength-label strength-${passwordStrength.strength}`}>
                                     {passwordStrength.strength.charAt(0).toUpperCase() + passwordStrength.strength.slice(1)}
                                 </span>
                             </div>
-                            <div className="requirements-list">
+                            <div className="strength-requirements">
                                 <div className={`requirement ${passwordStrength.checks.length ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     At least {requirements.minLength} characters
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.uppercase ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One uppercase letter
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.lowercase ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One lowercase letter
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.numbers ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One number
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.specialChars ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One special character
                                 </div>
                             </div>
@@ -366,8 +367,8 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     )}
 
                     <div className="form-group">
-                        <label htmlFor="confirmPassword">Confirm New Password</label>
-                        <div className="password-input-container">
+                        <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
+                        <div className="input-group">
                             <input
                                 type={showPasswords.confirm ? 'text' : 'password'}
                                 id="confirmPassword"
@@ -379,44 +380,45 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 disabled={isLoading}
                                 required
                                 autoComplete="new-password"
+                                className="form-input"
                             />
                             <button
                                 type="button"
-                                className="password-toggle"
                                 onClick={() => togglePasswordVisibility('confirm')}
                                 disabled={isLoading}
+                                className="input-toggle-btn"
                             >
                                 {showPasswords.confirm ? <FiEyeOff /> : <FiEye />}
                             </button>
                         </div>
                         {errors.confirmPassword && (
-                            <span className="error-message">{errors.confirmPassword}</span>
+                            <span className="form-error">{errors.confirmPassword}</span>
                         )}
                     </div>
-                </form>
 
-                <div className="form-actions">
-                    <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={handleClose}
-                        disabled={isLoading}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn-primary"
-                        onClick={handleSubmit}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <ButtonLoadingOverlay isLoading={isLoading} />
-                        ) : (
-                            'Change Password'
-                        )}
-                    </button>
-                </div>
+                    <div className="form-actions">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            disabled={isLoading}
+                            className="btn btn-secondary"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            onClick={handleSubmit}
+                            disabled={isLoading}
+                            className="btn btn-primary"
+                        >
+                            {isLoading ? (
+                                <ButtonLoadingOverlay isLoading={isLoading} />
+                            ) : (
+                                'Change Password'
+                            )}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

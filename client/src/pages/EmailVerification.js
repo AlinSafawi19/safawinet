@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/EmailVerification.css';
+import LoadingOverlay from '../components/LoadingOverlay';
+import { FiMail } from 'react-icons/fi';
 
 const EmailVerification = () => {
     const [searchParams] = useSearchParams();
@@ -12,7 +13,7 @@ const EmailVerification = () => {
 
     useEffect(() => {
         const token = searchParams.get('token');
-        
+
         if (!token) {
             setVerificationStatus('error');
             setError('No verification token provided');
@@ -25,7 +26,7 @@ const EmailVerification = () => {
     const verifyEmail = async (token) => {
         try {
             const response = await axios.post('/api/auth/verify-email', { token });
-            
+
             if (response.data.success) {
                 setVerificationStatus('success');
                 setMessage('Email verified successfully! You can now close this window and return to your dashboard.');
@@ -48,7 +49,7 @@ const EmailVerification = () => {
             const response = await axios.post('/api/auth/send-email-verification', {}, {
                 withCredentials: true
             });
-            
+
             if (response.data.success) {
                 setMessage('Verification email sent! Please check your inbox.');
                 setError('');
@@ -61,29 +62,30 @@ const EmailVerification = () => {
     };
 
     return (
-        <div className="email-verification">
-            <div className="verification-container">
-                <div className="verification-header">
-                    <h1>📧 Email Verification</h1>
-                    <p>Verifying your email address...</p>
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-header">
+                    <div className="auth-logo">
+                        <h1 className="auth-title">
+                            <FiMail className="auth-icon" /> Email Verification
+                        </h1>
+                        <p className="auth-subtitle">Verifying your email address</p>
+                    </div>
                 </div>
 
                 <div className="verification-content">
                     {verificationStatus === 'verifying' && (
-                        <div className="verifying-state">
-                            <div className="loading-spinner"></div>
-                            <p>Verifying your email address...</p>
-                        </div>
+                        <LoadingOverlay isLoading={verificationStatus === 'verifying'} />
                     )}
 
                     {verificationStatus === 'success' && (
-                        <div className="success-state">
+                        <div className="verification-success">
                             <div className="success-icon">✅</div>
-                            <h2>Email Verified Successfully!</h2>
-                            <p>{message}</p>
-                            <button 
-                                className="btn btn-primary"
+                            <h2 className="success-title">Email Verified Successfully!</h2>
+                            <p className="success-message">{message}</p>
+                            <button
                                 onClick={handleReturnToDashboard}
+                                className="btn btn-primary"
                             >
                                 Return to Dashboard
                             </button>
@@ -91,21 +93,21 @@ const EmailVerification = () => {
                     )}
 
                     {verificationStatus === 'error' && (
-                        <div className="error-state">
+                        <div className="verification-error">
                             <div className="error-icon">❌</div>
-                            <h2>Verification Failed</h2>
+                            <h2 className="error-title">Verification Failed</h2>
                             <p className="error-message">{error}</p>
-                            
+
                             <div className="error-actions">
-                                <button 
-                                    className="btn btn-secondary"
+                                <button
                                     onClick={handleResendVerification}
+                                    className="btn btn-secondary"
                                 >
                                     Resend Verification Email
                                 </button>
-                                <button 
-                                    className="btn btn-primary"
+                                <button
                                     onClick={handleReturnToDashboard}
+                                    className="btn btn-primary"
                                 >
                                     Return to Dashboard
                                 </button>
@@ -114,8 +116,8 @@ const EmailVerification = () => {
                     )}
                 </div>
 
-                <div className="verification-footer">
-                    <p>If you're having trouble, please contact support.</p>
+                <div className="auth-footer">
+                    <p className="footer-text">If you're having trouble, please contact support.</p>
                 </div>
             </div>
         </div>

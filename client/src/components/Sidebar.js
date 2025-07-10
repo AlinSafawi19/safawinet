@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { HiMenu, HiX, HiViewBoards, HiLogout, HiClipboardList, HiBookOpen, HiShieldCheck } from 'react-icons/hi';
 import authService from '../services/authService';
 
-const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
+const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle }) => {
     const [isCollapsed, setIsCollapsed] = useState(() => {
         // Get the collapsed state from localStorage, default to false
         const saved = localStorage.getItem('sidebarCollapsed');
@@ -12,7 +12,13 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
     const [activeSection, setActiveSection] = useState('dashboard');
     const location = useLocation();
     const navigate = useNavigate();
-    const user = authService.getCurrentUser();
+
+    // Notify parent when sidebar state changes
+    useEffect(() => {
+        if (onSidebarToggle) {
+            onSidebarToggle(isCollapsed);
+        }
+    }, [isCollapsed, onSidebarToggle]);
 
     const menuItems = [
         {
@@ -96,58 +102,58 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
         <>
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
-                <div className="mobile-menu-overlay" onClick={onCloseMobileMenu}>
-                    <div className="mobile-menu-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="mobile-menu-header">
-                            <div className="mobile-menu-brand">
-                                <div className="brand-logo">
-                                    <HiShieldCheck className="brand-icon" />
+                <div className="mobile-overlay" onClick={onCloseMobileMenu}>
+                    <div className="mobile-menu" onClick={(e) => e.stopPropagation()}>
+                        <div className="mobile-header">
+                            <div className="mobile-brand">
+                                <div className="brand-icon">
+                                    <HiShieldCheck />
                                 </div>
-                                <div className="brand-text">
+                                <div className="brand-info">
                                     <span className="brand-name">SafawiNet</span>
                                     <span className="brand-tagline">Secure & Smart</span>
                                 </div>
                             </div>
                             <button
-                                className="mobile-menu-close"
                                 onClick={onCloseMobileMenu}
                                 aria-label="Close mobile menu"
+                                className="mobile-close-btn"
                             >
                                 <HiX />
                             </button>
                         </div>
-                        
-                        <nav className="mobile-menu-nav">
-                            <ul className="mobile-nav-menu">
+
+                        <nav className="mobile-nav">
+                            <ul className="mobile-menu-list">
                                 {menuItems.map((item) => (
-                                    <li key={item.id} className="mobile-nav-item">
+                                    <li key={item.id} className="mobile-menu-item">
                                         <button
-                                            className={`mobile-nav-link ${activeSection === item.id ? 'active' : ''}`}
                                             onClick={() => handleMenuClick(item.id)}
+                                            className={`mobile-menu-btn ${activeSection === item.id ? 'active' : ''}`}
                                         >
-                                            <span className="mobile-nav-icon">{item.icon}</span>
-                                            <span className="mobile-nav-label">{item.label}</span>
+                                            <span className="menu-icon">{item.icon}</span>
+                                            <span className="menu-label">{item.label}</span>
                                         </button>
                                     </li>
                                 ))}
                             </ul>
                         </nav>
 
-                        <div className="mobile-menu-footer">
-                            <ul className="mobile-footer-menu">
+                        <div className="mobile-footer">
+                            <ul className="mobile-footer-list">
                                 {footerItems.map((item) => (
                                     <li key={item.id} className="mobile-footer-item">
                                         <button
-                                            className={`mobile-footer-link ${item.id === 'logout' ? 'logout-link' : ''} ${activeSection === item.id ? 'active' : ''}`}
                                             onClick={() => {
                                                 handleFooterClick(item);
                                                 if (onCloseMobileMenu) {
                                                     onCloseMobileMenu();
                                                 }
                                             }}
+                                            className={`mobile-footer-btn ${item.id === 'logout' ? 'logout-btn' : ''} ${activeSection === item.id ? 'active' : ''}`}
                                         >
-                                            <span className="mobile-footer-icon">{item.icon}</span>
-                                            <span className="mobile-footer-label">{item.label}</span>
+                                            <span className="footer-icon">{item.icon}</span>
+                                            <span className="footer-label">{item.label}</span>
                                         </button>
                                     </li>
                                 ))}
@@ -158,21 +164,20 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
             )}
 
             {/* Desktop Sidebar */}
-            <aside className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+            <aside className={`sidebar${isCollapsed ? ' collapsed' : ''}`}>
                 <div className="sidebar-header">
                     {!isCollapsed && (
                         <div className="sidebar-brand">
-                            <div className="brand-logo">
-                                <HiShieldCheck className="brand-icon" />
+                            <div className="brand-icon">
+                                <HiShieldCheck />
                             </div>
-                            <div className="brand-text">
+                            <div className="brand-info">
                                 <span className="brand-name">SafawiNet</span>
                                 <span className="brand-tagline">Secure & Smart</span>
                             </div>
                         </div>
                     )}
                     <button
-                        className="sidebar-toggle"
                         onClick={() => {
                             const newCollapsedState = !isCollapsed;
                             setIsCollapsed(newCollapsedState);
@@ -180,22 +185,23 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
                             localStorage.setItem('sidebarCollapsed', JSON.stringify(newCollapsedState));
                         }}
                         title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                        className="sidebar-toggle-btn"
                     >
                         {isCollapsed ? <HiMenu /> : <HiX />}
                     </button>
                 </div>
 
                 <nav className="sidebar-nav">
-                    <ul className="nav-menu">
+                    <ul className="sidebar-menu">
                         {menuItems.map((item) => (
-                            <li key={item.id} className="nav-item">
+                            <li key={item.id} className="sidebar-menu-item">
                                 <button
-                                    className={`nav-link ${activeSection === item.id ? 'active' : ''}`}
                                     onClick={() => handleMenuClick(item.id)}
                                     title={item.label}
+                                    className={`sidebar-menu-btn ${activeSection === item.id ? 'active' : ''}`}
                                 >
-                                    <span className="nav-icon">{item.icon}</span>
-                                    {!isCollapsed && <span className="nav-label">{item.label}</span>}
+                                    <span className="menu-icon">{item.icon}</span>
+                                    {!isCollapsed && <span className="menu-label">{item.label}</span>}
                                 </button>
                             </li>
                         ))}
@@ -203,19 +209,23 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <ul className="footer-menu">
-                        {footerItems.map((item) => (
-                            <li key={item.id} className="footer-item">
-                                <button
-                                    className={`footer-link ${item.id === 'logout' ? 'logout-link' : ''} ${activeSection === item.id ? 'active' : ''}`}
-                                    onClick={() => handleFooterClick(item)}
-                                    title={item.label}
-                                >
-                                    <span className="footer-icon">{item.icon}</span>
-                                    {!isCollapsed && <span className="footer-label">{item.label}</span>}
-                                </button>
-                            </li>
-                        ))}
+                    <ul className="sidebar-footer-list">
+                        {footerItems.map((item) => {
+                            const buttonClass = `sidebar-footer-btn ${item.id === 'logout' ? 'logout-btn' : ''} ${activeSection === item.id ? 'active' : ''}`;
+                            console.log(`Sidebar: Footer button ${item.id} classes:`, buttonClass, 'activeSection:', activeSection);
+                            return (
+                                <li key={item.id} className="sidebar-footer-item">
+                                    <button
+                                        onClick={() => handleFooterClick(item)}
+                                        title={item.label}
+                                        className={buttonClass}
+                                    >
+                                        <span className="footer-icon">{item.icon}</span>
+                                        {!isCollapsed && <span className="footer-label">{item.label}</span>}
+                                    </button>
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
             </aside>

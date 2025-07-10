@@ -11,8 +11,6 @@ import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import Swal from 'sweetalert2';
 import {
     FiUser,
-    FiMail,
-    FiPhone,
     FiCalendar,
     FiClock,
     FiShield,
@@ -22,13 +20,10 @@ import {
     FiSave,
     FiX,
     FiKey,
-    FiCamera,
-    FiTrash2,
     FiSettings,
     FiLock,
     FiUnlock
 } from 'react-icons/fi';
-import '../styles/Profile.css';
 import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 
 const Profile = () => {
@@ -323,33 +318,33 @@ const Profile = () => {
     };
 
     return (
-        <div className="profile-page">
+        <div className="profile-container">
             <div className="profile-header">
-                <h1>Profile & Account Settings</h1>
-                <p>Manage your account information and preferences</p>
+                <h1 className="page-title">Profile & Account Settings</h1>
+                <p className="page-subtitle">Manage your account information and preferences</p>
             </div>
 
             <div className="profile-content">
                 {/* Account Information Section */}
                 <section className="profile-section">
                     <div className="section-header">
-                        <h2>Account Information</h2>
+                        <h2 className="section-title">Account Information</h2>
                         <div className="section-actions">
                             {isEditing ? (
                                 <>
                                     <button
-                                        className="action-btn secondary"
                                         onClick={handleEditToggle}
                                         disabled={isLoading}
+                                        className="btn btn-secondary"
                                     >
                                         <FiX /> Cancel
                                     </button>
                                     <button
-                                        className="action-btn primary"
                                         onClick={handleProfileUpdate}
                                         disabled={isLoading}
+                                        className="btn btn-primary"
                                     >
-                                        {isLoading ? <ButtonLoadingOverlay text="Saving..." /> : (
+                                        {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : (
                                             <>
                                                 <FiSave /> Save Changes
                                             </>
@@ -358,8 +353,8 @@ const Profile = () => {
                                 </>
                             ) : (
                                 <button
-                                    className="action-btn primary"
                                     onClick={handleEditToggle}
+                                    className="btn btn-primary"
                                 >
                                     <FiEdit3 /> Edit Account
                                 </button>
@@ -368,23 +363,23 @@ const Profile = () => {
                     </div>
 
                     {/* Profile Picture Section */}
-                    <div className="profile-picture-container">
-                        <div className="profile-picture-wrapper">
+                    <div className="profile-picture-section">
+                        <div className="picture-container">
                             <ProfilePicture user={profileData} size="xlarge" />
                         </div>
                         <div className="picture-actions">
                             {profileData.profilePicture && profileData.profilePicture.url && (
                                 <button
-                                    className="action-btn primary"
                                     onClick={handleRemoveProfilePicture}
                                     title="Remove profile picture"
+                                    className="btn btn-danger btn-sm"
                                 >
                                     Remove
                                 </button>
                             )}
                             <button
-                                className="action-btn primary"
                                 onClick={handleProfilePictureUpload}
+                                className="btn btn-secondary btn-sm"
                             >
                                 Upload New Picture
                             </button>
@@ -392,58 +387,58 @@ const Profile = () => {
                     </div>
 
                     {/* Read-Only Account Info Cards */}
-                    <div className="account-info-cards">
+                    <div className="info-cards">
                         <div className="info-card">
-                            <div className="info-card-icon">
+                            <div className="card-icon">
                                 <FiUser />
                             </div>
-                            <div className="info-card-content">
-                                <div className="info-card-label">Account Status</div>
-                                <div className="info-card-value">
-                                    <span className={`status-badge ${profileData.isActive ? 'active' : 'inactive'}`}>
+                            <div className="card-content">
+                                <div className="card-label">Account Status</div>
+                                <div className="card-value">
+                                    <span className={`status-badge ${profileData.isActive ? 'status-active' : 'status-inactive'}`}>
                                         {profileData.isActive ? 'Active' : 'Inactive'}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div className="info-card">
-                            <div className="info-card-icon">
+                            <div className="card-icon">
                                 <FiSettings />
                             </div>
-                            <div className="info-card-content">
-                                <div className="info-card-label">Role</div>
-                                <div className="info-card-value">
-                                    <span className={`status-badge ${profileData.isAdmin ? 'admin' : 'user'}`}>
+                            <div className="card-content">
+                                <div className="card-label">Role</div>
+                                <div className="card-value">
+                                    <span className={`role-badge ${profileData.isAdmin ? 'role-admin' : 'role-user'}`}>
                                         {profileData.isAdmin ? 'Administrator' : 'User'}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div className="info-card">
-                            <div className="info-card-icon">
+                            <div className="card-icon">
                                 <FiCalendar />
                             </div>
-                            <div className="info-card-content">
-                                <div className="info-card-label">Member Since</div>
-                                <div className="info-card-value">{formatDate(profileData.createdAt)}</div>
+                            <div className="card-content">
+                                <div className="card-label">Member Since</div>
+                                <div className="card-value">{formatDate(profileData.createdAt)}</div>
                             </div>
                         </div>
                         <div className="info-card">
-                            <div className="info-card-icon">
+                            <div className="card-icon">
                                 <FiClock />
                             </div>
-                            <div className="info-card-content">
-                                <div className="info-card-label">Last Login</div>
-                                <div className="info-card-value">{formatDate(profileData.lastLogin)}</div>
+                            <div className="card-content">
+                                <div className="card-label">Last Login</div>
+                                <div className="card-value">{formatDate(profileData.lastLogin)}</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Editable Form Fields */}
-                    <div className="profile-form">
+                    <div className="form-fields">
                         <div className="form-row">
                             <div className="form-group">
-                                <label htmlFor="firstName">First Name</label>
+                                <label htmlFor="firstName" className="form-label">First Name</label>
                                 {isEditing ? (
                                     <input
                                         type="text"
@@ -451,15 +446,16 @@ const Profile = () => {
                                         value={editForm.firstName}
                                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                                         placeholder="Enter your first name"
+                                        className="form-input"
                                     />
                                 ) : (
-                                    <div className="form-value">
+                                    <div className="form-display">
                                         {profileData.firstName || 'Not provided'}
                                     </div>
                                 )}
                             </div>
                             <div className="form-group">
-                                <label htmlFor="lastName">Last Name</label>
+                                <label htmlFor="lastName" className="form-label">Last Name</label>
                                 {isEditing ? (
                                     <input
                                         type="text"
@@ -467,9 +463,10 @@ const Profile = () => {
                                         value={editForm.lastName}
                                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                                         placeholder="Enter your last name"
+                                        className="form-input"
                                     />
                                 ) : (
-                                    <div className="form-value">
+                                    <div className="form-display">
                                         {profileData.lastName || 'Not provided'}
                                     </div>
                                 )}
@@ -477,7 +474,7 @@ const Profile = () => {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label htmlFor="username">Username</label>
+                                <label htmlFor="username" className="form-label">Username</label>
                                 {isEditing ? (
                                     <input
                                         type="text"
@@ -485,15 +482,16 @@ const Profile = () => {
                                         value={editForm.username}
                                         onChange={(e) => handleInputChange('username', e.target.value)}
                                         placeholder="Enter your username"
+                                        className="form-input"
                                     />
                                 ) : (
-                                    <div className="form-value">
+                                    <div className="form-display">
                                         {profileData.username}
                                     </div>
                                 )}
                             </div>
                             <div className="form-group">
-                                <label htmlFor="email">Email Address</label>
+                                <label htmlFor="email" className="form-label">Email Address</label>
                                 {isEditing ? (
                                     <input
                                         type="email"
@@ -501,19 +499,19 @@ const Profile = () => {
                                         value={editForm.email}
                                         onChange={(e) => handleInputChange('email', e.target.value)}
                                         placeholder="Enter your email address"
+                                        className="form-input"
                                     />
                                 ) : (
-                                    <div className="form-value">
+                                    <div className="form-display">
                                         <span className="email-value">{profileData.email}</span>
                                         {profileData.emailVerified && !emailChanged ? (
-                                            <span className="verified-badge">
+                                            <span className="verification-badge verified">
                                                 <FiCheckCircle /> Verified
                                             </span>
                                         ) : (
                                             <button
-                                                className="action-btn primary"
                                                 onClick={handleEmailVerification}
-                                                style={{ marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                                                className="btn btn-sm btn-secondary"
                                             >
                                                 {emailChanged ? 'Verify New Email' : 'Verify Email'}
                                             </button>
@@ -524,7 +522,7 @@ const Profile = () => {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label htmlFor="phone">Phone Number</label>
+                                <label htmlFor="phone" className="form-label">Phone Number</label>
                                 {isEditing ? (
                                     <input
                                         type="tel"
@@ -532,9 +530,10 @@ const Profile = () => {
                                         value={editForm.phone}
                                         onChange={(e) => handleInputChange('phone', e.target.value)}
                                         placeholder="Enter your phone number"
+                                        className="form-input"
                                     />
                                 ) : (
-                                    <div className="form-value">
+                                    <div className="form-display">
                                         {profileData.phone || 'Not provided'}
                                     </div>
                                 )}
@@ -546,44 +545,44 @@ const Profile = () => {
                 {/* Password Change Section */}
                 <section className="profile-section">
                     <div className="section-header">
-                        <h2>Password Management</h2>
+                        <h2 className="section-title">Password Management</h2>
                     </div>
-                    <div className="security-settings">
-                        <div className="security-item">
-                            <div className="security-info">
-                                <div className="security-icon">
+                    <div className="security-cards">
+                        <div className="security-card">
+                            <div className="card-header">
+                                <div className="card-icon">
                                     <FiKey />
                                 </div>
-                                <div className="security-details">
-                                    <h3>Password</h3>
-                                    <p>Change your account password</p>
+                                <div className="card-content">
+                                    <h3 className="card-title">Password</h3>
+                                    <p className="card-description">Change your account password</p>
                                 </div>
                             </div>
                             <button
-                                className="action-btn primary"
                                 onClick={() => setShowChangePassword(true)}
+                                className="btn btn-secondary"
                             >
                                 Change Password
                             </button>
                         </div>
 
-                        <div className="security-item">
-                            <div className="security-info">
-                                <div className="security-icon">
+                        <div className="security-card">
+                            <div className="card-header">
+                                <div className="card-icon">
                                     <FiShield />
                                 </div>
-                                <div className="security-details">
-                                    <h3>Password Strength</h3>
-                                    <p>Current password security level</p>
+                                <div className="card-content">
+                                    <h3 className="card-title">Password Strength</h3>
+                                    <p className="card-description">Current password security level</p>
                                 </div>
                             </div>
-                            <div className="password-strength-display">
-                                <span className={`status-badge ${getPasswordStrengthColor(securityStatus.passwordStrength?.level)}`}>
+                            <div className="strength-indicator">
+                                <span className={`strength-label strength-${securityStatus.passwordStrength?.level}`}>
                                     {getPasswordStrengthText(securityStatus.passwordStrength?.level)}
                                 </span>
                                 <div className="strength-bar">
-                                    <div
-                                        className={`strength-fill ${getPasswordStrengthColor(securityStatus.passwordStrength?.level)}`}
+                                    <div 
+                                        className={`strength-fill strength-${securityStatus.passwordStrength?.level}`}
                                         style={{
                                             width: `${(securityStatus.passwordStrength?.score / 5) * 100}%`
                                         }}
@@ -597,41 +596,41 @@ const Profile = () => {
                 {/* Security Settings Section */}
                 <section className="profile-section">
                     <div className="section-header">
-                        <h2>Security Settings</h2>
+                        <h2 className="section-title">Security Settings</h2>
                     </div>
-                    <div className="security-settings">
-                        <div className="security-item">
-                            <div className="security-info">
-                                <div className="security-icon">
+                    <div className="security-cards">
+                        <div className="security-card">
+                            <div className="card-header">
+                                <div className="card-icon">
                                     {profileData.twoFactorEnabled ? <FiLock /> : <FiUnlock />}
                                 </div>
-                                <div className="security-details">
-                                    <h3>Two-Factor Authentication</h3>
-                                    <p>{profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}</p>
+                                <div className="card-content">
+                                    <h3 className="card-title">Two-Factor Authentication</h3>
+                                    <p className="card-description">{profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}</p>
                                 </div>
                             </div>
                             <button
-                                className="action-btn primary"
                                 onClick={() => console.log('Toggle 2FA')}
+                                className={`btn ${profileData.twoFactorEnabled ? 'btn-danger' : 'btn-primary'}`}
                             >
                                 {profileData.twoFactorEnabled ? 'Disable' : 'Enable'}
                             </button>
                         </div>
 
-                        <div className="security-item">
-                            <div className="security-info">
-                                <div className="security-icon">
+                        <div className="security-card">
+                            <div className="card-header">
+                                <div className="card-icon">
                                     {profileData.emailVerified && !emailChanged ? <FiCheckCircle /> : <FiAlertCircle />}
                                 </div>
-                                <div className="security-details">
-                                    <h3>Email Verification</h3>
-                                    <p>{profileData.emailVerified && !emailChanged ? 'Verified' : emailChanged ? 'New email requires verification' : 'Not verified'}</p>
+                                <div className="card-content">
+                                    <h3 className="card-title">Email Verification</h3>
+                                    <p className="card-description">{profileData.emailVerified && !emailChanged ? 'Verified' : emailChanged ? 'New email requires verification' : 'Not verified'}</p>
                                 </div>
                             </div>
                             {(!profileData.emailVerified || emailChanged) && (
                                 <button
-                                    className="action-btn primary"
                                     onClick={handleEmailVerification}
+                                    className="btn btn-secondary"
                                 >
                                     {emailChanged ? 'Verify New Email' : 'Verify Email'}
                                 </button>

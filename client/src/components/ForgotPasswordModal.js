@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { FiMail, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
-import { showSuccessToast } from '../utils/sweetAlertConfig';
-import '../styles/ForgotPasswordModal.css';
 import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 
-const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
+const ForgotPasswordModal = ({ isOpen, onClose }) => {
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -91,36 +89,36 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
 
     return (
         <div className="modal-overlay" onClick={handleClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-container" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2><FiMail /> Forgot Password</h2>
+                    <h2 className="modal-title"><FiMail /> Forgot Password</h2>
                     <button
                         type="button"
-                        className="modal-close"
                         onClick={handleClose}
                         disabled={isLoading}
+                        className="modal-close-btn"
                     >
                         <FiX />
                     </button>
                 </div>
 
                 {!isSubmitted ? (
-                    <div className="forgot-password-content">
-                        <div className="info-section">
-                            <p>
+                    <div className="modal-content">
+                        <div className="modal-description">
+                            <p className="description-text">
                                 Enter your email address and we'll send you a link to reset your password.
                             </p>
                             <div className="security-notice">
                                 <FiAlertCircle />
-                                <span>
+                                <span className="notice-text">
                                     For security reasons, we don't reveal whether an email exists in our system.
                                 </span>
                             </div>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="forgot-password-form">
+                        <form onSubmit={handleSubmit} className="modal-form">
                             <div className="form-group">
-                                <label htmlFor="email">Email Address</label>
+                                <label htmlFor="email" className="form-label">Email Address</label>
                                 <input
                                     type="email"
                                     id="email"
@@ -130,24 +128,25 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                     placeholder="Enter your email address"
                                     disabled={isLoading}
                                     autoComplete="email"
+                                    className="form-input"
                                 />
                                 {error && (
-                                    <span className="error-message">{error}</span>
+                                    <span className="form-error">{error}</span>
                                 )}
                             </div>
 
                             <div className="form-actions">
                                 <button
                                     type="button"
-                                    className="btn-secondary"
                                     onClick={handleClose}
                                     disabled={isLoading}
+                                    className="btn btn-secondary"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="btn-primary"
+                                    className="btn btn-primary"
                                 >
                                     {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Send Reset Link'}
                                 </button>
@@ -155,37 +154,39 @@ const ForgotPasswordModal = ({ isOpen, onClose, onSuccess }) => {
                         </form>
                     </div>
                 ) : (
-                    <div className="success-content">
-                        <div className="success-icon">
-                            <FiCheckCircle />
-                        </div>
-                        <h3>Check Your Email</h3>
-                        <p>
-                            We've sent a password reset link to <strong>{email}</strong>.
-                        </p>
-                        <div className="email-instructions">
-                            <h4>What to do next:</h4>
-                            <ul>
-                                <li>Check your email inbox</li>
-                                <li>Look in your spam/junk folder if you don't see it</li>
-                                <li>Click the reset link in the email</li>
-                                <li>Create a new password</li>
-                            </ul>
-                        </div>
-                        <div className="security-reminder">
-                            <FiAlertCircle />
-                            <span>
-                                The reset link will expire in 1 hour for your security.
-                            </span>
-                        </div>
-                        <div className="form-actions">
-                            <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={handleClose}
-                            >
-                                Got it
-                            </button>
+                    <div className="modal-content">
+                        <div className="success-content">
+                            <div className="success-icon">
+                                <FiCheckCircle />
+                            </div>
+                            <h3 className="success-title">Check Your Email</h3>
+                            <p className="success-message">
+                                We've sent a password reset link to <strong>{email}</strong>.
+                            </p>
+                            <div className="instructions">
+                                <h4 className="instructions-title">What to do next:</h4>
+                                <ul className="instructions-list">
+                                    <li>Check your email inbox</li>
+                                    <li>Look in your spam/junk folder if you don't see it</li>
+                                    <li>Click the reset link in the email</li>
+                                    <li>Create a new password</li>
+                                </ul>
+                            </div>
+                            <div className="security-notice">
+                                <FiAlertCircle />
+                                <span className="notice-text">
+                                    The reset link will expire in 1 hour for your security.
+                                </span>
+                            </div>
+                            <div className="success-actions">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    className="btn btn-primary"
+                                >
+                                    Got it
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -1,9 +1,7 @@
 import React, { useState, useRef } from 'react';
 import authService from '../services/authService';
-import '../styles/ProfilePictureUpload.css';
 
 const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
-  const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -43,18 +41,15 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    setIsDragging(true);
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
-    setIsDragging(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    setIsDragging(false);
-    
+
     const file = e.dataTransfer.files[0];
     handleFileSelect(file);
   };
@@ -63,7 +58,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
     if (!selectedFile) return;
 
     setIsUploading(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('profilePicture', selectedFile);
@@ -85,7 +80,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
           currentUser.profilePicture = result.data.profilePicture;
           authService.saveToStorage();
         }
-        
+
         onUploadSuccess?.(result.data.profilePicture);
       } else {
         onUploadError?.(result.message || 'Upload failed');
@@ -98,39 +93,6 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
     }
   };
 
-  const handleRemove = async () => {
-    setIsUploading(true);
-    
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/profile-picture`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Update the user data in auth service
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-          currentUser.profilePicture = null;
-          authService.saveToStorage();
-        }
-        
-        onUploadSuccess?.(null);
-      } else {
-        onUploadError?.(result.message || 'Remove failed');
-      }
-    } catch (error) {
-      console.error('Remove error:', error);
-      onUploadError?.('Remove failed. Please try again.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleCancel = () => {
     setSelectedFile(null);
     setPreview(null);
@@ -138,35 +100,33 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   };
 
   return (
-    <div className="profile-picture-upload">
-      <div className="profile-picture-upload__header">
+    <div>
+      <div>
         <h3>Profile Picture</h3>
-        <button 
-          className="profile-picture-upload__close"
+        <button
           onClick={handleCancel}
           disabled={isUploading}
         >
-          ×
+          <FiTimes />
         </button>
       </div>
 
-      <div className="profile-picture-upload__content">
+      <div>
         {!selectedFile ? (
-          <div 
-            className={`profile-picture-upload__drop-zone ${isDragging ? 'profile-picture-upload__drop-zone--dragging' : ''}`}
+          <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
           >
-            <div className="profile-picture-upload__drop-zone-content">
+            <div>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7,10 12,15 17,10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               <p>Click to select or drag and drop an image</p>
-              <p className="profile-picture-upload__hint">
+              <p >
                 JPG, PNG, GIF, or WebP (max 5MB)
               </p>
             </div>
@@ -179,11 +139,11 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
             />
           </div>
         ) : (
-          <div className="profile-picture-upload__preview">
-            <img src={preview} alt="Preview" className="profile-picture-upload__preview-image" />
-            <div className="profile-picture-upload__preview-info">
-              <p className="profile-picture-upload__filename">{selectedFile.name}</p>
-              <p className="profile-picture-upload__filesize">
+          <div>
+            <img src={preview} alt="Preview" />
+            <div>
+              <p>{selectedFile.name}</p>
+              <p>
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
@@ -191,18 +151,16 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
         )}
       </div>
 
-      <div className="profile-picture-upload__actions">
+      <div>
         {selectedFile ? (
           <>
             <button
-              className="profile-picture-upload__btn profile-picture-upload__btn--primary"
               onClick={handleUpload}
               disabled={isUploading}
             >
-              {isUploading ? 'Uploading...' : 'Upload Picture'}
+              {isUploading ? <ButtonLoadingOverlay isLoading={isUploading} /> : 'Upload Picture'}
             </button>
             <button
-              className="profile-picture-upload__btn profile-picture-upload__btn--secondary"
               onClick={handleCancel}
               disabled={isUploading}
             >
@@ -211,7 +169,6 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
           </>
         ) : (
           <button
-            className="profile-picture-upload__btn profile-picture-upload__btn--secondary"
             onClick={handleCancel}
           >
             Cancel

@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from '../services/authService';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
 import logo from '../assets/images/logo.png';
-import '../styles/ResetPassword.css';
 import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 
 const ResetPassword = () => {
@@ -175,24 +174,24 @@ const ResetPassword = () => {
 
     if (tokenError) {
         return (
-            <div className="reset-password-container">
-                <div className="reset-password-card">
-                    <div className="reset-password-header">
-                        <div className="logo">
+            <div className="auth-container">
+                <div className="auth-card">
+                    <div className="auth-header">
+                        <div className="auth-logo">
                             <img src={logo} alt="SafawiNet Logo" className="logo-image" />
                         </div>
-                        <h2>Invalid Reset Link</h2>
+                        <h2 className="auth-title">Invalid Reset Link</h2>
                     </div>
 
-                    <div className="error-content">
+                    <div className="auth-error">
                         <div className="error-icon">
                             <FiAlertCircle />
                         </div>
-                        <p>{tokenError}</p>
+                        <p className="error-message">{tokenError}</p>
                         <button
                             type="button"
-                            className="btn-primary"
                             onClick={handleRedirectToLogin}
+                            className="btn btn-secondary"
                         >
                             Go to Login
                         </button>
@@ -204,25 +203,25 @@ const ResetPassword = () => {
 
     if (isSuccess) {
         return (
-            <div className="reset-password-container">
-                <div className="reset-password-card">
-                    <div className="reset-password-header">
-                        <div className="logo">
+            <div className="auth-container">
+                <div className="auth-card">
+                    <div className="auth-header">
+                        <div className="auth-logo">
                             <img src={logo} alt="SafawiNet Logo" className="logo-image" />
                         </div>
-                        <h2>Password Reset Successful</h2>
+                        <h2 className="auth-title">Password Reset Successful</h2>
                     </div>
 
-                    <div className="success-content">
+                    <div className="auth-success">
                         <div className="success-icon">
                             <FiCheckCircle />
                         </div>
-                        <p>Your password has been reset successfully!</p>
-                        <p>You can now log in with your new password.</p>
+                        <p className="success-message">Your password has been reset successfully!</p>
+                        <p className="success-subtitle">You can now log in with your new password.</p>
                         <button
                             type="button"
-                            className="btn-primary"
                             onClick={handleRedirectToLogin}
+                            className="btn btn-primary"
                         >
                             Go to Login
                         </button>
@@ -233,20 +232,20 @@ const ResetPassword = () => {
     }
 
     return (
-        <div className="reset-password-container">
-            <div className="reset-password-card">
-                <div className="reset-password-header">
-                    <div className="logo">
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-header">
+                    <div className="auth-logo">
                         <img src={logo} alt="SafawiNet Logo" className="logo-image" />
                     </div>
-                    <h2>Reset Your Password</h2>
-                    <p>Enter your new password below</p>
+                    <h2 className="auth-title">Reset Your Password</h2>
+                    <p className="auth-subtitle">Enter your new password below</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="reset-password-form">
+                <form onSubmit={handleSubmit} className="auth-form">
                     <div className="form-group">
-                        <label htmlFor="newPassword">New Password</label>
-                        <div className="password-input-container">
+                        <label htmlFor="newPassword" className="form-label">New Password</label>
+                        <div className="input-group">
                             <input
                                 ref={newPasswordRef}
                                 type={showPasswords.new ? 'text' : 'password'}
@@ -258,18 +257,19 @@ const ResetPassword = () => {
                                 placeholder="Enter your new password"
                                 disabled={isLoading}
                                 autoComplete="new-password"
+                                className="form-input"
                             />
                             <button
                                 type="button"
-                                className="password-toggle"
                                 onClick={() => togglePasswordVisibility('new')}
                                 disabled={isLoading}
+                                className="input-toggle-btn"
                             >
                                 {showPasswords.new ? <FiEyeOff /> : <FiEye />}
                             </button>
                         </div>
                         {errors.newPassword && (
-                            <span className="error-message">{errors.newPassword}</span>
+                            <span className="form-error">{errors.newPassword}</span>
                         )}
                     </div>
 
@@ -277,35 +277,32 @@ const ResetPassword = () => {
                     {passwordStrength && (
                         <div className="password-strength">
                             <div className="strength-bar">
-                                <div
-                                    className={`strength-fill ${passwordStrength.strength}`}
-                                    style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
-                                ></div>
+                                <div className={`strength-fill strength-${passwordStrength.strength}`}></div>
                             </div>
                             <div className="strength-text">
-                                Password Strength: <span className={passwordStrength.strength}>
+                                Password Strength: <span className={`strength-label strength-${passwordStrength.strength}`}>
                                     {passwordStrength.strength.charAt(0).toUpperCase() + passwordStrength.strength.slice(1)}
                                 </span>
                             </div>
-                            <div className="requirements-list">
+                            <div className="strength-requirements">
                                 <div className={`requirement ${passwordStrength.checks.length ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     At least {requirements.minLength} characters
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.uppercase ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One uppercase letter
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.lowercase ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One lowercase letter
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.numbers ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One number
                                 </div>
                                 <div className={`requirement ${passwordStrength.checks.specialChars ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle className="requirement-icon" />
+                                    <FiCheckCircle />
                                     One special character
                                 </div>
                             </div>
@@ -313,8 +310,8 @@ const ResetPassword = () => {
                     )}
 
                     <div className="form-group">
-                        <label htmlFor="confirmPassword">Confirm New Password</label>
-                        <div className="password-input-container">
+                        <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
+                        <div className="input-group">
                             <input
                                 ref={confirmPasswordRef}
                                 type={showPasswords.confirm ? 'text' : 'password'}
@@ -326,33 +323,34 @@ const ResetPassword = () => {
                                 placeholder="Confirm your new password"
                                 disabled={isLoading}
                                 autoComplete="new-password"
+                                className="form-input"
                             />
                             <button
                                 type="button"
-                                className="password-toggle"
                                 onClick={() => togglePasswordVisibility('confirm')}
                                 disabled={isLoading}
+                                className="input-toggle-btn"
                             >
                                 {showPasswords.confirm ? <FiEyeOff /> : <FiEye />}
                             </button>
                         </div>
                         {errors.confirmPassword && (
-                            <span className="error-message">{errors.confirmPassword}</span>
+                            <span className="form-error">{errors.confirmPassword}</span>
                         )}
                     </div>
 
                     <div className="form-actions">
                         <button
                             type="button"
-                            className="btn-secondary"
                             onClick={handleRedirectToLogin}
                             disabled={isLoading}
+                            className="btn btn-secondary"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className="btn-primary"
+                            className="btn btn-primary"
                         >
                             {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Reset Password'}
                         </button>

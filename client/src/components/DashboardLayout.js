@@ -4,11 +4,14 @@ import LoadingOverlay from './LoadingOverlay';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { initializeTheme } from '../utils/themeUtils';
-import '../styles/DashboardLayout.css';
 
 const DashboardLayout = ({ onLogout, children }) => {
     const user = authService.getCurrentUser();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        const saved = localStorage.getItem('sidebarCollapsed');
+        return saved ? JSON.parse(saved) : false;
+    });
     console.log(user);
 
     // Apply theme based on user preferences
@@ -26,6 +29,10 @@ const DashboardLayout = ({ onLogout, children }) => {
         setIsMobileMenuOpen(false);
     };
 
+    const handleSidebarToggle = (collapsed) => {
+        setIsSidebarCollapsed(collapsed);
+    };
+
     // Ensure we have a valid user before rendering
     if (!user) {
         return (
@@ -36,13 +43,17 @@ const DashboardLayout = ({ onLogout, children }) => {
     }
 
     return (
-        <div className="App">
-            <div className="dashboard-layout">
+        <div className="dashboard-layout">
+            <div className={`layout-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 <Header onLogout={onLogout} onMobileMenuToggle={toggleMobileMenu} />
                 
-                <div className="dashboard-body">
-                    <Sidebar isMobileMenuOpen={isMobileMenuOpen} onCloseMobileMenu={closeMobileMenu} />
-                    <main className="dashboard-content">
+                <div className={`layout-content ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+                    <Sidebar 
+                        isMobileMenuOpen={isMobileMenuOpen} 
+                        onCloseMobileMenu={closeMobileMenu}
+                        onSidebarToggle={handleSidebarToggle}
+                    />
+                    <main className="main-content">
                         {children}
                     </main>
                 </div>
