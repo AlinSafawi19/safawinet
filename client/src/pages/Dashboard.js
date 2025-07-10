@@ -1156,15 +1156,6 @@ const Dashboard = () => {
                                             'System Issues Detected'}
                                 </span>
                             </div>
-                            <div className="summary-item">
-                                <span className="summary-label">Last Updated:</span>
-                                <span className="summary-value">
-                                    {systemHealth.uptime.lastCheck ?
-                                        formatDate(systemHealth.uptime.lastCheck) :
-                                        'Never'
-                                    }
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </article>
