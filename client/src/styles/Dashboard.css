@@ -577,7 +577,12 @@ html {
 
 .error-icon {
   font-size: 2rem;
-  color: #B22222;
+  color: #F59E0B;
+}
+
+/* Style FiAlertTriangle icons specifically */
+.error-icon svg {
+  color: #f59e0b !important;
 }
 
 .error-text h4 {
@@ -692,13 +697,11 @@ html {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 300px;
-  text-align: center;
+  height: 100%;
   color: var(--text-muted);
-  background: var(--bg-main);
-  border-radius: 8px;
-  border: 2px dashed var(--border-color);
-  position: relative;
+  background: none;
+  border: none;
+  border-radius: 0;
 }
 
 .chart-loading-placeholder .loading-spinner,
@@ -716,9 +719,9 @@ html {
 
 .chart-loading-placeholder h4,
 .map-loading-placeholder h4 {
-  margin: 0;
+  margin: 0 0 4px 0;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-main);
   display: flex;
   align-items: center;
@@ -728,7 +731,7 @@ html {
 .chart-loading-placeholder p,
 .map-loading-placeholder p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   color: var(--text-muted);
 }
 
