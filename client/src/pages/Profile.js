@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import axios from 'axios';
 import moment from 'moment';
@@ -32,6 +33,7 @@ import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 
 const Profile = () => {
     const user = authService.getCurrentUser();
+    const location = useLocation();
 
     // Apply user theme preference
     useEffect(() => {
@@ -48,6 +50,7 @@ const Profile = () => {
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showProfilePictureUpload, setShowProfilePictureUpload] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [emailChanged, setEmailChanged] = useState(false);
 
     const [profileData, setProfileData] = useState({
         firstName: user?.firstName || '',
@@ -139,6 +142,21 @@ const Profile = () => {
         refreshProfileData();
     }, []);
 
+    // Check if we should automatically open edit mode (coming from dashboard)
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const shouldEdit = urlParams.get('edit');
+        
+        if (shouldEdit === 'true') {
+            // Automatically open edit mode
+            setIsEditing(true);
+            
+            // Clean up the URL parameter to prevent it from persisting
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    }, [location.search]);
+
     // Format date for display with user's timezone and date format
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -185,6 +203,13 @@ const Profile = () => {
             ...prev,
             [field]: value
         }));
+
+        // Track if email has changed
+        if (field === 'email' && value !== profileData.email) {
+            setEmailChanged(true);
+        } else if (field === 'email' && value === profileData.email) {
+            setEmailChanged(false);
+        }
     };
 
     // Handle edit mode toggle
@@ -198,6 +223,7 @@ const Profile = () => {
                 phone: profileData.phone,
                 username: profileData.username
             });
+            setEmailChanged(false); // Reset email changed status
         }
         setIsEditing(!isEditing);
     };
@@ -210,9 +236,16 @@ const Profile = () => {
             const response = await api.put('/auth/profile', editForm);
 
             if (response.data.success) {
+                const emailWasChanged = emailChanged;
                 showSuccessToast('Profile Updated!', 'Your profile has been updated successfully.');
                 await refreshProfileData();
                 setIsEditing(false);
+                setEmailChanged(false); // Reset email changed status
+
+                // Show additional message if email was changed
+                if (emailWasChanged) {
+                    showSuccessToast('Email Changed!', 'Your email has been updated. Please verify your new email address.');
+                }
             } else {
                 showErrorToast('Update Failed', response.data.message || 'Failed to update profile.');
             }
@@ -472,7 +505,7 @@ const Profile = () => {
                                 ) : (
                                     <div className="form-value">
                                         <span className="email-value">{profileData.email}</span>
-                                        {profileData.emailVerified ? (
+                                        {profileData.emailVerified && !emailChanged ? (
                                             <span className="verified-badge">
                                                 <FiCheckCircle /> Verified
                                             </span>
@@ -482,7 +515,7 @@ const Profile = () => {
                                                 onClick={handleEmailVerification}
                                                 style={{ marginLeft: '0.5rem', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
                                             >
-                                                Verify Email
+                                                {emailChanged ? 'Verify New Email' : 'Verify Email'}
                                             </button>
                                         )}
                                     </div>
@@ -588,19 +621,19 @@ const Profile = () => {
                         <div className="security-item">
                             <div className="security-info">
                                 <div className="security-icon">
-                                    {profileData.emailVerified ? <FiCheckCircle /> : <FiAlertCircle />}
+                                    {profileData.emailVerified && !emailChanged ? <FiCheckCircle /> : <FiAlertCircle />}
                                 </div>
                                 <div className="security-details">
                                     <h3>Email Verification</h3>
-                                    <p>{profileData.emailVerified ? 'Verified' : 'Not verified'}</p>
+                                    <p>{profileData.emailVerified && !emailChanged ? 'Verified' : emailChanged ? 'New email requires verification' : 'Not verified'}</p>
                                 </div>
                             </div>
-                            {!profileData.emailVerified && (
+                            {(!profileData.emailVerified || emailChanged) && (
                                 <button
                                     className="action-btn primary"
                                     onClick={handleEmailVerification}
                                 >
-                                    Verify Email
+                                    {emailChanged ? 'Verify New Email' : 'Verify Email'}
                                 </button>
                             )}
                         </div>

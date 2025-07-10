@@ -978,7 +978,9 @@ router.put('/profile', authenticateToken, sanitizeInput, validateInput({
                 firstName: firstName || req.user.firstName,
                 lastName: lastName || req.user.lastName,
                 email: email ? email.toLowerCase() : req.user.email,
-                phone: phone || req.user.phone
+                phone: phone || req.user.phone,
+                // Reset email verification if email changed
+                emailVerified: email && email.toLowerCase() !== req.user.email ? false : req.user.emailVerified
             },
             { new: true, runValidators: true }
         ).select('-password');

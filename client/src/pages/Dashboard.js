@@ -802,8 +802,8 @@ const Dashboard = () => {
     const handleQuickAction = (action) => {
         switch (action) {
             case 'edit-profile':
-                // TODO: Implement profile edit modal/page
-                console.log('Edit profile clicked');
+                // Redirect to profile page with edit mode flag
+                window.location.href = '/profile?edit=true';
                 break;
             case 'change-password':
                 setShowChangePassword(true);
@@ -1036,7 +1036,7 @@ const Dashboard = () => {
                             <div className="action-buttons">
                                 <a
                                     href="#"
-                                    className="action-btn edit-profile"
+                                    className="action-btn primary"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         handleQuickAction('edit-profile');
@@ -1046,7 +1046,7 @@ const Dashboard = () => {
                                 </a>
                                 <a
                                     href="#"
-                                    className="action-btn change-password"
+                                    className="action-btn primary"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         handleQuickAction('change-password');

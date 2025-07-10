@@ -32,6 +32,9 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu }) => {
             setActiveSection('audit-logs');
         } else if (path === '/knowledge-guide') {
             setActiveSection('knowledge-guide');
+        } else if (path === '/profile') {
+            // Profile is accessed via header, so no sidebar item should be active
+            setActiveSection('');
         }
     }, [location.pathname]);
 
