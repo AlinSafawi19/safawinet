@@ -9,6 +9,7 @@ import { io } from 'socket.io-client';
 import config from '../config/config';
 import moment from 'moment';
 import 'moment-timezone';
+import { useToast } from '../components/DashboardLayout';
 import {
     FiAlertTriangle,
     FiCheckCircle,
@@ -52,6 +53,7 @@ const Dashboard = () => {
     const [lastFetchTime, setLastFetchTime] = useState(null);
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
     const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
+    const { setToast } = useToast();
     //console.log(user);
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
@@ -846,13 +848,19 @@ const Dashboard = () => {
             const response = await api.post('/auth/send-email-verification');
 
             if (response.data.success) {
-                alert('Email verification sent! Please check your inbox and click the verification link.');
+                setToast({ show: true, message: 'Verification email sent! Check your email inbox (and spam/junk folder if not found).', type: 'success' });
+                // Auto-hide toast after 6 seconds (longer for more detailed message)
+                setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 6000);
             } else {
-                alert('Failed to send email verification. Please try again.');
+                setToast({ show: true, message: 'Failed to send verification email. Please try again.', type: 'error' });
+                // Auto-hide toast after 4 seconds
+                setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 4000);
             }
         } catch (error) {
             console.error('Email verification error:', error);
-            alert('Failed to send email verification. Please try again.');
+            setToast({ show: true, message: 'Failed to send verification email. Please try again.', type: 'error' });
+            // Auto-hide toast after 4 seconds
+            setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 4000);
         }
     };
 

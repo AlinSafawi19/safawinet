@@ -831,6 +831,95 @@ html {
   text-align: center;
 }
 
+/* Toast Notification */
+.toast-notification {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+  background: var(--bg-sidebar);
+  color: var(--text-main);
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease-out;
+  border: 2px solid transparent;
+}
+
+.toast-notification.success {
+  border-color: #10B981;
+  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+}
+
+.toast-notification.error {
+  border-color: #EF4444;
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast-icon {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+.toast-icon.success {
+  color: #10B981;
+}
+
+.toast-icon.error {
+  color: #EF4444;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-main);
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-main);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 /* Remove borders and rounded corners for most dashboard elements, but preserve buttons */
 .dashboard *,
 .dashboard *:before,
