@@ -22,10 +22,12 @@ import authService from '../services/authService';
 import ProfilePicture from './ProfilePicture';
 import logo from '../assets/images/logo.png';
 import Swal from 'sweetalert2';
+import { useCalculator } from '../contexts/CalculatorContext';
 
 const Header = ({ onLogout, onMobileMenuToggle }) => {
     const user = authService.getCurrentUser();
     const navigate = useNavigate();
+    const { openCalculator } = useCalculator();
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showToolsDropdown, setShowToolsDropdown] = useState(false);
     const [notificationCount, setNotificationCount] = useState(3);
@@ -34,7 +36,7 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
     const toolsRef = useRef(null);
 
     const tools = [
-        { id: 'calculator', label: 'Calculator', icon: <FiPlus />, action: () => console.log('Calculator clicked') },
+        { id: 'calculator', label: 'Calculator', icon: <FiPlus />, action: () => openCalculator() },
         { id: 'kanban', label: 'Kanban Board', icon: <FiGrid />, action: () => console.log('Kanban clicked') },
         { id: 'calendar', label: 'Calendar', icon: <FiCalendar />, action: () => console.log('Calendar clicked') },
         { id: 'reminder', label: 'Reminder', icon: <FiClock />, action: () => console.log('Reminder clicked') },
