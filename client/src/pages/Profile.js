@@ -5,6 +5,7 @@ import axios from 'axios';
 import moment from 'moment';
 import 'moment-timezone';
 import ProfilePicture from '../components/ProfilePicture';
+import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
@@ -41,7 +42,8 @@ const Profile = () => {
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
     const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
 
-    const [isEditing, setIsEditing] = useState(false);
+    // Remove isEditing and related logic
+    // const [isEditing, setIsEditing] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showProfilePictureUpload, setShowProfilePictureUpload] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +74,15 @@ const Profile = () => {
         email: profileData.email,
         phone: profileData.phone,
         username: profileData.username
+    });
+
+    // Add focus state for each input
+    const [inputFocus, setInputFocus] = useState({
+        firstName: false,
+        lastName: false,
+        email: false,
+        phone: false,
+        username: false
     });
 
     // Create axios instance for API calls
@@ -144,7 +155,7 @@ const Profile = () => {
         
         if (shouldEdit === 'true') {
             // Automatically open edit mode
-            setIsEditing(true);
+            // setIsEditing(true); // Removed
             
             // Clean up the URL parameter to prevent it from persisting
             const newUrl = window.location.pathname;
@@ -156,22 +167,6 @@ const Profile = () => {
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         return moment(dateString).tz(userTimezone).format(userDateFormat);
-    };
-
-    // Get password strength color
-    const getPasswordStrengthColor = (level) => {
-        switch (level) {
-            case 'very_strong':
-            case 'strong':
-                return 'success';
-            case 'medium':
-                return 'warning';
-            case 'weak':
-            case 'very_weak':
-                return 'error';
-            default:
-                return 'unknown';
-        }
     };
 
     // Get password strength text
@@ -207,21 +202,8 @@ const Profile = () => {
         }
     };
 
-    // Handle edit mode toggle
-    const handleEditToggle = () => {
-        if (isEditing) {
-            // Cancel editing - reset form to original values
-            setEditForm({
-                firstName: profileData.firstName,
-                lastName: profileData.lastName,
-                email: profileData.email,
-                phone: profileData.phone,
-                username: profileData.username
-            });
-            setEmailChanged(false); // Reset email changed status
-        }
-        setIsEditing(!isEditing);
-    };
+    // Remove handleEditToggle
+    // Remove all references to setIsEditing
 
     // Handle profile update
     const handleProfileUpdate = async () => {
@@ -234,7 +216,7 @@ const Profile = () => {
                 const emailWasChanged = emailChanged;
                 showSuccessToast('Profile Updated!', 'Your profile has been updated successfully.');
                 await refreshProfileData();
-                setIsEditing(false);
+                // setIsEditing(false); // Removed
                 setEmailChanged(false); // Reset email changed status
 
                 // Show additional message if email was changed
@@ -317,6 +299,14 @@ const Profile = () => {
         }
     };
 
+    // Helper to get floating label class
+    const getFloatingLabelClass = (field) => {
+        let cls = 'form-group floating-label';
+        if (inputFocus[field]) cls += ' focused';
+        if (editForm[field]) cls += ' filled';
+        return cls;
+    };
+
     return (
         <div className="profile-container">
             <div className="profile-header">
@@ -330,35 +320,17 @@ const Profile = () => {
                     <div className="section-header">
                         <h2 className="section-title">Account Information</h2>
                         <div className="section-actions">
-                            {isEditing ? (
-                                <>
-                                    <button
-                                        onClick={handleEditToggle}
-                                        disabled={isLoading}
-                                        className="btn btn-secondary"
-                                    >
-                                        <FiX /> Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleProfileUpdate}
-                                        disabled={isLoading}
-                                        className="btn btn-primary"
-                                    >
-                                        {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : (
-                                            <>
-                                                <FiSave /> Save Changes
-                                            </>
-                                        )}
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={handleEditToggle}
-                                    className="btn btn-primary"
-                                >
-                                    <FiEdit3 /> Edit Account
-                                </button>
-                            )}
+                            <button
+                                onClick={handleProfileUpdate}
+                                disabled={isLoading}
+                                className="btn btn-primary"
+                            >
+                                {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : (
+                                    <>
+                                        <FiSave /> Save Changes
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
 
@@ -379,7 +351,7 @@ const Profile = () => {
                             )}
                             <button
                                 onClick={handleProfilePictureUpload}
-                                className="btn btn-secondary btn-sm"
+                                className="btn btn-secondary"
                             >
                                 Upload New Picture
                             </button>
@@ -437,106 +409,74 @@ const Profile = () => {
                     {/* Editable Form Fields */}
                     <div className="form-fields">
                         <div className="form-row">
-                            <div className="form-group">
+                            <div className={getFloatingLabelClass('firstName')}>
+                                <input
+                                    type="text"
+                                    id="firstName"
+                                    value={editForm.firstName}
+                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                                    onFocus={() => setInputFocus(f => ({ ...f, firstName: true }))}
+                                    onBlur={() => setInputFocus(f => ({ ...f, firstName: false }))}
+                                    placeholder={inputFocus.firstName || editForm.firstName ? '' : 'First Name'}
+                                    className="form-input"
+                                />
                                 <label htmlFor="firstName" className="form-label">First Name</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        id="firstName"
-                                        value={editForm.firstName}
-                                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                                        placeholder="Enter your first name"
-                                        className="form-input"
-                                    />
-                                ) : (
-                                    <div className="form-display">
-                                        {profileData.firstName || 'Not provided'}
-                                    </div>
-                                )}
                             </div>
-                            <div className="form-group">
+                            <div className={getFloatingLabelClass('lastName')}>
+                                <input
+                                    type="text"
+                                    id="lastName"
+                                    value={editForm.lastName}
+                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                                    onFocus={() => setInputFocus(f => ({ ...f, lastName: true }))}
+                                    onBlur={() => setInputFocus(f => ({ ...f, lastName: false }))}
+                                    placeholder={inputFocus.lastName || editForm.lastName ? '' : 'Last Name'}
+                                    className="form-input"
+                                />
                                 <label htmlFor="lastName" className="form-label">Last Name</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        id="lastName"
-                                        value={editForm.lastName}
-                                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                                        placeholder="Enter your last name"
-                                        className="form-input"
-                                    />
-                                ) : (
-                                    <div className="form-display">
-                                        {profileData.lastName || 'Not provided'}
-                                    </div>
-                                )}
                             </div>
                         </div>
                         <div className="form-row">
-                            <div className="form-group">
+                            <div className={getFloatingLabelClass('username')}>
+                                <input
+                                    type="text"
+                                    id="username"
+                                    value={editForm.username}
+                                    onChange={(e) => handleInputChange('username', e.target.value)}
+                                    onFocus={() => setInputFocus(f => ({ ...f, username: true }))}
+                                    onBlur={() => setInputFocus(f => ({ ...f, username: false }))}
+                                    placeholder={inputFocus.username || editForm.username ? '' : 'Username'}
+                                    className="form-input"
+                                />
                                 <label htmlFor="username" className="form-label">Username</label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        id="username"
-                                        value={editForm.username}
-                                        onChange={(e) => handleInputChange('username', e.target.value)}
-                                        placeholder="Enter your username"
-                                        className="form-input"
-                                    />
-                                ) : (
-                                    <div className="form-display">
-                                        {profileData.username}
-                                    </div>
-                                )}
                             </div>
-                            <div className="form-group">
+                            <div className={getFloatingLabelClass('email')}>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    value={editForm.email}
+                                    onChange={(e) => handleInputChange('email', e.target.value)}
+                                    onFocus={() => setInputFocus(f => ({ ...f, email: true }))}
+                                    onBlur={() => setInputFocus(f => ({ ...f, email: false }))}
+                                    placeholder={inputFocus.email || editForm.email ? '' : 'Email Address'}
+                                    className="form-input"
+                                />
                                 <label htmlFor="email" className="form-label">Email Address</label>
-                                {isEditing ? (
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        value={editForm.email}
-                                        onChange={(e) => handleInputChange('email', e.target.value)}
-                                        placeholder="Enter your email address"
-                                        className="form-input"
-                                    />
-                                ) : (
-                                    <div className="form-display">
-                                        <span className="email-value">{profileData.email}</span>
-                                        {profileData.emailVerified && !emailChanged ? (
-                                            <span className="verification-badge verified">
-                                                <FiCheckCircle /> Verified
-                                            </span>
-                                        ) : (
-                                            <button
-                                                onClick={handleEmailVerification}
-                                                className="btn btn-sm btn-secondary"
-                                            >
-                                                {emailChanged ? 'Verify New Email' : 'Verify Email'}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </div>
                         <div className="form-row">
-                            <div className="form-group">
+                            <div className={getFloatingLabelClass('phone')}>
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    value={editForm.phone}
+                                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                                    onFocus={() => setInputFocus(f => ({ ...f, phone: true }))}
+                                    onBlur={() => setInputFocus(f => ({ ...f, phone: false }))}
+                                    placeholder={inputFocus.phone || editForm.phone ? '' : 'Phone Number'}
+                                    className="form-input"
+                                />
                                 <label htmlFor="phone" className="form-label">Phone Number</label>
-                                {isEditing ? (
-                                    <input
-                                        type="tel"
-                                        id="phone"
-                                        value={editForm.phone}
-                                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                                        placeholder="Enter your phone number"
-                                        className="form-input"
-                                    />
-                                ) : (
-                                    <div className="form-display">
-                                        {profileData.phone || 'Not provided'}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -564,31 +504,6 @@ const Profile = () => {
                             >
                                 Change Password
                             </button>
-                        </div>
-
-                        <div className="security-card">
-                            <div className="card-header">
-                                <div className="card-icon">
-                                    <FiShield />
-                                </div>
-                                <div className="card-content">
-                                    <h3 className="card-title">Password Strength</h3>
-                                    <p className="card-description">Current password security level</p>
-                                </div>
-                            </div>
-                            <div className="strength-indicator">
-                                <span className={`strength-label strength-${securityStatus.passwordStrength?.level}`}>
-                                    {getPasswordStrengthText(securityStatus.passwordStrength?.level)}
-                                </span>
-                                <div className="strength-bar">
-                                    <div 
-                                        className={`strength-fill strength-${securityStatus.passwordStrength?.level}`}
-                                        style={{
-                                            width: `${(securityStatus.passwordStrength?.score / 5) * 100}%`
-                                        }}
-                                    ></div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </section>
@@ -652,17 +567,11 @@ const Profile = () => {
 
             {/* Profile Picture Upload Modal */}
             {showProfilePictureUpload && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <ProfilePicture
-                            user={profileData}
-                            isUploadModal={true}
-                            onUploadSuccess={handleProfilePictureSuccess}
-                            onUploadError={handleProfilePictureError}
-                            onCancel={() => setShowProfilePictureUpload(false)}
-                        />
-                    </div>
-                </div>
+                <ProfilePictureUpload
+                    onUploadSuccess={handleProfilePictureSuccess}
+                    onUploadError={handleProfilePictureError}
+                    onCancel={() => setShowProfilePictureUpload(false)}
+                />
             )}
         </div>
     );

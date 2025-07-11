@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import authService from '../services/authService';
+import ButtonLoadingOverlay from './ButtonLoadingOverlay';
+import { FiX, FiUpload } from 'react-icons/fi';
 
 const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -100,80 +102,93 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   };
 
   return (
-    <div>
-      <div>
-        <h3>Profile Picture</h3>
-        <button
-          onClick={handleCancel}
-          disabled={isUploading}
-        >
-          <FiTimes />
-        </button>
-      </div>
-
-      <div>
-        {!selectedFile ? (
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+    <div className="profile-upload-modal">
+      <div className="profile-upload-container">
+        <div className="profile-upload-header">
+          <h3 className="profile-upload-title">Upload Profile Picture</h3>
+          <button
+            onClick={handleCancel}
+            disabled={isUploading}
+            className="profile-upload-close"
+            type="button"
           >
-            <div>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7,10 12,15 17,10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <p>Click to select or drag and drop an image</p>
-              <p >
+            <FiX />
+          </button>
+        </div>
+
+        <div className="profile-upload-content">
+          {!selectedFile ? (
+            <div
+              className="profile-upload-dropzone"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="profile-upload-icon">
+                <FiUpload />
+              </div>
+              <p className="profile-upload-text">Click to select or drag and drop an image</p>
+              <p className="profile-upload-hint">
                 JPG, PNG, GIF, or WebP (max 5MB)
               </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileInputChange}
+                className="profile-upload-input"
+              />
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileInputChange}
-              style={{ display: 'none' }}
-            />
-          </div>
-        ) : (
-          <div>
-            <img src={preview} alt="Preview" />
-            <div>
-              <p>{selectedFile.name}</p>
-              <p>
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
+          ) : (
+            <div className="profile-upload-preview">
+              <img src={preview} alt="Preview" />
+              <div className="profile-upload-info">
+                <p className="profile-upload-file-name">{selectedFile.name}</p>
+                <p className="profile-upload-file-size">
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <div>
-        {selectedFile ? (
-          <>
-            <button
-              onClick={handleUpload}
-              disabled={isUploading}
-            >
-              {isUploading ? <ButtonLoadingOverlay isLoading={isUploading} /> : 'Upload Picture'}
-            </button>
+        <div className="profile-upload-actions">
+          {selectedFile ? (
+            <>
+              <button
+                onClick={handleUpload}
+                disabled={isUploading}
+                className="btn btn-primary"
+                type="button"
+              >
+                {isUploading ? (
+                  <ButtonLoadingOverlay isLoading={isUploading} />
+                ) : (
+                  <>
+                    <FiUpload /> Upload Picture
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isUploading}
+                className="btn btn-secondary"
+                type="button"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
             <button
               onClick={handleCancel}
-              disabled={isUploading}
+              className="btn btn-secondary"
+              type="button"
             >
               Cancel
             </button>
-          </>
-        ) : (
-          <button
-            onClick={handleCancel}
-          >
-            Cancel
-          </button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
