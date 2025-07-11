@@ -21,6 +21,7 @@ import {
 import authService from '../services/authService';
 import ProfilePicture from './ProfilePicture';
 import logo from '../assets/images/logo.png';
+import Swal from 'sweetalert2';
 
 const Header = ({ onLogout, onMobileMenuToggle }) => {
     const user = authService.getCurrentUser();
@@ -43,13 +44,27 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
     ];
 
     const handleLogout = async () => {
-        try {
-            await authService.logout();
-            if (onLogout) {
-                onLogout();
+        const result = await Swal.fire({
+            title: 'Logout Confirmation',
+            text: 'Are you sure you want to logout?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, logout',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await authService.logout();
+                if (onLogout) {
+                    onLogout();
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
             }
-        } catch (error) {
-            console.error('Logout error:', error);
         }
     };
 

@@ -27,7 +27,8 @@ const adminUser = {
         timezone: 'Asia/Beirut',
         language: 'english',
         theme: 'light',
-        dateFormat: 'MMM dd, yyyy h:mm a'
+        dateFormat: 'MMM dd, yyyy h:mm a',
+        autoLogoutTime: 30
     }
 };
 
@@ -90,7 +91,8 @@ const createSampleUsers = async (adminId) => {
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a'
+                dateFormat: 'MMM dd, yyyy h:mm a',
+                autoLogoutTime: 30
             }
         },
         {
@@ -112,7 +114,8 @@ const createSampleUsers = async (adminId) => {
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a'
+                dateFormat: 'MMM dd, yyyy h:mm a',
+                autoLogoutTime: 30
             }
         }
     ];

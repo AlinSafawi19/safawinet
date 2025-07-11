@@ -114,7 +114,8 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a'
+                dateFormat: 'MMM dd, yyyy h:mm a',
+                autoLogoutTime: 30
             }
         });
 
@@ -242,6 +243,15 @@ router.put('/:id', authenticateToken, requirePermission('users', 'edit'), async 
             }
             if (userPreferences.dateFormat !== undefined) {
                 updateData['userPreferences.dateFormat'] = userPreferences.dateFormat;
+            }
+            if (userPreferences.autoLogoutTime !== undefined) {
+                if (userPreferences.autoLogoutTime < 5 || userPreferences.autoLogoutTime > 480) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Auto logout time must be between 5 and 480 minutes'
+                    });
+                }
+                updateData['userPreferences.autoLogoutTime'] = userPreferences.autoLogoutTime;
             }
         }
 
@@ -372,7 +382,7 @@ router.get('/permissions/available', authenticateToken, requirePermission('users
 // Update user preferences
 router.put('/:id/preferences', authenticateToken, async (req, res) => {
     try {
-        const { timezone, language, theme, dateFormat } = req.body;
+        const { timezone, language, theme, dateFormat, autoLogoutTime } = req.body;
 
         // Validate theme if provided
         if (theme && !['light', 'dark'].includes(theme)) {
@@ -380,6 +390,16 @@ router.put('/:id/preferences', authenticateToken, async (req, res) => {
                 success: false,
                 message: 'Theme must be either "light" or "dark"'
             });
+        }
+
+        // Validate autoLogoutTime if provided
+        if (autoLogoutTime !== undefined) {
+            if (autoLogoutTime < 5 || autoLogoutTime > 480) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Auto logout time must be between 5 and 480 minutes'
+                });
+            }
         }
 
         const user = await User.findById(req.params.id);
@@ -403,6 +423,7 @@ router.put('/:id/preferences', authenticateToken, async (req, res) => {
         if (language !== undefined) user.userPreferences.language = language;
         if (theme !== undefined) user.userPreferences.theme = theme;
         if (dateFormat !== undefined) user.userPreferences.dateFormat = dateFormat;
+        if (autoLogoutTime !== undefined) user.userPreferences.autoLogoutTime = autoLogoutTime;
 
         await user.save();
 

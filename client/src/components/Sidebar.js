@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HiMenu, HiX, HiViewBoards, HiLogout, HiClipboardList, HiBookOpen, HiShieldCheck } from 'react-icons/hi';
 import authService from '../services/authService';
+import Swal from 'sweetalert2';
 
-const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle }) => {
+const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogout }) => {
     const [isCollapsed, setIsCollapsed] = useState(() => {
         // Get the collapsed state from localStorage, default to false
         const saved = localStorage.getItem('sidebarCollapsed');
@@ -61,9 +62,29 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle }) => {
             id: 'logout',
             label: 'Logout',
             icon: <HiLogout />,
-            action: () => {
-                authService.logout();
-                window.location.href = '/login';
+            action: async () => {
+                const result = await Swal.fire({
+                    title: 'Logout Confirmation',
+                    text: 'Are you sure you want to logout?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, logout',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        await authService.logout();
+                        if (onLogout) {
+                            onLogout();
+                        }
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                    }
+                }
             }
         }
     ];

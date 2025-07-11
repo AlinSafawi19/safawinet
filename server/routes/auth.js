@@ -943,12 +943,24 @@ router.put('/profile', authenticateToken, sanitizeInput, validateInput({
     body: {
         firstName: { required: true, type: 'string', minLength: 2, maxLength: 50 },
         lastName: { required: true, type: 'string', minLength: 2, maxLength: 50 },
+        username: { required: true, type: 'string', minLength: 3, maxLength: 30 },
         email: { required: true, type: 'email', maxLength: 100 },
         phone: { type: 'string', maxLength: 20 }
     }
 }), async (req, res) => {
     try {
-        const { firstName, lastName, email, phone } = req.body;
+        const { firstName, lastName, username, email, phone } = req.body;
+
+        // Check if username is already taken by another user
+        if (username && username !== req.user.username) {
+            const existingUser = await User.findOne({ username });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Username is already taken'
+                });
+            }
+        }
 
         // Check if email is already taken by another user
         if (email && email !== req.user.email) {
@@ -977,6 +989,7 @@ router.put('/profile', authenticateToken, sanitizeInput, validateInput({
             {
                 firstName: firstName || req.user.firstName,
                 lastName: lastName || req.user.lastName,
+                username: username || req.user.username,
                 email: email ? email.toLowerCase() : req.user.email,
                 phone: phone || req.user.phone,
                 // Reset email verification if email changed

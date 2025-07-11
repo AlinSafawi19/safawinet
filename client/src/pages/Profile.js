@@ -202,6 +202,34 @@ const Profile = () => {
         }
     };
 
+    // Handle key press events for form navigation
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            // Navigate from firstName to lastName
+            if (e.target.id === 'firstName') {
+                document.getElementById('lastName').focus();
+            }
+            // Navigate from lastName to username
+            else if (e.target.id === 'lastName') {
+                document.getElementById('username').focus();
+            }
+            // Navigate from username to email
+            else if (e.target.id === 'username') {
+                document.getElementById('email').focus();
+            }
+            // Navigate from email to phone
+            else if (e.target.id === 'email') {
+                document.getElementById('phone').focus();
+            }
+            // Navigate from phone to save button
+            else if (e.target.id === 'phone') {
+                document.getElementById('saveButton').click();
+            }
+        }
+    };
+
     // Remove handleEditToggle
     // Remove all references to setIsEditing
 
@@ -321,6 +349,7 @@ const Profile = () => {
                         <h2 className="section-title">Account Information</h2>
                         <div className="section-actions">
                             <button
+                                id="saveButton"
                                 onClick={handleProfileUpdate}
                                 disabled={isLoading}
                                 className="btn btn-primary"
@@ -415,6 +444,7 @@ const Profile = () => {
                                     id="firstName"
                                     value={editForm.firstName}
                                     onChange={(e) => handleInputChange('firstName', e.target.value)}
+                                    onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, firstName: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, firstName: false }))}
                                     placeholder={inputFocus.firstName || editForm.firstName ? '' : 'First Name'}
@@ -428,6 +458,7 @@ const Profile = () => {
                                     id="lastName"
                                     value={editForm.lastName}
                                     onChange={(e) => handleInputChange('lastName', e.target.value)}
+                                    onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, lastName: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, lastName: false }))}
                                     placeholder={inputFocus.lastName || editForm.lastName ? '' : 'Last Name'}
@@ -443,6 +474,7 @@ const Profile = () => {
                                     id="username"
                                     value={editForm.username}
                                     onChange={(e) => handleInputChange('username', e.target.value)}
+                                    onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, username: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, username: false }))}
                                     placeholder={inputFocus.username || editForm.username ? '' : 'Username'}
@@ -456,6 +488,7 @@ const Profile = () => {
                                     id="email"
                                     value={editForm.email}
                                     onChange={(e) => handleInputChange('email', e.target.value)}
+                                    onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, email: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, email: false }))}
                                     placeholder={inputFocus.email || editForm.email ? '' : 'Email Address'}
@@ -471,6 +504,7 @@ const Profile = () => {
                                     id="phone"
                                     value={editForm.phone}
                                     onChange={(e) => handleInputChange('phone', e.target.value)}
+                                    onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, phone: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, phone: false }))}
                                     placeholder={inputFocus.phone || editForm.phone ? '' : 'Phone Number'}

@@ -226,6 +226,12 @@ const userSchema = new mongoose.Schema({
     dateFormat: {
       type: String,
       default: 'MMM dd, yyyy h:mm a' // Format: Jul 10, 2025 1:21 AM
+    },
+    autoLogoutTime: {
+      type: Number,
+      default: 30, // 30 minutes in minutes
+      min: 5, // Minimum 5 minutes
+      max: 480 // Maximum 8 hours
     }
   }
 }, {

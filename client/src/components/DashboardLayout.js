@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import authService from '../services/authService';
 import LoadingOverlay from './LoadingOverlay';
 import Header from './Header';
@@ -12,6 +12,7 @@ const DashboardLayout = ({ onLogout, children }) => {
         const saved = localStorage.getItem('sidebarCollapsed');
         return saved ? JSON.parse(saved) : false;
     });
+    const logoutTimerRef = useRef(null);
     console.log(user);
 
     // Apply theme based on user preferences
@@ -20,6 +21,42 @@ const DashboardLayout = ({ onLogout, children }) => {
             initializeTheme(user);
         }
     }, [user]);
+
+    // Auto logout logic
+    useEffect(() => {
+        if (!user) return;
+        // Get autoLogoutTime in minutes, default to 30
+        const autoLogoutTime = (user.userPreferences && user.userPreferences.autoLogoutTime) || 30;
+        const timeoutMs = autoLogoutTime * 60 * 1000;
+
+        const resetTimer = () => {
+            if (logoutTimerRef.current) {
+                clearTimeout(logoutTimerRef.current);
+            }
+            logoutTimerRef.current = setTimeout(() => {
+                if (onLogout) onLogout();
+            }, timeoutMs);
+        };
+
+        // List of events that indicate user activity
+        const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => {
+            window.addEventListener(event, resetTimer);
+        });
+
+        // Start the timer initially
+        resetTimer();
+
+        // Cleanup on unmount or user change
+        return () => {
+            if (logoutTimerRef.current) {
+                clearTimeout(logoutTimerRef.current);
+            }
+            activityEvents.forEach(event => {
+                window.removeEventListener(event, resetTimer);
+            });
+        };
+    }, [user, onLogout]);
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -52,6 +89,7 @@ const DashboardLayout = ({ onLogout, children }) => {
                         isMobileMenuOpen={isMobileMenuOpen} 
                         onCloseMobileMenu={closeMobileMenu}
                         onSidebarToggle={handleSidebarToggle}
+                        onLogout={onLogout}
                     />
                     <main className="main-content">
                         {children}
