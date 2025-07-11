@@ -23,11 +23,13 @@ import ProfilePicture from './ProfilePicture';
 import logo from '../assets/images/logo.png';
 import Swal from 'sweetalert2';
 import { useCalculator } from '../contexts/CalculatorContext';
+import { useLiraRateConverter } from '../contexts/LiraRateConverterContext';
 
 const Header = ({ onLogout, onMobileMenuToggle }) => {
     const user = authService.getCurrentUser();
     const navigate = useNavigate();
     const { openCalculator } = useCalculator();
+    const { openLiraRateConverter } = useLiraRateConverter();
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showToolsDropdown, setShowToolsDropdown] = useState(false);
     const [notificationCount, setNotificationCount] = useState(3);
@@ -41,7 +43,7 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
         { id: 'calendar', label: 'Calendar', icon: <FiCalendar />, action: () => console.log('Calendar clicked') },
         { id: 'reminder', label: 'Reminder', icon: <FiClock />, action: () => console.log('Reminder clicked') },
         { id: 'files', label: 'Files', icon: <FiFileText />, action: () => console.log('Files clicked') },
-        { id: 'lira-converter', label: 'Lira Rate Converter', icon: <FiDollarSign />, action: () => console.log('Lira Converter clicked') },
+        { id: 'lira-converter', label: 'Lira Rate Converter', icon: <FiDollarSign />, action: () => openLiraRateConverter() },
         { id: 'lira-saver', label: 'Lira Rate Saver', icon: <FiTrendingUp />, action: () => console.log('Lira Saver clicked') }
     ];
 

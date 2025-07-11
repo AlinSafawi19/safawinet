@@ -14,6 +14,8 @@ import Profile from './pages/Profile';
 import { applyUserTheme } from './utils/themeUtils';
 import { CalculatorProvider } from './contexts/CalculatorContext';
 import Calculator from './components/Calculator';
+import { LiraRateConverterProvider } from './contexts/LiraRateConverterContext';
+import LiraRateConverter from './components/LiraRateConverter';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -164,48 +166,51 @@ function App() {
 
   return (
     <CalculatorProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/verify-email" element={<EmailVerification />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/audit-logs"
-            element={
-              <ProtectedRoute>
-                <AuditLogsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/knowledge-guide"
-            element={
-              <ProtectedRoute>
-                <KnowledgeGuidePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-        <Calculator />
-      </Router>
+      <LiraRateConverterProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify-email" element={<EmailVerification />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit-logs"
+              element={
+                <ProtectedRoute>
+                  <AuditLogsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/knowledge-guide"
+              element={
+                <ProtectedRoute>
+                  <KnowledgeGuidePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+          <Calculator />
+          <LiraRateConverter />
+        </Router>
+      </LiraRateConverterProvider>
     </CalculatorProvider>
   );
 }
