@@ -7,6 +7,7 @@ import 'moment-timezone';
 import ProfilePicture from '../components/ProfilePicture';
 import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import TwoFactorModal from '../components/TwoFactorModal';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import Swal from 'sweetalert2';
@@ -46,6 +47,8 @@ const Profile = () => {
     // const [isEditing, setIsEditing] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showProfilePictureUpload, setShowProfilePictureUpload] = useState(false);
+    const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+    const [twoFactorMode, setTwoFactorMode] = useState('enable');
     const [isLoading, setIsLoading] = useState(false);
     const [emailChanged, setEmailChanged] = useState(false);
 
@@ -295,6 +298,17 @@ const Profile = () => {
     const handleProfilePictureError = (error) => {
         setShowProfilePictureUpload(false);
         showErrorToast('Upload Failed', error || 'Failed to upload profile picture.');
+    };
+
+    // Handle 2FA toggle
+    const handleTwoFactorToggle = () => {
+        setTwoFactorMode(profileData.twoFactorEnabled ? 'disable' : 'enable');
+        setShowTwoFactorModal(true);
+    };
+
+    // Handle 2FA success
+    const handleTwoFactorSuccess = async () => {
+        await refreshProfileData();
     };
 
     const handleRemoveProfilePicture = async () => {
@@ -559,7 +573,7 @@ const Profile = () => {
                                 </div>
                             </div>
                             <button
-                                onClick={() => console.log('Toggle 2FA')}
+                                onClick={handleTwoFactorToggle}
                                 className={`btn ${profileData.twoFactorEnabled ? 'btn-danger' : 'btn-primary'}`}
                             >
                                 {profileData.twoFactorEnabled ? 'Disable' : 'Enable'}
@@ -607,6 +621,14 @@ const Profile = () => {
                     onCancel={() => setShowProfilePictureUpload(false)}
                 />
             )}
+
+            {/* Two-Factor Authentication Modal */}
+            <TwoFactorModal
+                isOpen={showTwoFactorModal}
+                onClose={() => setShowTwoFactorModal(false)}
+                onSuccess={handleTwoFactorSuccess}
+                mode={twoFactorMode}
+            />
         </div>
     );
 };

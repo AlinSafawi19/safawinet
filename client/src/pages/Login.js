@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
+import BackupCodeModal from '../components/BackupCodeModal';
 import logo from '../assets/images/logo.png';
 import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 import { showErrorToast } from '../utils/sweetAlertConfig';
-import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiShield, FiKey } from 'react-icons/fi';
 import { FaLock } from 'react-icons/fa';
 
 const Login = ({ onLoginSuccess }) => {
@@ -20,6 +21,10 @@ const Login = ({ onLoginSuccess }) => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockTime, setBlockTime] = useState(0);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [showBackupCodeModal, setShowBackupCodeModal] = useState(false);
+  const [backupCode, setBackupCode] = useState('');
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -106,8 +111,8 @@ const Login = ({ onLoginSuccess }) => {
     return true;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, overrideBackupCode) => {
+    if (e) e.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -115,18 +120,58 @@ const Login = ({ onLoginSuccess }) => {
 
     setIsLoading(true);
 
+    // Use overrideBackupCode if provided, otherwise use backupCode from state
+    const codeToUse = overrideBackupCode !== undefined ? overrideBackupCode : backupCode;
+
     try {
+      const loginData = {
+        identifier: formData.identifier.trim(),
+        password: formData.password,
+        rememberMe
+      };
+
+      if (twoFactorCode) {
+        loginData.twoFactorCode = twoFactorCode;
+      }
+
+      if (codeToUse) {
+        loginData.backupCode = codeToUse;
+      }
+
+      console.log('Login attempt with data:', {
+        identifier: loginData.identifier,
+        hasPassword: !!loginData.password,
+        rememberMe: loginData.rememberMe,
+        hasTwoFactorCode: !!loginData.twoFactorCode,
+        hasBackupCode: !!loginData.backupCode,
+        backupCode: loginData.backupCode,
+        twoFactorCode: loginData.twoFactorCode
+      });
+
+      console.log('Current backupCode state:', backupCode, 'Override backupCode:', overrideBackupCode);
+
       const result = await authService.login(
         formData.identifier.trim(),
         formData.password,
-        rememberMe
+        rememberMe,
+        twoFactorCode,
+        codeToUse
       );
 
+      console.log('Login result:', result);
+
       if (result.success) {
+        console.log('Login successful, calling onLoginSuccess');
         setAttempts(0);
+        setRequiresTwoFactor(false);
+        setTwoFactorCode('');
+        setBackupCode('');
         if (onLoginSuccess) {
           onLoginSuccess();
         }
+      } else if (result.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setAttempts(0);
       } else {
         showErrorToast('Login Failed', result.message);
 
@@ -216,68 +261,117 @@ const Login = ({ onLoginSuccess }) => {
         )}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <input
-              type={getInputType()}
-              id="identifier"
-              name="identifier"
-              value={formData.identifier}
-              onChange={handleIdentifierChange}
-              onKeyPress={handleKeyPress}
-              placeholder=" "
-              disabled={isLoading || isBlocked}
-              autoComplete="username"
-              className="form-input"
-            />
-            <label htmlFor="identifier" className="form-label">{getLabel()}</label>
-          </div>
+          {!requiresTwoFactor && (
+            <>
+              <div className="form-group">
+                <input
+                  type={getInputType()}
+                  id="identifier"
+                  name="identifier"
+                  value={formData.identifier}
+                  onChange={handleIdentifierChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder=" "
+                  disabled={isLoading || isBlocked}
+                  autoComplete="username"
+                  className="form-input"
+                />
+                <label htmlFor="identifier" className="form-label">{getLabel()}</label>
+              </div>
+            </>
+          )}
 
-          <div className="form-group">
-            <div className="input-group">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                onKeyPress={handleKeyPress}
-                placeholder=" "
-                disabled={isLoading || isBlocked}
-                autoComplete="current-password"
-                className="form-input"
-              />
+          {!requiresTwoFactor && (
+            <div className="form-group">
+              <div className="input-group">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder=" "
+                  disabled={isLoading || isBlocked}
+                  autoComplete="current-password"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading || isBlocked}
+                  className="input-toggle-btn"
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+              <label htmlFor="password" className="form-label">Password</label>
+            </div>
+          )}
+
+          {requiresTwoFactor && (
+            <div className="form-group">
+              <div className="auth-2fa-notice">
+                <FiShield />
+                <span>Two-factor authentication required</span>
+              </div>
+              <div className="input-group">
+                <input
+                  type="text"
+                  id="twoFactorCode"
+                  name="twoFactorCode"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder=" "
+                  disabled={isLoading || isBlocked}
+                  autoComplete="one-time-code"
+                  className="form-input verification-input"
+                  maxLength="6"
+                  pattern="[0-9]{6}"
+                />
+                <label htmlFor="twoFactorCode" className="form-label">6-digit code</label>
+              </div>
+              
+              <div className="backup-code-section">
+                <div className="backup-code-divider">
+                  <span>or</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBackupCodeModal(true)}
+                  disabled={isLoading || isBlocked}
+                  className="btn btn-secondary btn-sm backup-code-btn"
+                >
+                  <FiKey />
+                  Use Backup Code
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!requiresTwoFactor && (
+            <div className="form-options">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={isLoading || isBlocked}
+                  className="form-checkbox"
+                />
+                <span className="checkbox-text">Remember me</span>
+              </label>
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading || isBlocked}
-                className="input-toggle-btn"
+                onClick={() => setShowForgotPassword(true)}
+                className="link-btn"
               >
-                {showPassword ? <FiEyeOff /> : <FiEye />}
+                Forgot password?
               </button>
             </div>
-            <label htmlFor="password" className="form-label">Password</label>
-          </div>
-
-          <div className="form-options">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={isLoading || isBlocked}
-                className="form-checkbox"
-              />
-              <span className="checkbox-text">Remember me</span>
-            </label>
-            <button
-              type="button"
-              disabled={isLoading || isBlocked}
-              onClick={() => setShowForgotPassword(true)}
-              className="link-btn"
-            >
-              Forgot password?
-            </button>
-          </div>
+          )}
 
           <button
             type="submit"
@@ -306,6 +400,21 @@ const Login = ({ onLoginSuccess }) => {
           setShowForgotPassword(false);
           // Optionally show a success message
         }}
+      />
+
+      {/* Backup Code Modal */}
+      <BackupCodeModal
+        isOpen={showBackupCodeModal}
+        onClose={() => setShowBackupCodeModal(false)}
+        onSuccess={(data) => {
+          console.log('BackupCodeModal onSuccess called with:', data);
+          setShowBackupCodeModal(false);
+          setTimeout(() => {
+            console.log('Submitting form with backup code:', data.backupCode);
+            handleSubmit(null, data.backupCode);
+          }, 100);
+        }}
+        onCancel={() => setShowBackupCodeModal(false)}
       />
     </div>
   );

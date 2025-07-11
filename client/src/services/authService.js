@@ -22,45 +22,52 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor to handle token refresh
-api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-
-            try {
-                // Try to refresh token
-                const response = await api.post('/auth/refresh');
-                const { token } = response.data.data;
-                
-                // Store new token
-                localStorage.setItem('authToken', token);
-                
-                // Retry original request
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-                return api(originalRequest);
-            } catch (refreshError) {
-                // Refresh failed, clear auth data
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-                // Let React Router handle the redirection
-                return Promise.reject(refreshError);
-            }
-        }
-
-        return Promise.reject(error);
-    }
-);
-
 class AuthService {
     constructor() {
         this.user = null;
         this.token = null;
+        this.refreshToken = null;
         this.isAuthenticated = false;
         this.loadFromStorage();
+        this.setupResponseInterceptor();
+    }
+
+    // Setup response interceptor after instance is created
+    setupResponseInterceptor() {
+        api.interceptors.response.use(
+            (response) => response,
+            async (error) => {
+                const originalRequest = error.config;
+
+                // Skip token refresh for login requests and unauthenticated requests
+                if (error.response?.status === 401 && 
+                    !originalRequest._retry && 
+                    !originalRequest.url.includes('/auth/login') &&
+                    this.token) {
+                    originalRequest._retry = true;
+
+                    try {
+                        // Try to refresh token using this instance
+                        const refreshSuccess = await this.refreshToken();
+                        
+                        if (refreshSuccess) {
+                            // Retry original request with new token
+                            originalRequest.headers.Authorization = `Bearer ${this.token}`;
+                            return api(originalRequest);
+                        } else {
+                            throw new Error('Token refresh failed');
+                        }
+                    } catch (refreshError) {
+                        // Refresh failed, clear auth data
+                        this.clearAuth();
+                        // Let React Router handle the redirection
+                        return Promise.reject(refreshError);
+                    }
+                }
+
+                return Promise.reject(error);
+            }
+        );
     }
 
     // Load user data from localStorage
@@ -68,10 +75,12 @@ class AuthService {
         try {
             const storedUser = localStorage.getItem('user');
             const storedToken = localStorage.getItem('authToken');
+            const storedRefreshToken = localStorage.getItem('refreshToken');
             
             if (storedUser && storedToken) {
                 this.user = JSON.parse(storedUser);
                 this.token = storedToken;
+                this.refreshToken = storedRefreshToken;
                 this.isAuthenticated = true;
             }
         } catch (error) {
@@ -85,6 +94,9 @@ class AuthService {
         if (this.user && this.token) {
             localStorage.setItem('user', JSON.stringify(this.user));
             localStorage.setItem('authToken', this.token);
+            if (this.refreshToken) {
+                localStorage.setItem('refreshToken', this.refreshToken);
+            }
         }
     }
 
@@ -92,25 +104,56 @@ class AuthService {
     clearAuth() {
         this.user = null;
         this.token = null;
+        this.refreshToken = null;
         this.isAuthenticated = false;
         localStorage.removeItem('user');
         localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
     }
 
     // Login method
-    async login(identifier, password, rememberMe = false) {
+    async login(identifier, password, rememberMe = false, twoFactorCode = null, backupCode = null) {
         try {
-            const response = await api.post('/auth/login', {
+            const loginData = {
                 identifier,
                 password,
                 rememberMe
+            };
+
+            if (twoFactorCode) {
+                loginData.twoFactorCode = twoFactorCode;
+            }
+
+            if (backupCode) {
+                loginData.backupCode = backupCode;
+            }
+
+            console.log('AuthService sending login data:', {
+                identifier: loginData.identifier,
+                hasPassword: !!loginData.password,
+                rememberMe: loginData.rememberMe,
+                hasTwoFactorCode: !!loginData.twoFactorCode,
+                hasBackupCode: !!loginData.backupCode,
+                twoFactorCode: loginData.twoFactorCode
+            });
+
+            const response = await api.post('/auth/login', loginData);
+
+            console.log('AuthService received response:', {
+                success: response.data.success,
+                message: response.data.message,
+                requiresTwoFactor: response.data.requiresTwoFactor,
+                hasData: !!response.data.data,
+                hasUser: !!response.data.data?.user,
+                hasToken: !!response.data.data?.token
             });
 
             if (response.data.success) {
-                const { user, token, expiresIn } = response.data.data;
+                const { user, token, refreshToken, expiresIn } = response.data.data;
                 
                 this.user = user;
                 this.token = token;
+                this.refreshToken = refreshToken;
                 this.isAuthenticated = true;
                 
                 this.saveToStorage();
@@ -119,6 +162,7 @@ class AuthService {
                     success: true,
                     user,
                     token,
+                    refreshToken,
                     expiresIn
                 };
             }
@@ -130,6 +174,14 @@ class AuthService {
                     success: false,
                     message: error.response.data.message,
                     retryAfter: error.response.data.retryAfter
+                };
+            }
+
+            if (error.response?.status === 401 && error.response?.data?.requiresTwoFactor) {
+                return {
+                    success: false,
+                    requiresTwoFactor: true,
+                    message: error.response.data.message
                 };
             }
             
@@ -203,10 +255,18 @@ class AuthService {
     // Refresh token
     async refreshToken() {
         try {
-            const response = await api.post('/auth/refresh');
+            if (!this.refreshToken) {
+                throw new Error('No refresh token available');
+            }
+
+            const response = await api.post('/auth/refresh', {
+                refreshToken: this.refreshToken
+            });
+            
             if (response.data.success) {
-                const { token } = response.data.data;
-                this.token = token;
+                const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+                this.token = accessToken;
+                this.refreshToken = newRefreshToken;
                 this.saveToStorage();
                 return true;
             }

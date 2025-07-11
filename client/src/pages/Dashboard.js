@@ -10,6 +10,7 @@ import config from '../config/config';
 import moment from 'moment';
 import 'moment-timezone';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import TwoFactorModal from '../components/TwoFactorModal';
 import ProfilePicture from '../components/ProfilePicture';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
@@ -59,6 +60,8 @@ const Dashboard = () => {
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
     const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
     const [showChangePassword, setShowChangePassword] = useState(false);
+    const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+    const [twoFactorMode, setTwoFactorMode] = useState('enable');
 
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
@@ -851,8 +854,8 @@ const Dashboard = () => {
                 setShowChangePassword(true);
                 break;
             case 'toggle-2fa':
-                // TODO: Implement 2FA toggle
-                console.log('Toggle 2FA clicked');
+                setTwoFactorMode(profileData.twoFactorEnabled ? 'disable' : 'enable');
+                setShowTwoFactorModal(true);
                 break;
             case 'verify-email':
                 handleEmailVerification();
@@ -1223,7 +1226,7 @@ const Dashboard = () => {
                                         {profileData.twoFactorEnabled ?
                                             '2FA is enabled and active.' :
                                             <>
-                                                2FA is disabled. <a href="#">Enable now</a>
+                                                2FA is disabled. <a href="#" onClick={() => handleQuickAction('toggle-2fa')}>Enable now</a>
                                             </>
                                         }
                                     </div>
@@ -1364,6 +1367,18 @@ const Dashboard = () => {
                     // Refresh profile data after password change
                     refreshProfileData();
                 }}
+            />
+
+            {/* Two-Factor Authentication Modal */}
+            <TwoFactorModal
+                isOpen={showTwoFactorModal}
+                onClose={() => setShowTwoFactorModal(false)}
+                onSuccess={() => {
+                    setShowTwoFactorModal(false);
+                    // Refresh profile data after 2FA change
+                    refreshProfileData();
+                }}
+                mode={twoFactorMode}
             />
         </main>
     );

@@ -301,11 +301,23 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
         identifier: { required: true, type: 'string', minLength: 3, maxLength: 100 },
         password: { required: true, type: 'string', minLength: 6, maxLength: 128 },
         rememberMe: { type: 'boolean' },
-        twoFactorCode: { type: 'string', maxLength: 10 }
+        twoFactorCode: { type: 'string', maxLength: 10 },
+        backupCode: { type: 'string', maxLength: 10 }
     }
 }), async (req, res) => {
     try {
-        const { identifier, password, rememberMe, twoFactorCode } = req.body;
+        const { identifier, password, rememberMe, twoFactorCode, backupCode } = req.body;
+        let usedBackupCode = false; // Declare at function scope
+
+        console.log('Login request received:', {
+            identifier,
+            hasPassword: !!password,
+            rememberMe,
+            hasTwoFactorCode: !!twoFactorCode,
+            hasBackupCode: !!backupCode,
+            twoFactorCode,
+            backupCode
+        });
 
         // Find user by username, email, or phone
         const user = await User.findOne({
@@ -314,7 +326,7 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 { email: identifier.toLowerCase() },
                 { phone: identifier }
             ]
-        });
+        }).select('+twoFactorSecret');
 
         if (!user) {
             // Log failed attempt
@@ -416,7 +428,10 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
 
         // Check 2FA if enabled
         if (user.twoFactorEnabled) {
-            if (!twoFactorCode) {
+            console.log('2FA check - twoFactorCode:', !!twoFactorCode, 'backupCode:', !!backupCode);
+            
+            if (!twoFactorCode && !backupCode) {
+                console.log('2FA check - no codes provided, requiring 2FA');
                 return res.status(401).json({
                     success: false,
                     message: 'Two-factor authentication code required',
@@ -424,15 +439,79 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 });
             }
 
-            // Verify 2FA code
-            const verified = speakeasy.totp.verify({
+            // Validate TOTP code format if provided
+            if (twoFactorCode && !/^\d{6}$/.test(twoFactorCode)) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Two-factor authentication code must be exactly 6 digits'
+                });
+            }
+
+            let twoFactorVerified = false;
+
+            // Try TOTP code first if provided
+            if (twoFactorCode) {
+                // Check if user has a valid secret
+                if (!user.twoFactorSecret) {
+                    console.log('2FA Login Debug - User has no twoFactorSecret');
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Two-factor authentication not properly configured'
+                    });
+                }
+
+                // For debugging: show expected code (remove in production)
+                const expectedCode = speakeasy.totp({
+                    secret: user.twoFactorSecret,
+                    encoding: 'base32'
+                });
+                console.log('2FA Login Debug - Expected code:', expectedCode, 'Provided code:', twoFactorCode, 'Secret length:', user.twoFactorSecret.length);
+
+                twoFactorVerified = speakeasy.totp.verify({
                 secret: user.twoFactorSecret,
                 encoding: 'base32',
                 token: twoFactorCode,
-                window: 2 // Allow 2 time steps for clock skew
-            });
+                    window: 4 // Increased from 2 to 4 to allow more time steps
+                });
 
-            if (!verified) {
+                console.log('2FA Login Debug - Verification result:', twoFactorVerified);
+            }
+
+            // If TOTP failed or not provided, try backup code
+            if (!twoFactorVerified && backupCode) {
+                console.log('Attempting backup code verification');
+                const backupCodeEntry = user.twoFactorBackupCodes.find(
+                    code => code.code === backupCode.toUpperCase() && !code.used
+                );
+
+                if (backupCodeEntry) {
+                    twoFactorVerified = true;
+                    usedBackupCode = true;
+
+                    // Mark the backup code as used
+                    backupCodeEntry.used = true;
+                    await user.save();
+
+                                        // Log backup code usage
+                    await AuditLog.logEvent({
+                        userId: user._id,
+                        username: user.username,
+                        action: 'login',
+                        ip: req.ip,
+                        userAgent: req.headers['user-agent'],
+                        device: extractDeviceInfo(req.headers['user-agent']),
+                        location: await extractLocationFromIP(req.ip),
+                        success: true,
+                        details: { 
+                            backupCodeUsed: backupCodeEntry.code,
+                            remainingCodes: user.twoFactorBackupCodes.filter(code => !code.used).length,
+                            usedBackupCode: true
+                        }
+                    });
+                }
+            }
+
+            if (!twoFactorVerified) {
                             await AuditLog.logEvent({
                 userId: user._id,
                 username: user.username,
@@ -442,13 +521,16 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 device: extractDeviceInfo(req.headers['user-agent']),
                 location: await extractLocationFromIP(req.ip),
                 success: false,
-                details: { reason: 'invalid_2fa_code' },
+                    details: {
+                        reason: backupCode ? 'invalid_backup_code' : 'invalid_2fa_code',
+                        usedBackupCode: backupCode ? true : false
+                    },
                 riskLevel: 'high'
             });
 
                 return res.status(401).json({
                     success: false,
-                    message: 'Invalid two-factor authentication code'
+                    message: backupCode ? 'Invalid backup code' : 'Invalid two-factor authentication code'
                 });
             }
         }
@@ -491,6 +573,13 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
             }
         );
 
+        // Generate refresh token
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET || securityConfig.jwt.secret,
+            { expiresIn: '7d' }
+        );
+
         // Set secure HTTP-only cookie
         const cookieOptions = {
             httpOnly: securityConfig.cookie.httpOnly,
@@ -531,7 +620,10 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
             location: await extractLocationFromIP(req.ip),
             success: true,
             sessionId,
-            details: { twoFactorUsed: user.twoFactorEnabled }
+            details: {
+                twoFactorUsed: user.twoFactorEnabled,
+                usedBackupCode: usedBackupCode || false
+            }
         });
 
         // Emit real-time dashboard updates
@@ -555,12 +647,22 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
         const userResponse = user.toJSON();
         delete userResponse.password;
 
+        console.log('Login successful response:', {
+            success: true,
+            userId: user._id,
+            username: user.username,
+            hasToken: !!token,
+            hasRefreshToken: !!refreshToken,
+            usedBackupCode: usedBackupCode || false
+        });
+
         res.json({
             success: true,
             message: 'Login successful',
             data: {
                 user: userResponse,
                 token,
+                refreshToken,
                 expiresIn: tokenExpiry
             }
         });
@@ -801,15 +903,50 @@ router.post('/2fa/enable', authenticateToken, sanitizeInput, validateInput({
             });
         }
 
+        // Validate code format
+        if (!code || !/^\d{6}$/.test(code)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Verification code must be exactly 6 digits'
+            });
+        }
+
+        // Check if user has a secret
+        if (!user.twoFactorSecret) {
+            return res.status(400).json({
+                success: false,
+                message: 'Two-factor authentication setup not completed. Please complete setup first.'
+            });
+        }
+
         // Verify code
         const verified = speakeasy.totp.verify({
             secret: user.twoFactorSecret,
             encoding: 'base32',
             token: code,
-            window: 2
+            window: 4 // Increased from 2 to 4 to allow more time steps
         });
 
+        // For debugging: show expected code (remove in production)
+        const expectedCode = speakeasy.totp({
+            secret: user.twoFactorSecret,
+            encoding: 'base32'
+        });
+        console.log('2FA Debug - Expected code:', expectedCode, 'Provided code:', code);
+
         if (!verified) {
+            // Add debugging information
+            console.log('2FA Enable Debug:', {
+                userId: user._id,
+                username: user.username,
+                hasSecret: !!user.twoFactorSecret,
+                secretLength: user.twoFactorSecret ? user.twoFactorSecret.length : 0,
+                codeProvided: code,
+                codeLength: code ? code.length : 0,
+                codeIsNumeric: /^\d+$/.test(code),
+                timestamp: new Date().toISOString()
+            });
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid verification code'
@@ -909,6 +1046,184 @@ router.post('/2fa/disable', authenticateToken, sanitizeInput, validateInput({
         res.status(500).json({
             success: false,
             message: 'Failed to disable two-factor authentication'
+        });
+    }
+});
+
+// Backup code verification endpoint
+router.post('/2fa/verify-backup-code', authenticateToken, sanitizeInput, validateInput({
+    body: {
+        backupCode: { required: true, type: 'string', maxLength: 10 }
+    }
+}), async (req, res) => {
+    try {
+        const { backupCode } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user.twoFactorEnabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'Two-factor authentication is not enabled'
+            });
+        }
+
+        // Find the backup code
+        const backupCodeEntry = user.twoFactorBackupCodes.find(
+            code => code.code === backupCode.toUpperCase() && !code.used
+        );
+
+        if (!backupCodeEntry) {
+            // Log failed backup code attempt
+            await AuditLog.logEvent({
+                userId: user._id,
+                username: user.username,
+                action: 'backup_code_failed',
+                ip: req.ip,
+                userAgent: req.headers['user-agent'],
+                device: extractDeviceInfo(req.headers['user-agent']),
+                location: await extractLocationFromIP(req.ip),
+                success: false,
+                details: { reason: 'invalid_or_used_backup_code' },
+                riskLevel: 'high'
+            });
+
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or already used backup code'
+            });
+        }
+
+        // Mark the backup code as used
+        backupCodeEntry.used = true;
+        await user.save();
+
+        // Log successful backup code usage
+        await AuditLog.logEvent({
+            userId: user._id,
+            username: user.username,
+            action: 'backup_code_used',
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
+            success: true,
+            details: {
+                backupCodeUsed: backupCodeEntry.code,
+                remainingCodes: user.twoFactorBackupCodes.filter(code => !code.used).length
+            }
+        });
+
+        res.json({
+            success: true,
+            message: 'Backup code verified successfully',
+            data: {
+                remainingCodes: user.twoFactorBackupCodes.filter(code => !code.used).length
+            }
+        });
+
+    } catch (error) {
+        console.error('Backup code verification error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to verify backup code'
+        });
+    }
+});
+
+// Regenerate backup codes
+router.post('/2fa/regenerate-backup-codes', authenticateToken, sanitizeInput, validateInput({
+    body: {
+        code: { required: true, type: 'string', maxLength: 10 }
+    }
+}), async (req, res) => {
+    try {
+        const { code } = req.body;
+        const user = await User.findById(req.user._id).select('+twoFactorSecret');
+
+        if (!user.twoFactorEnabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'Two-factor authentication is not enabled'
+            });
+        }
+
+        // Verify current 2FA code first
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: code,
+            window: 2
+        });
+
+        if (!verified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid verification code'
+            });
+        }
+
+        // Generate new backup codes
+        await user.generateBackupCodes();
+
+        // Send email with new backup codes
+        await emailService.sendTwoFactorSetupEmail(user, null, user.twoFactorBackupCodes.map(code => code.code));
+
+        // Log backup codes regeneration
+        await AuditLog.logEvent({
+            userId: user._id,
+            username: user.username,
+            action: 'backup_codes_regenerated',
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+            device: extractDeviceInfo(req.headers['user-agent']),
+            location: await extractLocationFromIP(req.ip),
+            success: true
+        });
+
+        res.json({
+            success: true,
+            message: 'Backup codes regenerated successfully',
+            data: {
+                backupCodes: user.twoFactorBackupCodes.map(code => code.code)
+            }
+        });
+
+    } catch (error) {
+        console.error('Backup codes regeneration error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to regenerate backup codes'
+        });
+    }
+});
+
+// Get remaining backup codes count
+router.get('/2fa/backup-codes-count', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (!user.twoFactorEnabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'Two-factor authentication is not enabled'
+            });
+        }
+
+        const remainingCodes = user.twoFactorBackupCodes.filter(code => !code.used).length;
+
+        res.json({
+            success: true,
+            data: {
+                remainingCodes,
+                totalCodes: user.twoFactorBackupCodes.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Get backup codes count error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get backup codes count'
         });
     }
 });
@@ -1920,6 +2235,185 @@ router.get('/verification-status', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to get verification status'
+        });
+    }
+});
+
+// Debug endpoint to check 2FA status (remove in production)
+router.get('/debug/2fa-status', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('+twoFactorSecret');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Generate current expected code for debugging
+        let expectedCode = null;
+        if (user.twoFactorSecret) {
+            expectedCode = speakeasy.totp({
+                secret: user.twoFactorSecret,
+                encoding: 'base32'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                twoFactorEnabled: user.twoFactorEnabled,
+                hasSecret: !!user.twoFactorSecret,
+                secretLength: user.twoFactorSecret ? user.twoFactorSecret.length : 0,
+                expectedCode: expectedCode,
+                backupCodesCount: user.twoFactorBackupCodes ? user.twoFactorBackupCodes.length : 0,
+                unusedBackupCodes: user.twoFactorBackupCodes ? user.twoFactorBackupCodes.filter(code => !code.used).length : 0
+            }
+        });
+    } catch (error) {
+        console.error('Debug 2FA status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get 2FA debug status'
+        });
+    }
+});
+
+// Debug endpoint to check user 2FA by username/email (remove in production)
+router.get('/debug/user-2fa/:identifier', async (req, res) => {
+    try {
+        const { identifier } = req.params;
+
+        const user = await User.findOne({
+            $or: [
+                { username: identifier },
+                { email: identifier.toLowerCase() },
+                { phone: identifier }
+            ]
+        }).select('+twoFactorSecret');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Generate current expected code for debugging
+        let expectedCode = null;
+        if (user.twoFactorSecret) {
+            expectedCode = speakeasy.totp({
+                secret: user.twoFactorSecret,
+                encoding: 'base32'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                userId: user._id,
+                username: user.username,
+                email: user.email,
+                twoFactorEnabled: user.twoFactorEnabled,
+                hasSecret: !!user.twoFactorSecret,
+                secretLength: user.twoFactorSecret ? user.twoFactorSecret.length : 0,
+                expectedCode: expectedCode,
+                backupCodesCount: user.twoFactorBackupCodes ? user.twoFactorBackupCodes.length : 0,
+                unusedBackupCodes: user.twoFactorBackupCodes ? user.twoFactorBackupCodes.filter(code => !code.used).length : 0
+            }
+        });
+    } catch (error) {
+        console.error('Debug user 2FA error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get user 2FA debug status'
+        });
+    }
+});
+
+// Refresh token endpoint
+router.post('/refresh', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Refresh token is required'
+            });
+        }
+
+        // Verify the refresh token
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+
+        // Find the user
+        const user = await User.findById(decoded.userId);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid refresh token'
+            });
+        }
+
+        // Check if user is active
+        if (!user.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: 'Account is deactivated'
+            });
+        }
+
+        // Generate new access token
+        const accessToken = jwt.sign(
+            {
+                userId: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        // Generate new refresh token
+        const newRefreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Token refreshed successfully',
+            data: {
+                accessToken,
+                refreshToken: newRefreshToken,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    role: user.role,
+                    emailVerified: user.emailVerified,
+                    phoneVerified: user.phoneVerified,
+                    twoFactorEnabled: user.twoFactorEnabled
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Refresh token error:', error);
+
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired refresh token'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to refresh token'
         });
     }
 });
