@@ -1068,7 +1068,7 @@ const Dashboard = () => {
                             <div className="action-buttons">
                                 <a
                                     href="#"
-                                    className="action-btn primary"
+                                    className="action-btn primary1"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         handleQuickAction('edit-profile');
@@ -1078,7 +1078,7 @@ const Dashboard = () => {
                                 </a>
                                 <a
                                     href="#"
-                                    className="action-btn primary"
+                                    className="action-btn primary2"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         handleQuickAction('change-password');
