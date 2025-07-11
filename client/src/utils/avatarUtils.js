@@ -1,3 +1,5 @@
+import config from '../config/config';
+
 // Utility functions for avatar handling
 
 /**
@@ -31,9 +33,14 @@ export const getProfileDisplay = (user) => {
   
   // Check if user has uploaded profile picture
   if (user.profilePicture && user.profilePicture.url) {
+    // Construct full URL by prepending server URL to relative path
+    const fullUrl = user.profilePicture.url.startsWith('http') 
+      ? user.profilePicture.url 
+      : `${config.serverUrl}${user.profilePicture.url}`;
+    
     return { 
       type: 'image', 
-      value: user.profilePicture.url 
+      value: fullUrl 
     };
   }
   

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
+import { getProfileDisplay, getInitialsColor, generateInitials } from '../utils/avatarUtils';
 import authService from '../services/authService';
 import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 import { FiX } from 'react-icons/fi';
@@ -235,9 +235,9 @@ const ProfilePicture = ({
           />
           <div
             className="profile-initials"
-            style={{ backgroundColor: initialsColor }}
+            style={{ backgroundColor: initialsColor, display: 'none' }}
           >
-            {profileDisplay.value}
+            {user?.profileInitials || generateInitials(user)}
           </div>
         </>
       ) : (

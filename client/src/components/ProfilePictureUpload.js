@@ -62,28 +62,10 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('profilePicture', selectedFile);
-
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/profile-picture`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        },
-        body: formData
-      });
-
-      const result = await response.json();
+      const result = await authService.uploadProfilePicture(selectedFile);
 
       if (result.success) {
-        // Update the user data in auth service
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-          currentUser.profilePicture = result.data.profilePicture;
-          authService.saveToStorage();
-        }
-
-        onUploadSuccess?.(result.data.profilePicture);
+        onUploadSuccess?.(result.profilePicture);
       } else {
         onUploadError?.(result.message || 'Upload failed');
       }

@@ -117,19 +117,19 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="modal-form">
-                            <div className="form-group">
-                                <label htmlFor="email" className="form-label">Email Address</label>
+                            <div className="form-group floating-label">
                                 <input
                                     type="email"
                                     id="email"
                                     name="email"
                                     value={email}
                                     onChange={handleChange}
-                                    placeholder="Enter your email address"
+                                    placeholder=""
                                     disabled={isLoading}
                                     autoComplete="email"
                                     className="form-input"
                                 />
+                                <label htmlFor="email" className="form-label">Email Address</label>
                                 {error && (
                                     <span className="form-error">{error}</span>
                                 )}
