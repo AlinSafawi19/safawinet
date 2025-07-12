@@ -84,21 +84,15 @@ The seed script creates:
 ### Available Pages and Actions
 
 **Pages:**
-- `dashboard` - Main dashboard
-- `users` - User management
-- `reports` - Reports and analytics
-- `settings` - System settings
-- `analytics` - Data analytics
-- `inventory` - Inventory management
-- `sales` - Sales management
-- `customers` - Customer management
-- `audit` - Audit logs and security monitoring
+- `users` - User management (requires permission)
 
 **Actions:**
 - `view` - View data
 - `add` - Create new records
 - `edit` - Modify existing records
 - `delete` - Remove records
+
+**Note:** Dashboard, Audit Logs, and Knowledge Guide are accessible to all authenticated users and do not require specific permissions.
 
 ## API Endpoints
 
@@ -156,15 +150,7 @@ The system uses a granular permission system where:
 ```javascript
 permissions: [
   {
-    page: 'dashboard',
-    actions: ['view']
-  },
-  {
-    page: 'audit-logs',
-    actions: ['view', 'add', 'edit']
-  },
-  {
-    page: 'knowledge-guide',
+    page: 'users',
     actions: ['view', 'add', 'edit', 'delete']
   }
 ]

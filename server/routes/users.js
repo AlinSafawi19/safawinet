@@ -365,7 +365,7 @@ router.put('/:id/permissions', authenticateToken, requirePermission('users', 'ed
 // Get available pages and actions for permissions
 router.get('/permissions/available', authenticateToken, requirePermission('users', 'view'), (req, res) => {
     const availablePages = [
-        'dashboard', 'audit-logs', 'knowledge-guide'
+        'users'
     ];
 
     const availableActions = ['view', 'add', 'edit', 'delete'];

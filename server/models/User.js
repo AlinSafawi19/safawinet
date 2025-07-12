@@ -190,7 +190,7 @@ const userSchema = new mongoose.Schema({
     page: {
       type: String,
       required: true,
-      enum: ['dashboard', 'audit-logs', 'knowledge-guide']
+      enum: ['users']
     },
     actions: [{
       type: String,

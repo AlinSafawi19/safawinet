@@ -4,7 +4,7 @@ const { config } = require('../config/config');
 
 // Available pages and actions for the system
 const AVAILABLE_PAGES = [
-    'dashboard', 'audit-logs', 'knowledge-guide'
+    'users'
 ];
 
 const AVAILABLE_ACTIONS = ['view', 'add', 'edit', 'delete'];
@@ -48,13 +48,13 @@ const createAdminUser = async () => {
             ...adminUser,
             welcomeEmailSent: false
         };
-        
+
         const admin = new User(adminData);
         await admin.save();
 
         // Verify the welcomeEmailSent field was set correctly
         const savedAdmin = await User.findOne({ username: 'alin' });
-        
+
         console.log('✅ Admin user created successfully!');
         console.log('Username: alin');
         console.log('Email: alinsafawi19@gmail.com');
@@ -83,9 +83,7 @@ const createSampleUsers = async (adminId) => {
             isActive: true,
             createdBy: adminId,
             permissions: [
-                { page: 'dashboard', actions: ['view', 'add', 'edit'] },
-                { page: 'audit-logs', actions: ['view', 'add', 'edit'] },
-                { page: 'knowledge-guide', actions: ['view', 'add', 'edit'] }
+                { page: 'users', actions: ['view', 'add', 'edit'] }
             ],
             userPreferences: {
                 timezone: 'Asia/Beirut',
@@ -106,9 +104,7 @@ const createSampleUsers = async (adminId) => {
             isActive: true,
             createdBy: adminId,
             permissions: [
-                { page: 'dashboard', actions: ['view'] },
-                { page: 'audit-logs', actions: ['view'] },
-                { page: 'knowledge-guide', actions: ['view'] }
+                { page: 'users', actions: ['view'] }
             ],
             userPreferences: {
                 timezone: 'Asia/Beirut',
@@ -158,8 +154,8 @@ const seedDatabase = async () => {
         console.log('✅ Database seeding completed successfully!');
         console.log('\n📋 Available users:');
         console.log('1. Admin - Full access to all pages and actions');
-        console.log('2. Manager - Limited access (view + add/edit on dashboard, audit-logs and knowledge-guide)');
-        console.log('3. Viewer - Read-only access to dashboard, audit-logs and knowledge-guide');
+        console.log('2. Manager - Limited access (view + add/edit on users page)');
+        console.log('3. Viewer - Read-only access to users page');
 
     } catch (error) {
         console.error('❌ Database seeding failed:', error.message);

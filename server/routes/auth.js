@@ -2146,8 +2146,7 @@ router.get('/debug/permissions', authenticateToken, (req, res) => {
                     isActive: user.isActive
                 },
                 permissions: permissions,
-                hasAuditLogsPermission: user.hasPermission('audit-logs', 'view'),
-                hasAuditPermission: user.hasPermission('audit-logs', 'view'),
+                hasUsersPermission: user.hasPermission('users', 'view'),
                 allPermissions: permissions.map(p => `${p.page}: ${p.actions.join(', ')}`)
             }
         });

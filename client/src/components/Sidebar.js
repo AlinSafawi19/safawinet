@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { HiMenu, HiX, HiViewBoards, HiLogout, HiClipboardList, HiBookOpen, HiShieldCheck } from 'react-icons/hi';
+import { HiMenu, HiX, HiViewBoards, HiLogout, HiClipboardList, HiBookOpen, HiShieldCheck, HiUsers } from 'react-icons/hi';
 import authService from '../services/authService';
 import Swal from 'sweetalert2';
 
@@ -37,6 +37,19 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogou
         }
     ];
 
+    // Add Users menu item if user has permission
+    const currentUser = authService.getCurrentUser();
+    const canViewUsers = currentUser && (currentUser.isAdmin || authService.hasPermission('users', 'view'));
+    
+    if (canViewUsers) {
+        menuItems.push({
+            id: 'users',
+            label: 'Users',
+            icon: <HiUsers />,
+            path: '/users'
+        });
+    }
+
     // Update active section based on URL path
     useEffect(() => {
         const path = location.pathname;
@@ -46,6 +59,8 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogou
             setActiveSection('audit-logs');
         } else if (path === '/knowledge-guide') {
             setActiveSection('knowledge-guide');
+        } else if (path === '/users') {
+            setActiveSection('users');
         } else if (path === '/profile') {
             // Profile is accessed via header, so no sidebar item should be active
             setActiveSection('');
@@ -114,6 +129,9 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogou
                 break;
             case 'knowledge-guide':
                 navigate('/knowledge-guide');
+                break;
+            case 'users':
+                navigate('/users');
                 break;
             default:
                 navigate('/dashboard');

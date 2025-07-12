@@ -11,6 +11,7 @@ import KnowledgeGuide from './pages/KnowledgeGuide';
 import EmailVerification from './pages/EmailVerification';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
+import Users from './pages/Users';
 import { applyUserTheme } from './utils/themeUtils';
 import { CalculatorProvider } from './contexts/CalculatorContext';
 import Calculator from './components/Calculator';
@@ -155,6 +156,21 @@ const ProfilePage = () => {
   );
 };
 
+// Users Page component
+const UsersPage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <Users />
+    </DashboardLayout>
+  );
+};
+
 function App() {
   // Apply user theme on app load
   useEffect(() => {
@@ -201,6 +217,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <UsersPage />
                 </ProtectedRoute>
               }
             />
