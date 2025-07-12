@@ -375,9 +375,34 @@ userSchema.methods.generateBackupCodes = function() {
 
 // Method to get password strength information
 userSchema.methods.getPasswordStrength = function() {
+  // If password is a hash and strength is very weak or 0, treat as unknown
+  const isHashed = typeof this.password === 'string' && this.password.startsWith('$2'); // bcrypt hashes start with $2
+  const score = this.passwordStrength?.score || 0;
+  const level = this.passwordStrength?.level || 'very_weak';
+
+  if (isHashed && (score === 0 || level === 'very_weak')) {
+    return {
+      score: 0,
+      level: 'unknown',
+      lastChecked: this.passwordStrength?.lastChecked || this.createdAt,
+      lastChanged: this.passwordLastChanged || this.createdAt,
+      details: this.passwordStrength?.details || {
+        length: 0,
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumbers: false,
+        hasSpecialChars: false,
+        hasRepeatingChars: false,
+        hasSequentialChars: false,
+        hasCommonPatterns: false,
+        entropy: 0
+      }
+    };
+  }
+
   return {
-    score: this.passwordStrength?.score || 0,
-    level: this.passwordStrength?.level || 'very_weak',
+    score: score,
+    level: level,
     lastChecked: this.passwordStrength?.lastChecked || this.createdAt,
     lastChanged: this.passwordLastChanged || this.createdAt,
     details: this.passwordStrength?.details || {
