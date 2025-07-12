@@ -1968,6 +1968,60 @@ router.get('/security-status', authenticateToken, async (req, res) => {
     }
 });
 
+// Get audit logs for the current user
+router.get('/audit-logs', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const cutoff = req.query.cutoff ? new Date(req.query.cutoff) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+        
+        // Build query
+        const query = {
+            userId: userId,
+            timestamp: { $gte: cutoff }
+        };
+
+        // Add filters
+        if (req.query.action) {
+            query.action = req.query.action;
+        }
+        if (req.query.riskLevel) {
+            query.riskLevel = req.query.riskLevel;
+        }
+        if (req.query.success !== undefined) {
+            query.success = req.query.success === 'true';
+        }
+
+        // Get total count
+        const total = await AuditLog.countDocuments(query);
+
+        // Get audit logs with pagination
+        const logs = await AuditLog.find(query)
+            .sort({ timestamp: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .select('-__v');
+
+        res.json({
+            success: true,
+            data: {
+                logs,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Audit logs fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch audit logs'
+        });
+    }
+});
+
 // Debug endpoint to check user permissions
 router.get('/debug/permissions', authenticateToken, (req, res) => {
     try {
