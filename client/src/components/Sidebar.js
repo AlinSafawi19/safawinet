@@ -4,7 +4,7 @@ import { HiMenu, HiX, HiViewBoards, HiLogout, HiClipboardList, HiBookOpen, HiShi
 import authService from '../services/authService';
 import Swal from 'sweetalert2';
 
-const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogout }) => {
+const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogout, isMobile }) => {
     const [isCollapsed, setIsCollapsed] = useState(() => {
         // Get the collapsed state from localStorage, default to false
         const saved = localStorage.getItem('sidebarCollapsed');
@@ -14,12 +14,19 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogou
     const location = useLocation();
     const navigate = useNavigate();
 
+    // Update collapsed state when mobile state changes
+    useEffect(() => {
+        if (isMobile) {
+            setIsCollapsed(false);
+        }
+    }, [isMobile]);
+
     // Notify parent when sidebar state changes
     useEffect(() => {
-        if (onSidebarToggle) {
+        if (onSidebarToggle && !isMobile) {
             onSidebarToggle(isCollapsed);
         }
-    }, [isCollapsed, onSidebarToggle]);
+    }, [isCollapsed, onSidebarToggle, isMobile]);
 
     const menuItems = [
         {
@@ -119,6 +126,15 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogou
         }
     };
 
+    const handleSidebarToggle = () => {
+        if (!isMobile) {
+            const newCollapsedState = !isCollapsed;
+            setIsCollapsed(newCollapsedState);
+            // Save the collapsed state to localStorage only on desktop
+            localStorage.setItem('sidebarCollapsed', JSON.stringify(newCollapsedState));
+        }
+    };
+
     return (
         <>
             {/* Mobile Menu Overlay */}
@@ -198,18 +214,15 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, onSidebarToggle, onLogou
                             </div>
                         </div>
                     )}
-                    <button
-                        onClick={() => {
-                            const newCollapsedState = !isCollapsed;
-                            setIsCollapsed(newCollapsedState);
-                            // Save the collapsed state to localStorage
-                            localStorage.setItem('sidebarCollapsed', JSON.stringify(newCollapsedState));
-                        }}
-                        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-                        className="sidebar-toggle-btn"
-                    >
-                        {isCollapsed ? <HiMenu /> : <HiX />}
-                    </button>
+                    {!isMobile && (
+                        <button
+                            onClick={handleSidebarToggle}
+                            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                            className="sidebar-toggle-btn"
+                        >
+                            {isCollapsed ? <HiMenu /> : <HiX />}
+                        </button>
+                    )}
                 </div>
 
                 <nav className="sidebar-nav">

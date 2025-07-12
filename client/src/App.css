@@ -1439,6 +1439,21 @@ a:focus {
   }
 }
 
+/* Ensure sidebar is properly hidden on mobile */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none !important;
+  }
+  
+  .layout-content {
+    margin-left: 0 !important;
+  }
+  
+  .layout-container.sidebar-collapsed {
+    margin-left: 0 !important;
+  }
+}
+
 @media (max-width: 768px) {
   .mobile-close-btn {
     width: 3rem;
@@ -8282,6 +8297,8 @@ a:focus {
   align-items: flex-start;
   margin-bottom: 2rem;
   gap: 1rem;
+  position: relative;
+  z-index: 1000;
 }
 
 .header-content {
@@ -8493,6 +8510,8 @@ a:focus {
 .header-actions {
   display: flex;
   gap: 0.75rem;
+  position: relative;
+  z-index: 1000;
 }
 
 /* Audit Filters */
@@ -8610,6 +8629,7 @@ a:focus {
   position: relative;
   overflow: hidden;
   transition: all var(--transition-normal);
+  z-index: 1;
 }
 
 .audit-summary::before {
@@ -9212,6 +9232,8 @@ a:focus {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  position: relative;
+  z-index: 1000;
 }
 
 .limit-label {
