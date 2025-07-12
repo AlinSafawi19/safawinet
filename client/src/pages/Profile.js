@@ -155,11 +155,11 @@ const Profile = () => {
     useEffect(() => {
         const urlParams = new URLSearchParams(location.search);
         const shouldEdit = urlParams.get('edit');
-        
+
         if (shouldEdit === 'true') {
             // Automatically open edit mode
             // setIsEditing(true); // Removed
-            
+
             // Clean up the URL parameter to prevent it from persisting
             const newUrl = window.location.pathname;
             window.history.replaceState({}, document.title, newUrl);
@@ -209,7 +209,7 @@ const Profile = () => {
     const handleKeyPress = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            
+
             // Navigate from firstName to lastName
             if (e.target.id === 'firstName') {
                 document.getElementById('lastName').focus();
@@ -351,9 +351,13 @@ const Profile = () => {
 
     return (
         <div className="profile-container">
-            <div className="profile-header">
-                <h1 className="page-title">Profile & Account Settings</h1>
-                <p className="page-subtitle">Manage your account information and preferences</p>
+            <div className="header-content">
+                <h1 className="page-title">
+                    <FiUser /> Profile & Account Settings
+                </h1>
+                <p className="page-description">
+                    Manage your account information and preferences
+                </p>
             </div>
 
             <div className="profile-content">

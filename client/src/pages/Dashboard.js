@@ -62,6 +62,7 @@ const Dashboard = () => {
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
     const [twoFactorMode, setTwoFactorMode] = useState('enable');
+    const [isCheckingEmailVerification, setIsCheckingEmailVerification] = useState(false);
 
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
@@ -210,6 +211,9 @@ const Dashboard = () => {
                 case 'security-status':
                     setSecurityStatus(update.data);
                     break;
+                case 'profile-data':
+                    setProfileData(update.data);
+                    break;
                 case 'system-health':
                     setSystemHealth(prev => ({
                         ...prev,
@@ -314,7 +318,14 @@ const Dashboard = () => {
 
             // Update security status
             if (securityStatusResponse.data.success) {
-                setSecurityStatus(securityStatusResponse.data.data);
+                setSecurityStatus(prev => ({
+                    ...prev,
+                    passwordStrength: {
+                        status: securityStatusResponse.data.data.passwordStrength.level === 'weak' ? 'weak' :
+                            securityStatusResponse.data.data.passwordStrength.level === 'medium' ? 'medium' : 'strong',
+                        level: securityStatusResponse.data.data.passwordStrength.level
+                    }
+                }));
             }
 
             // Update system health with response time measurement
@@ -480,6 +491,44 @@ const Dashboard = () => {
     // Refresh profile data on mount and when returning to dashboard
     useEffect(() => {
         refreshProfileData();
+        
+        // Set up periodic email verification status check
+        const checkEmailVerificationStatus = async () => {
+            if (!authService.isUserAuthenticated()) return;
+            
+            try {
+                setIsCheckingEmailVerification(true);
+                const api = createApiInstance();
+                const response = await api.get('/auth/email-verification-status');
+                
+                if (response.data.success) {
+                    const { emailVerified } = response.data.data;
+                    
+                    // Update profile data if email verification status changed
+                    setProfileData(prev => {
+                        if (prev.emailVerified !== emailVerified) {
+                            return {
+                                ...prev,
+                                emailVerified: emailVerified
+                            };
+                        }
+                        return prev;
+                    });
+                }
+            } catch (error) {
+                console.error('Error checking email verification status:', error);
+            } finally {
+                setIsCheckingEmailVerification(false);
+            }
+        };
+        
+        // Check immediately and then every 30 seconds
+        checkEmailVerificationStatus();
+        const emailCheckInterval = setInterval(checkEmailVerificationStatus, 30000);
+        
+        return () => {
+            clearInterval(emailCheckInterval);
+        };
     }, []);
 
     // Update current time every second
@@ -872,22 +921,41 @@ const Dashboard = () => {
     // Refresh profile data from server
     const refreshProfileData = async () => {
         try {
-            const result = await authService.getProfile();
-            if (result.success) {
+            const api = createApiInstance();
+            
+            // Fetch profile and security status in parallel
+            const [profileResult, securityStatusResult] = await Promise.all([
+                authService.getProfile(),
+                api.get('/auth/security-status')
+            ]);
+
+            if (profileResult.success) {
                 setProfileData({
-                    firstName: result.user.firstName || '',
-                    lastName: result.user.lastName || '',
-                    email: result.user.email || '',
-                    phone: result.user.phone || '',
-                    username: result.user.username || '',
-                    isAdmin: result.user.isAdmin || false,
-                    isActive: result.user.isActive || true,
-                    createdAt: result.user.createdAt || '',
-                    lastLogin: result.user.lastLogin || '',
-                    twoFactorEnabled: result.user.twoFactorEnabled || false,
-                    emailVerified: result.user.emailVerified || false,
-                    phoneVerified: result.user.phoneVerified || false
+                    firstName: profileResult.user.firstName || '',
+                    lastName: profileResult.user.lastName || '',
+                    email: profileResult.user.email || '',
+                    phone: profileResult.user.phone || '',
+                    username: profileResult.user.username || '',
+                    isAdmin: profileResult.user.isAdmin || false,
+                    isActive: profileResult.user.isActive || true,
+                    createdAt: profileResult.user.createdAt || '',
+                    lastLogin: profileResult.user.lastLogin || '',
+                    twoFactorEnabled: profileResult.user.twoFactorEnabled || false,
+                    emailVerified: profileResult.user.emailVerified || false,
+                    phoneVerified: profileResult.user.phoneVerified || false
                 });
+            }
+
+            // Update security status including password strength
+            if (securityStatusResult.data.success) {
+                setSecurityStatus(prev => ({
+                    ...prev,
+                    passwordStrength: {
+                        status: securityStatusResult.data.data.passwordStrength.level === 'weak' ? 'weak' :
+                            securityStatusResult.data.data.passwordStrength.level === 'medium' ? 'medium' : 'strong',
+                        level: securityStatusResult.data.data.passwordStrength.level
+                    }
+                }));
             }
         } catch (error) {
             console.error('Error refreshing profile data:', error);
@@ -903,6 +971,25 @@ const Dashboard = () => {
 
             if (response.data.success) {
                 showSuccessToast('Verification Email Sent!', 'Check your email inbox (and spam/junk folder if not found).');
+                
+                // Check email verification status after a short delay to see if it was already verified
+                setTimeout(async () => {
+                    try {
+                        setIsCheckingEmailVerification(true);
+                        const statusResponse = await api.get('/auth/email-verification-status');
+                        if (statusResponse.data.success) {
+                            const { emailVerified } = statusResponse.data.data;
+                            setProfileData(prev => ({
+                                ...prev,
+                                emailVerified: emailVerified
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('Error checking email verification status:', error);
+                    } finally {
+                        setIsCheckingEmailVerification(false);
+                    }
+                }, 2000); // Check after 2 seconds
             } else {
                 showErrorToast('Failed to Send Email', 'Failed to send verification email. Please try again.');
             }
@@ -1195,31 +1282,37 @@ const Dashboard = () => {
                     <div className="card-content">
                         <div className="security-status-list">
                             <div className={`security-status-item ${getStatusClass('good')}`}>
-                                <span className="status-icon"><FiShieldCheck /></span>
+                                <span className="status-icon success"><FiShieldCheck /></span>
                                 <div>
                                     <div className="status-title">Account Security</div>
                                     <div className="status-desc">Your account is secure.</div>
                                 </div>
                             </div>
                             <div className={`security-status-item ${getStatusClass(securityStatus.passwordStrength?.status)}`}>
-                                <span className="status-icon">{securityStatus.passwordStrength?.status === 'strong' ? <FiCheckCircle /> : <FiAlertCircle />}</span>
+                                <span className={`status-icon ${securityStatus.passwordStrength?.status === 'strong' ? 'success' : securityStatus.passwordStrength?.status === 'medium' ? 'warning' : 'error'}`}>
+                                    {securityStatus.passwordStrength?.status === 'strong' ? <FiCheckCircle /> : <FiAlertCircle />}
+                                </span>
                                 <div>
                                     <div className="status-title">Password Strength</div>
                                     <div className="status-desc">
                                         {securityStatus.passwordStrength?.status === 'strong' ?
                                             'Your password is strong and secure.' :
-                                            <>
-                                                Your password is weak. <a href="#" onClick={(e) => {
-                                                    e.preventDefault();
-                                                    handleQuickAction('change-password');
-                                                }}>Change password</a>
-                                            </>
+                                            securityStatus.passwordStrength?.status === 'unknown' ?
+                                                <>Password strength cannot be determined for your account. <a href="#" onClick={(e) => { e.preventDefault(); handleQuickAction('change-password'); }}>Change password</a> to update strength.</> :
+                                                <>
+                                                    Your password is weak. <a href="#" onClick={(e) => {
+                                                        e.preventDefault();
+                                                        handleQuickAction('change-password');
+                                                    }}>Change password</a>
+                                                </>
                                         }
                                     </div>
                                 </div>
                             </div>
                             <div className={`security-status-item ${getStatusClass(profileData.twoFactorEnabled ? 'enabled' : 'disabled')}`}>
-                                <span className="status-icon">{profileData.twoFactorEnabled ? <FiCheckCircle /> : <FiLock />}</span>
+                                <span className={`status-icon ${profileData.twoFactorEnabled ? 'success' : 'warning'}`}>
+                                    {profileData.twoFactorEnabled ? <FiCheckCircle /> : <FiLock />}
+                                </span>
                                 <div>
                                     <div className="status-title">Two-Factor Auth</div>
                                     <div className="status-desc">
@@ -1233,22 +1326,35 @@ const Dashboard = () => {
                                 </div>
                             </div>
                             <div className={`security-status-item ${profileData.emailVerified ? 'good' : 'warning'}`}>
-                                <span className="status-icon">{profileData.emailVerified ? <FiCheckCircle /> : <FiMail />}</span>
+                                <span className={`status-icon ${profileData.emailVerified ? 'success' : 'warning'}`}>
+                                    {isCheckingEmailVerification ? (
+                                        <div className="loading-spinner-small"></div>
+                                    ) : profileData.emailVerified ? (
+                                        <FiCheckCircle />
+                                    ) : (
+                                        <FiMail />
+                                    )}
+                                </span>
                                 <div>
                                     <div className="status-title">Email Verification</div>
                                     <div className="status-desc">
-                                        {profileData.emailVerified ?
-                                            'Email is verified and secure.' :
+                                        {isCheckingEmailVerification ? (
+                                            'Checking verification status...'
+                                        ) : profileData.emailVerified ? (
+                                            'Email is verified and secure.'
+                                        ) : (
                                             <>
                                                 Email not verified. <a href="#" onClick={() => handleQuickAction('verify-email')}>Verify now</a>
                                             </>
-                                        }
+                                        )}
                                     </div>
                                 </div>
                             </div>
                             {/* --- PHONE VERIFICATION UI & LOGIC DISABLED --- */}
                             {/* <div className={`security-status-item ${getStatusClass(profileData.phoneVerified ? 'good' : 'warning')}`}>
-                                <span className="status-icon">{profileData.phoneVerified ? <FiCheckCircle /> : <FiSmartphone />}</span>
+                                <span className={`status-icon ${profileData.phoneVerified ? 'success' : 'warning'}`}>
+                                    {profileData.phoneVerified ? <FiCheckCircle /> : <FiSmartphone />}
+                                </span>
                                 <div>
                                     <div className="status-title">Phone Verification</div>
                                     <div className="status-desc">

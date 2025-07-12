@@ -972,6 +972,47 @@ router.post('/2fa/enable', authenticateToken, sanitizeInput, validateInput({
             success: true
         });
 
+        // Emit real-time security status update
+        try {
+            const { emitUserUpdate } = require('../index');
+            const securityStatus = {
+                accountSecurity: {
+                    status: user.isActive ? 'good' : 'locked',
+                    failedAttempts: user.failedLoginAttempts || 0
+                },
+                passwordStrength: {
+                    status: user.getPasswordStrength().level === 'weak' ? 'weak' :
+                        user.getPasswordStrength().level === 'medium' ? 'medium' : 'strong',
+                    level: user.getPasswordStrength().level
+                },
+                twoFactorAuth: {
+                    enabled: true,
+                    backupCodesCount: user.twoFactorBackupCodes?.filter(code => !code.used).length || 0
+                }
+            };
+            await emitUserUpdate(user._id, 'security-status', securityStatus);
+            
+            // Also emit profile data update for 2FA status
+            const profileData = {
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                username: user.username || '',
+                isAdmin: user.isAdmin || false,
+                isActive: user.isActive || true,
+                createdAt: user.createdAt || '',
+                lastLogin: user.lastLogin || '',
+                twoFactorEnabled: true,
+                emailVerified: user.emailVerified || false,
+                phoneVerified: user.phoneVerified || false
+            };
+            await emitUserUpdate(user._id, 'profile-data', profileData);
+        } catch (socketError) {
+            console.error('Socket.IO update error:', socketError);
+            // Don't fail the 2FA enable if socket update fails
+        }
+
         res.json({
             success: true,
             message: 'Two-factor authentication enabled successfully'
@@ -1035,6 +1076,47 @@ router.post('/2fa/disable', authenticateToken, sanitizeInput, validateInput({
             location: await extractLocationFromIP(req.ip),
             success: true
         });
+
+        // Emit real-time security status update
+        try {
+            const { emitUserUpdate } = require('../index');
+            const securityStatus = {
+                accountSecurity: {
+                    status: user.isActive ? 'good' : 'locked',
+                    failedAttempts: user.failedLoginAttempts || 0
+                },
+                passwordStrength: {
+                    status: user.getPasswordStrength().level === 'weak' ? 'weak' :
+                        user.getPasswordStrength().level === 'medium' ? 'medium' : 'strong',
+                    level: user.getPasswordStrength().level
+                },
+                twoFactorAuth: {
+                    enabled: false,
+                    backupCodesCount: 0
+                }
+            };
+            await emitUserUpdate(user._id, 'security-status', securityStatus);
+            
+            // Also emit profile data update for 2FA status
+            const profileData = {
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                username: user.username || '',
+                isAdmin: user.isAdmin || false,
+                isActive: user.isActive || true,
+                createdAt: user.createdAt || '',
+                lastLogin: user.lastLogin || '',
+                twoFactorEnabled: false,
+                emailVerified: user.emailVerified || false,
+                phoneVerified: user.phoneVerified || false
+            };
+            await emitUserUpdate(user._id, 'profile-data', profileData);
+        } catch (socketError) {
+            console.error('Socket.IO update error:', socketError);
+            // Don't fail the 2FA disable if socket update fails
+        }
 
         res.json({
             success: true,
@@ -1514,6 +1596,30 @@ router.put('/change-password', authenticateToken, sanitizeInput, validateInput({
             location: await extractLocationFromIP(req.ip),
             success: true
         });
+
+        // Emit real-time security status update
+        try {
+            const { emitUserUpdate } = require('../index');
+            const securityStatus = {
+                accountSecurity: {
+                    status: user.isActive ? 'good' : 'locked',
+                    failedAttempts: user.failedLoginAttempts || 0
+                },
+                passwordStrength: {
+                    status: passwordValidation.analysis.level === 'weak' ? 'weak' :
+                        passwordValidation.analysis.level === 'medium' ? 'medium' : 'strong',
+                    level: passwordValidation.analysis.level
+                },
+                twoFactorAuth: {
+                    enabled: user.twoFactorEnabled || false,
+                    backupCodesCount: user.twoFactorBackupCodes?.filter(code => !code.used).length || 0
+                }
+            };
+            await emitUserUpdate(user._id, 'security-status', securityStatus);
+        } catch (socketError) {
+            console.error('Socket.IO update error:', socketError);
+            // Don't fail the password change if socket update fails
+        }
 
         res.json({
             success: true,
@@ -2080,6 +2186,29 @@ router.post('/send-email-verification', authenticateToken, async (req, res) => {
         const emailResult = await emailService.sendEmailVerification(user, user.emailVerificationToken);
         
         if (emailResult.success) {
+            // Emit real-time profile data update to show verification email was sent
+            try {
+                const { emitUserUpdate } = require('../index');
+                const profileData = {
+                    firstName: user.firstName || '',
+                    lastName: user.lastName || '',
+                    email: user.email || '',
+                    phone: user.phone || '',
+                    username: user.username || '',
+                    isAdmin: user.isAdmin || false,
+                    isActive: user.isActive || true,
+                    createdAt: user.createdAt || '',
+                    lastLogin: user.lastLogin || '',
+                    twoFactorEnabled: user.twoFactorEnabled || false,
+                    emailVerified: user.emailVerified || false,
+                    phoneVerified: user.phoneVerified || false
+                };
+                await emitUserUpdate(user._id, 'profile-data', profileData);
+            } catch (socketError) {
+                console.error('Socket.IO update error:', socketError);
+                // Don't fail the email verification request if socket update fails
+            }
+
             res.json({
                 success: true,
                 message: 'Email verification sent successfully'
@@ -2144,6 +2273,34 @@ router.post('/verify-email', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to verify email'
+        });
+    }
+});
+
+// Check email verification status
+router.get('/email-verification-status', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                emailVerified: user.emailVerified || false,
+                email: user.email
+            }
+        });
+    } catch (error) {
+        console.error('Email verification status check error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check email verification status'
         });
     }
 });
