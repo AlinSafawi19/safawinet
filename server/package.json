@@ -8,6 +8,7 @@
     "test-server": "node test-server.js",
     "test-sms": "node test-sms.js",
     "seed": "node seed/seed.js",
+    "seed-templates": "node seed/seedRoleTemplates.js",
     "check-db": "node scripts/checkDb.js",
     "backup-db": "node scripts/backupDb.js",
     "restore-db": "node scripts/restoreDb.js",

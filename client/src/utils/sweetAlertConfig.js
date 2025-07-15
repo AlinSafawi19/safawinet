@@ -17,6 +17,12 @@ export const showSuccessToast = (title, text, timer = 3000) => {
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: false,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -36,6 +42,12 @@ export const showErrorToast = (title, text, timer = 4000) => {
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: false,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -55,6 +67,12 @@ export const showWarningToast = (title, text, timer = 4000) => {
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: false,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -74,6 +92,12 @@ export const showInfoToast = (title, text, timer = 4000) => {
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: false,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -95,6 +119,12 @@ export const showValidationErrors = (errors) => {
             padding: '1rem',
             customClass: {
                 popup: 'swal-under-header'
+            },
+            backdrop: false,
+            allowOutsideClick: true,
+            allowEscapeKey: true,
+            customStyle: {
+                zIndex: 9999
             }
         });
     }
@@ -115,6 +145,12 @@ export const showConfirmationDialog = (title, text, confirmButtonText = 'Yes', c
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -131,6 +167,12 @@ export const showSuccessModal = (title, text, confirmButtonText = 'OK') => {
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -147,6 +189,12 @@ export const showErrorModal = (title, text, confirmButtonText = 'OK') => {
         padding: '1rem',
         customClass: {
             popup: 'swal-under-header'
+        },
+        backdrop: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true,
+        customStyle: {
+            zIndex: 9999
         }
     });
 };
@@ -159,6 +207,10 @@ export const showLoadingDialog = (title = 'Loading...', text = 'Please wait') =>
         allowOutsideClick: false,
         allowEscapeKey: false,
         showConfirmButton: false,
+        backdrop: true,
+        customStyle: {
+            zIndex: 9999
+        },
         didOpen: () => {
             Swal.showLoading();
         }

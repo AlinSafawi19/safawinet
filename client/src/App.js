@@ -12,6 +12,7 @@ import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
 import CreateUser from './pages/CreateUser';
+import RoleTemplates from './pages/RoleTemplates';
 import { applyUserTheme } from './utils/themeUtils';
 import { CalculatorProvider } from './contexts/CalculatorContext';
 import Calculator from './components/Calculator';
@@ -186,6 +187,21 @@ const CreateUserPage = () => {
   );
 };
 
+// Role Templates Page component
+const RoleTemplatesPage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <RoleTemplates />
+    </DashboardLayout>
+  );
+};
+
 function App() {
   // Apply user theme on app load
   useEffect(() => {
@@ -248,6 +264,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateUserPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/role-templates"
+              element={
+                <ProtectedRoute>
+                  <RoleTemplatesPage />
                 </ProtectedRoute>
               }
             />
