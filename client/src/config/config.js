@@ -2,7 +2,7 @@ const config = {
   development: {
     apiUrl: 'http://localhost:5000/api',
     serverUrl: 'http://localhost:5000',
-    clientUrl: 'http://localhost:3000'
+    clientUrl: 'http://localhost:3002'
   },
   production: {
     apiUrl: process.env.REACT_APP_API_URL || 'https://your-production-server.com/api',

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiShield, FiKey, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
-import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
+import { FiX, FiShield, FiAlertCircle } from 'react-icons/fi';
 
 const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
     const [backupCode, setBackupCode] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     // Handle backup code submission
     const handleSubmit = async (e) => {
@@ -89,7 +87,7 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
                 <div className="modal-content">
                     <div className="modal-description">
                         <p className="description-text">
-                            Enter one of your backup codes to access your account. 
+                            Enter one of your backup codes to access your account.
                             Each backup code can only be used once.
                         </p>
 
@@ -135,7 +133,7 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
                                 disabled={isLoading}
                                 className="btn btn-primary"
                             >
-                                {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Verify Code'}
+                                {isLoading ? 'Verifying Code...' : 'Verify Code'}
                             </button>
                         </div>
                     </form>

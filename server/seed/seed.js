@@ -4,10 +4,78 @@ const { config } = require('../config/config');
 
 // Available pages and actions for the system
 const AVAILABLE_PAGES = [
-    'users'
+    'dashboard',
+    'users',
+    'audit-logs',
+    'knowledge-guide',
+    'profile',
+    'reports',
+    'analytics',
+    'notifications',
+    'settings',
+    'backups',
+    'integrations',
+    'security',
+    'help',
+    'support'
 ];
 
 const AVAILABLE_ACTIONS = ['view', 'add', 'edit', 'delete'];
+
+// Role Templates with clear permissions
+const ROLE_TEMPLATES = {
+    admin: {
+        name: 'Administrator',
+        description: 'Full access to all features and system administration',
+        permissions: AVAILABLE_PAGES.map(page => ({
+            page,
+            actions: AVAILABLE_ACTIONS
+        }))
+    },
+    viewer: {
+        name: 'Viewer',
+        description: 'Read-only access to all web app features',
+        permissions: AVAILABLE_PAGES.map(page => ({
+            page,
+            actions: ['view']
+        }))
+    },
+    manager: {
+        name: 'Manager',
+        description: 'User management and operational oversight',
+        permissions: [
+            { page: 'dashboard', actions: ['view'] },
+            { page: 'users', actions: ['view', 'add', 'edit'] },
+            { page: 'audit-logs', actions: ['view'] },
+            { page: 'knowledge-guide', actions: ['view'] },
+            { page: 'profile', actions: ['view', 'edit'] },
+            { page: 'reports', actions: ['view', 'add', 'edit'] },
+            { page: 'analytics', actions: ['view', 'add', 'edit'] },
+            { page: 'notifications', actions: ['view'] },
+            { page: 'settings', actions: ['view'] },
+            { page: 'help', actions: ['view'] },
+            { page: 'support', actions: ['view'] }
+        ]
+    },
+    supervisor: {
+        name: 'Supervisor',
+        description: 'Team oversight and advanced reporting',
+        permissions: [
+            { page: 'dashboard', actions: ['view'] },
+            { page: 'users', actions: ['view', 'add', 'edit'] },
+            { page: 'audit-logs', actions: ['view'] },
+            { page: 'knowledge-guide', actions: ['view'] },
+            { page: 'profile', actions: ['view', 'edit'] },
+            { page: 'reports', actions: ['view', 'add', 'edit'] },
+            { page: 'analytics', actions: ['view', 'add', 'edit'] },
+            { page: 'notifications', actions: ['view', 'add'] },
+            { page: 'settings', actions: ['view'] },
+            { page: 'backups', actions: ['view'] },
+            { page: 'help', actions: ['view'] },
+            { page: 'support', actions: ['view'] }
+        ]
+    }
+};
 
 // Base admin user data
 const adminUser = {
@@ -19,10 +87,8 @@ const adminUser = {
     lastName: 'Safawi',
     isAdmin: true,
     isActive: true,
-    permissions: AVAILABLE_PAGES.map(page => ({
-        page,
-        actions: AVAILABLE_ACTIONS
-    })),
+    role: 'admin',
+    permissions: ROLE_TEMPLATES.admin.permissions,
     userPreferences: {
         timezone: 'Asia/Beirut',
         language: 'english',
@@ -59,6 +125,7 @@ const createAdminUser = async () => {
         console.log('Username: alin');
         console.log('Email: alinsafawi19@gmail.com');
         console.log('Password: alin123M@');
+        console.log('Role: Administrator (Full Access)');
         console.log('Welcome Email Sent:', savedAdmin.welcomeEmailSent, '(will be sent on first login)');
         console.log('⚠️  Please change the password after first login!');
 
@@ -81,10 +148,9 @@ const createSampleUsers = async (adminId) => {
             lastName: 'Manager',
             isAdmin: false,
             isActive: true,
+            role: 'manager',
             createdBy: adminId,
-            permissions: [
-                { page: 'users', actions: ['view', 'add', 'edit'] }
-            ],
+            permissions: ROLE_TEMPLATES.manager.permissions,
             userPreferences: {
                 timezone: 'Asia/Beirut',
                 language: 'english',
@@ -102,10 +168,29 @@ const createSampleUsers = async (adminId) => {
             lastName: 'Viewer',
             isAdmin: false,
             isActive: true,
+            role: 'viewer',
             createdBy: adminId,
-            permissions: [
-                { page: 'users', actions: ['view'] }
-            ],
+            permissions: ROLE_TEMPLATES.viewer.permissions,
+            userPreferences: {
+                timezone: 'Asia/Beirut',
+                language: 'english',
+                theme: 'light',
+                dateFormat: 'MMM dd, yyyy h:mm a',
+                autoLogoutTime: 30
+            }
+        },
+        {
+            username: 'supervisor',
+            email: 'supervisor@safawinet.com',
+            phone: '+1234567893',
+            password: 'Supervisor@123',
+            firstName: 'Sarah',
+            lastName: 'Supervisor',
+            isAdmin: false,
+            isActive: true,
+            role: 'supervisor',
+            createdBy: adminId,
+            permissions: ROLE_TEMPLATES.supervisor.permissions,
             userPreferences: {
                 timezone: 'Asia/Beirut',
                 language: 'english',
@@ -125,7 +210,7 @@ const createSampleUsers = async (adminId) => {
                     welcomeEmailSent: false
                 });
                 await user.save();
-                console.log(`✅ Created sample user: ${userData.username}`);
+                console.log(`✅ Created sample user: ${userData.username} (${ROLE_TEMPLATES[userData.role].name})`);
             } else {
                 console.log(`⏭️  Sample user ${userData.username} already exists. Skipping.`);
             }
@@ -145,17 +230,22 @@ const seedDatabase = async () => {
         console.log('📦 Connected to MongoDB');
 
         // Create admin user
-        await createAdminUser();
-        //const admin = await createAdminUser();
+        const admin = await createAdminUser();
 
         // Create sample users (optional - uncomment if needed)
-        // await createSampleUsers(admin._id);
+        await createSampleUsers(admin._id);
 
         console.log('✅ Database seeding completed successfully!');
-        console.log('\n📋 Available users:');
-        console.log('1. Admin - Full access to all pages and actions');
-        console.log('2. Manager - Limited access (view + add/edit on users page)');
-        console.log('3. Viewer - Read-only access to users page');
+        console.log('\n📋 Role Templates:');
+        console.log('1. Administrator - Full access to all features and system administration');
+        console.log('2. Manager - User management and operational oversight');
+        console.log('3. Supervisor - Team oversight and advanced reporting');
+        console.log('4. Viewer - Read-only access to all web app features');
+        console.log('\n👥 Sample Users Created:');
+        console.log('- alin (Administrator) - Full access');
+        console.log('- manager (Manager) - User management + operational access');
+        console.log('- supervisor (Supervisor) - Team oversight + advanced reporting');
+        console.log('- viewer (Viewer) - Read-only access to all features');
 
     } catch (error) {
         console.error('❌ Database seeding failed:', error.message);
@@ -171,10 +261,4 @@ if (require.main === module) {
     seedDatabase();
 }
 
-module.exports = {
-    seedDatabase,
-    createAdminUser,
-    createSampleUsers,
-    AVAILABLE_PAGES,
-    AVAILABLE_ACTIONS
-}; 
+module.exports = { seedDatabase, ROLE_TEMPLATES }; 

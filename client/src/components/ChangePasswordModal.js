@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiX } from 'react-icons/fi';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 
 const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
@@ -18,6 +17,12 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [passwordStrength, setPasswordStrength] = useState(null);
+    // Add focus state for floating label
+    const [inputFocus, setInputFocus] = useState({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false
+    });
 
     // Password strength requirements
     const requirements = {
@@ -249,6 +254,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         };
     }, [isOpen]);
 
+    // Helper to get floating label class
+    const getFloatingLabelClass = (field) => {
+        let cls = 'form-group floating-label';
+        if (inputFocus[field]) cls += ' focused';
+        if (formData[field]) cls += ' filled';
+        return cls;
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -267,8 +280,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="modal-form">
-                    <div className="form-group">
-                        <label htmlFor="currentPassword" className="form-label">Current Password</label>
+                    <div className={getFloatingLabelClass('currentPassword')}>
                         <div className="input-group">
                             <input
                                 type={showPasswords.current ? 'text' : 'password'}
@@ -277,12 +289,15 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 value={formData.currentPassword}
                                 onChange={handleChange}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Enter your current password"
+                                onFocus={() => setInputFocus(f => ({ ...f, currentPassword: true }))}
+                                onBlur={() => setInputFocus(f => ({ ...f, currentPassword: false }))}
                                 disabled={isLoading}
                                 required
                                 autoComplete="current-password"
                                 className="form-input"
+                                placeholder=""
                             />
+                            <label htmlFor="currentPassword" className="form-label">Current Password</label>
                             <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility('current')}
@@ -297,8 +312,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                         )}
                     </div>
 
-                    <div className="form-group">
-                        <label htmlFor="newPassword" className="form-label">New Password</label>
+                    <div className={getFloatingLabelClass('newPassword')}>
                         <div className="input-group">
                             <input
                                 type={showPasswords.new ? 'text' : 'password'}
@@ -307,12 +321,15 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 value={formData.newPassword}
                                 onChange={handleChange}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Enter your new password"
+                                onFocus={() => setInputFocus(f => ({ ...f, newPassword: true }))}
+                                onBlur={() => setInputFocus(f => ({ ...f, newPassword: false }))}
                                 disabled={isLoading}
                                 required
                                 autoComplete="new-password"
                                 className="form-input"
+                                placeholder=""
                             />
+                            <label htmlFor="newPassword" className="form-label">New Password</label>
                             <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility('new')}
@@ -331,7 +348,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     {passwordStrength && (
                         <div className="password-strength">
                             <div className="strength-bar">
-                                <div 
+                                <div
                                     className={`strength-fill strength-${passwordStrength.strength}`}
                                     style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
                                 ></div>
@@ -366,8 +383,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                         </div>
                     )}
 
-                    <div className="form-group">
-                        <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
+                    <div className={getFloatingLabelClass('confirmPassword')}>
                         <div className="input-group">
                             <input
                                 type={showPasswords.confirm ? 'text' : 'password'}
@@ -376,12 +392,15 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Confirm your new password"
+                                onFocus={() => setInputFocus(f => ({ ...f, confirmPassword: true }))}
+                                onBlur={() => setInputFocus(f => ({ ...f, confirmPassword: false }))}
                                 disabled={isLoading}
                                 required
                                 autoComplete="new-password"
                                 className="form-input"
+                                placeholder=""
                             />
+                            <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
                             <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility('confirm')}
@@ -411,11 +430,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                             disabled={isLoading}
                             className="btn btn-primary"
                         >
-                            {isLoading ? (
-                                <ButtonLoadingOverlay isLoading={isLoading} />
-                            ) : (
-                                'Change Password'
-                            )}
+                            {isLoading ? 'Changing Password...' : 'Change Password'}
                         </button>
                     </div>
                 </form>

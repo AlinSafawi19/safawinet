@@ -3,7 +3,6 @@ import authService from '../services/authService';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import BackupCodeModal from '../components/BackupCodeModal';
 import logo from '../assets/images/logo.png';
-import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 import { showErrorToast } from '../utils/sweetAlertConfig';
 import { FiEye, FiEyeOff, FiShield, FiKey } from 'react-icons/fi';
 import { FaLock } from 'react-icons/fa';
@@ -378,7 +377,7 @@ const Login = ({ onLoginSuccess }) => {
             disabled={isLoading || isBlocked}
             className="btn btn-primary btn-full"
           >
-            {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Sign In'}
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 

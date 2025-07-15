@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import authService from '../services/authService';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 import { FiX, FiUpload } from 'react-icons/fi';
 
 const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
@@ -144,13 +143,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
                 className="btn btn-primary"
                 type="button"
               >
-                {isUploading ? (
-                  <ButtonLoadingOverlay isLoading={isUploading} />
-                ) : (
-                  <>
-                    <FiUpload /> Upload Picture
-                  </>
-                )}
+                {isUploading ? 'Uploading Picture...' : 'Upload Picture'}
               </button>
               <button
                 onClick={handleCancel}

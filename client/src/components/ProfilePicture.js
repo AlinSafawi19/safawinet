@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { getProfileDisplay, getInitialsColor, generateInitials } from '../utils/avatarUtils';
 import authService from '../services/authService';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 import { FiX } from 'react-icons/fi';
 
 const ProfilePicture = ({
   user,
+  size = 'medium',
   showUploadButton = false,
   onUploadClick = null,
   showRemoveButton = false,
@@ -199,7 +199,7 @@ const ProfilePicture = ({
                 disabled={isUploading}
                 className="btn btn-primary"
               >
-                {isUploading ? <ButtonLoadingOverlay isLoading={isUploading} /> : 'Upload Picture'}
+                {isUploading ? 'Uploading Picture...' : 'Upload Picture'}
               </button>
               <button
                 onClick={handleCancel}
@@ -224,7 +224,7 @@ const ProfilePicture = ({
 
   // Regular profile picture display
   return (
-    <div className="profile-picture">
+    <div className={`profile-picture size-${size}`}>
       {profileDisplay.type === 'image' ? (
         <>
           <img

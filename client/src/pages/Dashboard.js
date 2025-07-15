@@ -11,25 +11,17 @@ import moment from 'moment';
 import 'moment-timezone';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import TwoFactorModal from '../components/TwoFactorModal';
-import ProfilePicture from '../components/ProfilePicture';
-import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
-import { getInitialsColor, getProfileDisplay } from '../utils/avatarUtils';
 import {
-    FiAlertTriangle,
-    FiCheckCircle,
-    FiLock,
-    FiMail,
-    FiShield,
-    FiWifi,
-    FiShield as FiShieldCheck,
-    FiAlertCircle,
-    FiGlobe,
-    FiServer,
-    FiClock,
-    FiActivity
+    FiShare,
+    FiPrinter,
+    FiDownload,
+    FiX,
+    FiRefreshCw,
+    FiEye
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
+import TodoList from '../components/TodoList';
 
 // Fix for Leaflet marker icons in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -41,15 +33,6 @@ L.Icon.Default.mergeOptions({
 
 const Dashboard = () => {
     const user = authService.getCurrentUser();
-    const profileDisplay = getProfileDisplay(user);
-    const initialsColor = getInitialsColor(user?.username || user?.email || user?.firstName || '');
-    // Apply user theme preference
-    useEffect(() => {
-        if (user) {
-            applyUserTheme(user);
-        }
-    }, [user]);
-
     // Extract user preferences with fallbacks
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
     const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
@@ -58,38 +41,30 @@ const Dashboard = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [lastFetchTime, setLastFetchTime] = useState(null);
     const [rateLimitWarning, setRateLimitWarning] = useState(false);
-    const [currentTime, setCurrentTime] = useState(moment().tz(userTimezone));
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
     const [twoFactorMode, setTwoFactorMode] = useState('enable');
-    const [isCheckingEmailVerification, setIsCheckingEmailVerification] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
 
     const [securityStats, setSecurityStats] = useState({
         securityEvents: 0,
         failedLogins: 0,
         successfulLogins: 0,
-        period: '24 hours'
+        period: '0 hours'
     });
 
     const [securityStatus, setSecurityStatus] = useState({
-        accountSecurity: { status: 'good' },
-        passwordStrength: { status: 'strong' },
-        twoFactorAuth: { status: 'disabled' }
+        accountSecurity: { status: 'unknown' },
+        passwordStrength: { status: 'unknown' },
+        twoFactorAuth: { status: 'unknown' }
     });
 
     const [profileData, setProfileData] = useState({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
         email: user?.email || '',
-        phone: user?.phone || '',
-        username: user?.username || '',
         isAdmin: user?.isAdmin || false,
         isActive: user?.isActive || true,
-        createdAt: user?.createdAt || '',
-        lastLogin: user?.lastLogin || '',
         twoFactorEnabled: user?.twoFactorEnabled || false,
-        emailVerified: user?.emailVerified || false,
-        phoneVerified: user?.phoneVerified || false
+        emailVerified: user?.emailVerified || false
     });
 
     const [systemHealth, setSystemHealth] = useState({
@@ -99,26 +74,34 @@ const Dashboard = () => {
         uptime: { status: 'unknown', uptime: 0, lastCheck: null }
     });
 
+    // Add historical data state for trend calculations
+    const [historicalData, setHistoricalData] = useState({
+        systemHealth: {
+            database: { status: 'unknown', responseTime: 0 },
+            emailService: { status: 'unknown', deliveryRate: 0 },
+            apiResponse: { status: 'unknown', avgResponseTime: 0 },
+            uptime: { status: 'unknown', uptime: 0 }
+        },
+        securityStats: {
+            securityEvents: 0,
+            failedLogins: 0,
+            successfulLogins: 0
+        },
+        lastUpdate: null
+    });
+
     const [chartData, setChartData] = useState({
         securityEvents: [],
         loginSuccessRate: { successful: 0, failed: 0 },
         geographicActivity: [],
-        deviceUsage: []
-    });
-
-    const [apiErrors, setApiErrors] = useState({
-        securityEvents: false,
-        loginSuccessRate: false,
-        geographicActivity: false,
-        deviceUsage: false
-    });
-
-    // Loading states for charts
-    const [chartLoading, setChartLoading] = useState({
-        securityEvents: true,
-        loginSuccessRate: true,
-        geographicActivity: true,
-        deviceUsage: true
+        deviceUsage: [],
+        systemMetricsTimeline: [],
+        performanceMetrics: {
+            cpu: [],
+            memory: [],
+            disk: [],
+            network: []
+        }
     });
 
     // Chart refs
@@ -126,17 +109,30 @@ const Dashboard = () => {
     const loginSuccessChartRef = useRef(null);
     const deviceUsageChartRef = useRef(null);
     const geographicMapRef = useRef(null);
+    const systemHealthChartRef = useRef(null);
+    const loginSuccessDoughnutChartRef = useRef(null);
+    const securityEventsLineChartRef = useRef(null);
+    const systemMetricsTimelineChartRef = useRef(null);
+    const performanceMetricsChartRef = useRef(null);
 
     // Chart instances
     const [charts, setCharts] = useState({
         securityEvents: null,
         loginSuccess: null,
-        deviceUsage: null
+        deviceUsage: null,
+        systemHealth: null,
+        loginSuccessDoughnut: null,
+        securityEventsLine: null,
+        systemMetricsTimeline: null,
+        performanceMetrics: null
     });
 
     // Get the number of active sessions from user object
     const activeSessionsCount = user?.activeSessions?.length || 0;
     const maxSessions = user?.maxSessions || 5;
+
+    // Add active sessions to historical data for trend calculation
+    const [historicalActiveSessions, setHistoricalActiveSessions] = useState(0);
 
     // Create a single axios instance for all API calls
     const createApiInstance = useCallback(() => {
@@ -183,14 +179,6 @@ const Dashboard = () => {
 
             // Request initial dashboard data
             socketInstance.emit('request-dashboard-data');
-
-            // Set loading states when requesting data via socket
-            setChartLoading({
-                securityEvents: true,
-                loginSuccessRate: true,
-                geographicActivity: true,
-                deviceUsage: true
-            });
         });
 
         socketInstance.on('disconnect', () => {
@@ -230,24 +218,6 @@ const Dashboard = () => {
                         ...prev,
                         ...update.data
                     }));
-
-                    // Clear API errors for chart data since we received real-time updates
-                    setApiErrors(prev => ({
-                        ...prev,
-                        securityEvents: false,
-                        loginSuccessRate: false,
-                        geographicActivity: false,
-                        deviceUsage: false
-                    }));
-
-                    // Clear loading states for chart data since we received real-time updates
-                    setChartLoading(prev => ({
-                        ...prev,
-                        securityEvents: false,
-                        loginSuccessRate: false,
-                        geographicActivity: false,
-                        deviceUsage: false
-                    }));
                     break;
                 default:
                     break;
@@ -271,24 +241,6 @@ const Dashboard = () => {
     const fetchDashboardData = useCallback(async () => {
         if (!authService.isUserAuthenticated()) return;
 
-        // Set all charts to loading state
-        setChartLoading({
-            securityEvents: true,
-            loginSuccessRate: true,
-            geographicActivity: true,
-            deviceUsage: true
-        });
-
-        // Add a timeout to clear loading states if API calls take too long
-        const loadingTimeout = setTimeout(() => {
-            setChartLoading({
-                securityEvents: false,
-                loginSuccessRate: false,
-                geographicActivity: false,
-                deviceUsage: false
-            });
-        }, 10000); // 10 second timeout
-
         try {
             const api = createApiInstance();
 
@@ -300,7 +252,9 @@ const Dashboard = () => {
                 securityEventsChartResponse,
                 loginSuccessResponse,
                 geographicResponse,
-                deviceUsageResponse
+                deviceUsageResponse,
+                systemMetricsResponse,
+                performanceMetricsResponse
             ] = await Promise.all([
                 api.get('/auth/security-events'),
                 api.get('/auth/security-status'),
@@ -308,12 +262,19 @@ const Dashboard = () => {
                 api.get('/auth/security-events-chart?days=7'),
                 api.get('/auth/login-success-rate?hours=24'),
                 api.get('/auth/geographic-activity?hours=24'),
-                api.get('/auth/device-usage?hours=24')
+                api.get('/auth/device-usage?hours=24'),
+                api.get('/auth/system-metrics-timeline?hours=6'),
+                api.get('/auth/performance-metrics?hours=6')
             ]);
 
             // Update security stats
             if (securityEventsResponse.data.success) {
                 setSecurityStats(securityEventsResponse.data.data);
+
+                // Update historical data for trend calculations
+                updateHistoricalData({
+                    securityStats: securityEventsResponse.data.data
+                });
             }
 
             // Update security status
@@ -331,26 +292,33 @@ const Dashboard = () => {
             // Update system health with response time measurement
             if (healthResponse.data) {
                 const health = healthResponse.data;
-                setSystemHealth(prev => ({
-                    ...prev,
+                const newSystemHealth = {
+                    ...systemHealth,
                     database: {
                         status: health.database?.status || 'unknown',
-                        responseTime: prev.database.responseTime // Keep existing response time
+                        responseTime: systemHealth.database.responseTime // Keep existing response time
                     },
                     emailService: {
                         status: 'operational',
                         deliveryRate: 98.5
                     },
                     apiResponse: {
-                        status: prev.apiResponse.status, // Keep existing status
-                        avgResponseTime: prev.apiResponse.avgResponseTime // Keep existing response time
+                        status: systemHealth.apiResponse.status, // Keep existing status
+                        avgResponseTime: systemHealth.apiResponse.avgResponseTime // Keep existing response time
                     },
                     uptime: {
                         status: health.status || 'unknown',
                         uptime: health.uptime || 0,
                         lastCheck: new Date()
                     }
-                }));
+                };
+
+                setSystemHealth(newSystemHealth);
+
+                // Update historical data for trend calculations
+                updateHistoricalData({
+                    systemHealth: newSystemHealth
+                });
             }
 
             // Update chart data
@@ -359,11 +327,6 @@ const Dashboard = () => {
                     ...prev,
                     securityEvents: securityEventsChartResponse.data.data
                 }));
-                setApiErrors(prev => ({ ...prev, securityEvents: false }));
-                setChartLoading(prev => ({ ...prev, securityEvents: false }));
-            } else {
-                setApiErrors(prev => ({ ...prev, securityEvents: true }));
-                setChartLoading(prev => ({ ...prev, securityEvents: false }));
             }
 
             if (loginSuccessResponse.data.success) {
@@ -371,11 +334,6 @@ const Dashboard = () => {
                     ...prev,
                     loginSuccessRate: loginSuccessResponse.data.data
                 }));
-                setApiErrors(prev => ({ ...prev, loginSuccessRate: false }));
-                setChartLoading(prev => ({ ...prev, loginSuccessRate: false }));
-            } else {
-                setApiErrors(prev => ({ ...prev, loginSuccessRate: true }));
-                setChartLoading(prev => ({ ...prev, loginSuccessRate: false }));
             }
 
             if (geographicResponse.data.success) {
@@ -383,11 +341,6 @@ const Dashboard = () => {
                     ...prev,
                     geographicActivity: geographicResponse.data.data
                 }));
-                setApiErrors(prev => ({ ...prev, geographicActivity: false }));
-                setChartLoading(prev => ({ ...prev, geographicActivity: false }));
-            } else {
-                setApiErrors(prev => ({ ...prev, geographicActivity: true }));
-                setChartLoading(prev => ({ ...prev, geographicActivity: false }));
             }
 
             if (deviceUsageResponse.data.success) {
@@ -395,61 +348,31 @@ const Dashboard = () => {
                     ...prev,
                     deviceUsage: deviceUsageResponse.data.data
                 }));
-                setApiErrors(prev => ({ ...prev, deviceUsage: false }));
-                setChartLoading(prev => ({ ...prev, deviceUsage: false }));
-            } else {
-                setApiErrors(prev => ({ ...prev, deviceUsage: true }));
-                setChartLoading(prev => ({ ...prev, deviceUsage: false }));
+            }
+
+            if (systemMetricsResponse.data.success) {
+                setChartData(prev => ({
+                    ...prev,
+                    systemMetricsTimeline: systemMetricsResponse.data.data
+                }));
+            }
+
+            if (performanceMetricsResponse.data.success) {
+                setChartData(prev => ({
+                    ...prev,
+                    performanceMetrics: performanceMetricsResponse.data.data
+                }));
             }
 
             setLastFetchTime(new Date());
 
-            // Clear the loading timeout since API calls completed
-            clearTimeout(loadingTimeout);
         } catch (error) {
-            console.error('Error fetching dashboard data:', error);
-
-            // Clear the loading timeout since API calls failed
-            clearTimeout(loadingTimeout);
-
             // Handle rate limiting specifically
             if (error.response?.status === 429) {
-                console.warn('Rate limit exceeded, using cached data');
                 setRateLimitWarning(true);
 
                 // Clear warning after 30 seconds (longer for rate limiting)
                 setTimeout(() => setRateLimitWarning(false), 30000);
-
-                // Set error states for all APIs on rate limiting
-                setApiErrors({
-                    securityEvents: true,
-                    loginSuccessRate: true,
-                    geographicActivity: true,
-                    deviceUsage: true
-                });
-                setChartLoading({
-                    securityEvents: false,
-                    loginSuccessRate: false,
-                    geographicActivity: false,
-                    deviceUsage: false
-                });
-
-                // Show user-friendly message
-                console.log('Dashboard data temporarily unavailable due to rate limiting. Please try again in a few minutes.');
-            } else {
-                // Set error states for all APIs on general error
-                setApiErrors({
-                    securityEvents: true,
-                    loginSuccessRate: true,
-                    geographicActivity: true,
-                    deviceUsage: true
-                });
-                setChartLoading({
-                    securityEvents: false,
-                    loginSuccessRate: false,
-                    geographicActivity: false,
-                    deviceUsage: false
-                });
             }
         } finally {
         }
@@ -464,25 +387,11 @@ const Dashboard = () => {
     // Fetch data on mount and when not connected to real-time
     useEffect(() => {
         if (!isConnected) {
-            // Set loading states when starting to fetch data
-            setChartLoading({
-                securityEvents: true,
-                loginSuccessRate: true,
-                geographicActivity: true,
-                deviceUsage: true
-            });
             debouncedFetchDashboardData();
         } else {
             // When connected to real-time, only fetch data once on mount
             // Real-time updates will handle the rest
             if (!lastFetchTime) {
-                // Set loading states when starting to fetch data
-                setChartLoading({
-                    securityEvents: true,
-                    loginSuccessRate: true,
-                    geographicActivity: true,
-                    deviceUsage: true
-                });
                 debouncedFetchDashboardData();
             }
         }
@@ -491,19 +400,18 @@ const Dashboard = () => {
     // Refresh profile data on mount and when returning to dashboard
     useEffect(() => {
         refreshProfileData();
-        
+
         // Set up periodic email verification status check
         const checkEmailVerificationStatus = async () => {
             if (!authService.isUserAuthenticated()) return;
-            
+
             try {
-                setIsCheckingEmailVerification(true);
                 const api = createApiInstance();
                 const response = await api.get('/auth/email-verification-status');
-                
+
                 if (response.data.success) {
                     const { emailVerified } = response.data.data;
-                    
+
                     // Update profile data if email verification status changed
                     setProfileData(prev => {
                         if (prev.emailVerified !== emailVerified) {
@@ -518,27 +426,17 @@ const Dashboard = () => {
             } catch (error) {
                 console.error('Error checking email verification status:', error);
             } finally {
-                setIsCheckingEmailVerification(false);
             }
         };
-        
+
         // Check immediately and then every 30 seconds
         checkEmailVerificationStatus();
         const emailCheckInterval = setInterval(checkEmailVerificationStatus, 30000);
-        
+
         return () => {
             clearInterval(emailCheckInterval);
         };
     }, []);
-
-    // Update current time every second
-    useEffect(() => {
-        const timeInterval = setInterval(() => {
-            setCurrentTime(moment().tz(userTimezone));
-        }, 1000);
-
-        return () => clearInterval(timeInterval);
-    }, [userTimezone]);
 
     // Measure API response time separately (less frequent)
     useEffect(() => {
@@ -551,19 +449,28 @@ const Dashboard = () => {
                 await api.get('/health');
                 const responseTime = Date.now() - startTime;
 
+                const newApiResponse = {
+                    status: responseTime < 500 ? 'excellent' : responseTime < 1000 ? 'good' : 'slow',
+                    avgResponseTime: responseTime,
+                    lastCheck: new Date()
+                };
+
                 setSystemHealth(prev => ({
                     ...prev,
-                    apiResponse: {
-                        status: responseTime < 500 ? 'excellent' : responseTime < 1000 ? 'good' : 'slow',
-                        avgResponseTime: responseTime,
-                        lastCheck: new Date()
-                    }
+                    apiResponse: newApiResponse
                 }));
+
+                // Update historical data for trend calculations
+                updateHistoricalData({
+                    systemHealth: {
+                        ...systemHealth,
+                        apiResponse: newApiResponse
+                    }
+                });
 
                 // Update timestamp for successful API health checks
                 setLastFetchTime(new Date());
             } catch (error) {
-                console.error('Error measuring API response time:', error);
             }
         };
 
@@ -573,13 +480,36 @@ const Dashboard = () => {
         return () => clearInterval(interval);
     }, [createApiInstance]);
 
-    // Initialize charts
+    // Initialize charts when tab changes or data updates
     useEffect(() => {
-        // Only initialize charts if we have data and charts haven't been created yet
-        if (chartData.securityEvents.length > 0 || chartData.loginSuccessRate.successful > 0 || chartData.deviceUsage.length > 0) {
-            initializeCharts();
+        // Add a small delay to ensure DOM elements are rendered
+        const timer = setTimeout(() => {
+            if (activeTab === 'security' && chartData.securityEvents.length > 0) {
+                initializeSecurityCharts();
+            }
+            if (activeTab === 'analytics' && chartData.deviceUsage.length > 0) {
+                initializeAnalyticsCharts();
+            }
+            if (activeTab === 'overview' && systemHealthChartRef.current) {
+                initializeSystemHealthCharts();
+            }
+            if (activeTab === 'overview' && (chartData.systemMetricsTimeline.length > 0 || chartData.performanceMetrics.cpu.length > 0)) {
+                initializeOverviewCharts();
+            }
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [activeTab, chartData]);
+
+    // Handle map initialization when geographic data changes
+    useEffect(() => {
+        if ((activeTab === 'security' || activeTab === 'analytics') && chartData.geographicActivity && chartData.geographicActivity.length > 0) {
+            // Force map re-render when data changes
+            if (geographicMapRef.current) {
+                geographicMapRef.current.invalidateSize();
+            }
         }
-    }, [chartData]);
+    }, [activeTab, chartData.geographicActivity]);
 
     // Update charts when data changes (real-time updates)
     useEffect(() => {
@@ -592,7 +522,64 @@ const Dashboard = () => {
         if (charts.deviceUsage && chartData.deviceUsage.length > 0) {
             updateDeviceUsageChart();
         }
+        if (charts.systemHealth && systemHealthChartRef.current) {
+            updateSystemHealthChart();
+        }
+        if (charts.loginSuccessDoughnut && (chartData.loginSuccessRate.successful > 0 || chartData.loginSuccessRate.failed > 0)) {
+            updateLoginSuccessDoughnutChart();
+        }
+        if (charts.securityEventsLine && chartData.securityEvents.length > 0) {
+            updateSecurityEventsLineChart();
+        }
+        if (charts.systemMetricsTimeline && chartData.systemMetricsTimeline.length > 0) {
+            updateSystemMetricsTimelineChart();
+        }
+        if (charts.performanceMetrics &&
+            (chartData.performanceMetrics.cpu.length > 0 || chartData.performanceMetrics.memory.length > 0)) {
+            updatePerformanceMetricsChart();
+        }
     }, [chartData, charts]);
+
+    // Cleanup charts when switching tabs
+    useEffect(() => {
+        return () => {
+            // Destroy charts when component unmounts or tab changes
+            if (charts.securityEvents) {
+                charts.securityEvents.destroy();
+            }
+            if (charts.loginSuccess) {
+                charts.loginSuccess.destroy();
+            }
+            if (charts.deviceUsage) {
+                charts.deviceUsage.destroy();
+            }
+            if (charts.systemHealth) {
+                charts.systemHealth.destroy();
+            }
+            if (charts.loginSuccessDoughnut) {
+                charts.loginSuccessDoughnut.destroy();
+            }
+            if (charts.securityEventsLine) {
+                charts.securityEventsLine.destroy();
+            }
+            if (charts.systemMetricsTimeline) {
+                charts.systemMetricsTimeline.destroy();
+            }
+            if (charts.performanceMetrics) {
+                charts.performanceMetrics.destroy();
+            }
+            setCharts({
+                securityEvents: null,
+                loginSuccess: null,
+                deviceUsage: null,
+                systemHealth: null,
+                loginSuccessDoughnut: null,
+                securityEventsLine: null,
+                systemMetricsTimeline: null,
+                performanceMetrics: null
+            });
+        };
+    }, [activeTab]);
 
     // Add this after your chartData state declaration
     useEffect(() => {
@@ -600,10 +587,7 @@ const Dashboard = () => {
             setChartData(prev => ({
                 ...prev,
                 geographicActivity: [
-                    { country: 'United States', logins: 45, percentage: 45 },
-                    { country: 'United Kingdom', logins: 25, percentage: 25 },
-                    { country: 'Germany', logins: 15, percentage: 15 },
-                    { country: 'Other', logins: 15, percentage: 15 }
+                    { country: 'unknown', logins: 0, percentage: 0 }
                 ]
             }));
         }
@@ -611,9 +595,7 @@ const Dashboard = () => {
             setChartData(prev => ({
                 ...prev,
                 deviceUsage: [
-                    { device: 'Desktop', percentage: 60 },
-                    { device: 'Mobile', percentage: 30 },
-                    { device: 'Tablet', percentage: 10 }
+                    { device: 'unknown', percentage: 0 }
                 ]
             }));
         }
@@ -621,9 +603,9 @@ const Dashboard = () => {
             setChartData(prev => ({
                 ...prev,
                 loginSuccessRate: {
-                    successful: 85,
-                    failed: 15,
-                    totalLogins: 100
+                    successful: 0,
+                    failed: 0,
+                    totalLogins: 0
                 }
             }));
         }
@@ -631,17 +613,64 @@ const Dashboard = () => {
             setChartData(prev => ({
                 ...prev,
                 securityEvents: [
-                    { date: '2025-07-01', events: 5, failedLogins: 2 },
-                    { date: '2025-07-02', events: 7, failedLogins: 1 },
-                    { date: '2025-07-03', events: 3, failedLogins: 0 },
-                    { date: '2025-07-04', events: 8, failedLogins: 3 },
-                    { date: '2025-07-05', events: 6, failedLogins: 2 }
+                    { date: '2025-07-01', events: 0, failedLogins: 0 },
+                    { date: '2025-07-02', events: 0, failedLogins: 0 },
+                    { date: '2025-07-03', events: 0, failedLogins: 0 },
+                    { date: '2025-07-04', events: 0, failedLogins: 0 },
+                    { date: '2025-07-05', events: 0, failedLogins: 0 }
                 ]
             }));
         }
-    }, [chartData.geographicActivity, chartData.deviceUsage, chartData.loginSuccessRate, chartData.securityEvents]);
+        if (!chartData.systemMetricsTimeline || chartData.systemMetricsTimeline.length === 0) {
+            setChartData(prev => ({
+                ...prev,
+                systemMetricsTimeline: [
+                    { timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), databaseResponseTime: 45, apiResponseTime: 120, activeSessions: 3 },
+                    { timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), databaseResponseTime: 52, apiResponseTime: 135, activeSessions: 4 },
+                    { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), databaseResponseTime: 48, apiResponseTime: 128, activeSessions: 2 },
+                    { timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), databaseResponseTime: 55, apiResponseTime: 142, activeSessions: 5 },
+                    { timestamp: new Date(), databaseResponseTime: 50, apiResponseTime: 130, activeSessions: 3 }
+                ]
+            }));
+        }
+        if (!chartData.performanceMetrics.cpu || chartData.performanceMetrics.cpu.length === 0) {
+            setChartData(prev => ({
+                ...prev,
+                performanceMetrics: {
+                    cpu: [
+                        { timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), usage: 25 },
+                        { timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), usage: 30 },
+                        { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), usage: 28 },
+                        { timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), usage: 35 },
+                        { timestamp: new Date(), usage: 32 }
+                    ],
+                    memory: [
+                        { timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), usage: 45 },
+                        { timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), usage: 48 },
+                        { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), usage: 46 },
+                        { timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), usage: 52 },
+                        { timestamp: new Date(), usage: 50 }
+                    ],
+                    disk: [
+                        { timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), usage: 65 },
+                        { timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), usage: 67 },
+                        { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), usage: 66 },
+                        { timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), usage: 68 },
+                        { timestamp: new Date(), usage: 67 }
+                    ],
+                    network: [
+                        { timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), throughput: 2.5 },
+                        { timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), throughput: 3.2 },
+                        { timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), throughput: 2.8 },
+                        { timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), throughput: 3.5 },
+                        { timestamp: new Date(), throughput: 3.1 }
+                    ]
+                }
+            }));
+        }
+    }, [chartData.geographicActivity, chartData.deviceUsage, chartData.loginSuccessRate, chartData.securityEvents, chartData.systemMetricsTimeline, chartData.performanceMetrics]);
 
-    const initializeCharts = () => {
+    const initializeSecurityCharts = () => {
         // Security Events Chart
         if (securityEventsChartRef.current && !charts.securityEvents && chartData.securityEvents.length > 0) {
             const ctx = securityEventsChartRef.current.getContext('2d');
@@ -708,12 +737,12 @@ const Dashboard = () => {
                     datasets: [{
                         data: [chartData.loginSuccessRate.successful, chartData.loginSuccessRate.failed],
                         backgroundColor: [
-                            'rgba(16, 185, 129, 0.8)',
-                            'rgba(239, 68, 68, 0.8)'
+                            '#ffb6c1', // Pink
+                            '#ffe599'  // Yellow
                         ],
                         borderColor: [
-                            'rgba(16, 185, 129, 1)',
-                            'rgba(239, 68, 68, 1)'
+                            '#ffb6c1', // Pink
+                            '#ffe599'  // Yellow
                         ],
                         borderWidth: 2
                     }]
@@ -735,6 +764,130 @@ const Dashboard = () => {
             setCharts(prev => ({ ...prev, loginSuccess: loginSuccessChart }));
         }
 
+        // Login Success vs Failed Logins Doughnut Chart
+        if (loginSuccessDoughnutChartRef.current && !charts.loginSuccessDoughnut && (chartData.loginSuccessRate.successful > 0 || chartData.loginSuccessRate.failed > 0)) {
+            const ctx = loginSuccessDoughnutChartRef.current.getContext('2d');
+            const loginSuccessDoughnutChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Successful Logins', 'Failed Logins'],
+                    datasets: [{
+                        data: [chartData.loginSuccessRate.successful, chartData.loginSuccessRate.failed],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)', // Green for successful
+                            'rgba(239, 68, 68, 0.8)'   // Red for failed
+                        ],
+                        borderColor: [
+                            'rgba(34, 197, 94, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 2,
+                        cutout: '60%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            setCharts(prev => ({ ...prev, loginSuccessDoughnut: loginSuccessDoughnutChart }));
+        }
+
+        // Security Events vs Failed Logins Line Chart
+        if (securityEventsLineChartRef.current && !charts.securityEventsLine && chartData.securityEvents.length > 0) {
+            const ctx = securityEventsLineChartRef.current.getContext('2d');
+            const securityEventsLineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.securityEvents.map(item => {
+                        return moment(item.date).tz(userTimezone).format('MMM D');
+                    }),
+                    datasets: [
+                        {
+                            label: 'Security Events',
+                            data: chartData.securityEvents.map(item => item.events),
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Failed Logins',
+                            data: chartData.securityEvents.map(item => item.failedLogins),
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+            setCharts(prev => ({ ...prev, securityEventsLine: securityEventsLineChart }));
+        }
+    };
+
+    const initializeAnalyticsCharts = () => {
         // Device Usage Chart
         if (deviceUsageChartRef.current && !charts.deviceUsage && chartData.deviceUsage.length > 0) {
             const ctx = deviceUsageChartRef.current.getContext('2d');
@@ -778,6 +931,329 @@ const Dashboard = () => {
         }
     };
 
+    const initializeSystemHealthCharts = () => {
+        // System Health Gauge Chart
+        if (systemHealthChartRef.current && !charts.systemHealth) {
+            const ctx = systemHealthChartRef.current.getContext('2d');
+
+            // Calculate overall health score (0-100)
+            const getHealthScore = () => {
+                let score = 0;
+                let totalMetrics = 0;
+
+                // Database health (0-25 points)
+                if (systemHealth.database.status === 'operational') score += 25;
+                else if (systemHealth.database.status === 'ok') score += 20;
+                else if (systemHealth.database.status === 'degraded') score += 10;
+                totalMetrics++;
+
+                // Email service health (0-25 points)
+                if (systemHealth.emailService.status === 'operational') score += 25;
+                else if (systemHealth.emailService.status === 'ok') score += 20;
+                else if (systemHealth.emailService.status === 'degraded') score += 10;
+                totalMetrics++;
+
+                // API response health (0-25 points)
+                if (systemHealth.apiResponse.status === 'excellent') score += 25;
+                else if (systemHealth.apiResponse.status === 'good') score += 20;
+                else if (systemHealth.apiResponse.status === 'slow') score += 10;
+                totalMetrics++;
+
+                // Uptime health (0-25 points)
+                if (systemHealth.uptime.status === 'ok') score += 25;
+                else if (systemHealth.uptime.status === 'degraded') score += 15;
+                totalMetrics++;
+
+                return Math.round(score);
+            };
+
+            const healthScore = getHealthScore();
+
+            const systemHealthChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Health Score', 'Remaining'],
+                    datasets: [{
+                        data: [healthScore, 100 - healthScore],
+                        backgroundColor: [
+                            healthScore >= 80 ? 'rgba(16, 185, 129, 0.8)' :
+                                healthScore >= 60 ? 'rgba(245, 158, 11, 0.8)' :
+                                    'rgba(239, 68, 68, 0.8)',
+                            'rgba(229, 231, 235, 0.3)'
+                        ],
+                        borderColor: [
+                            healthScore >= 80 ? 'rgba(16, 185, 129, 1)' :
+                                healthScore >= 60 ? 'rgba(245, 158, 11, 1)' :
+                                    'rgba(239, 68, 68, 1)',
+                            'rgba(229, 231, 235, 0.5)'
+                        ],
+                        borderWidth: 2,
+                        cutout: '70%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    },
+                    elements: {
+                        arc: {
+                            borderWidth: 0
+                        }
+                    }
+                }
+            });
+
+            setCharts(prev => ({ ...prev, systemHealth: systemHealthChart }));
+        }
+    };
+
+    const initializeOverviewCharts = () => {
+        // System Metrics Timeline Chart
+        if (systemMetricsTimelineChartRef.current && !charts.systemMetricsTimeline && chartData.systemMetricsTimeline.length > 0) {
+            const ctx = systemMetricsTimelineChartRef.current.getContext('2d');
+            const systemMetricsTimelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.systemMetricsTimeline.map(item => {
+                        return moment(item.timestamp).tz(userTimezone).format('HH:mm');
+                    }),
+                    datasets: [
+                        {
+                            label: 'Database Response Time (ms)',
+                            data: chartData.systemMetricsTimeline.map(item => item.databaseResponseTime),
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'API Response Time (ms)',
+                            data: chartData.systemMetricsTimeline.map(item => item.apiResponseTime),
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Active Sessions',
+                            data: chartData.systemMetricsTimeline.map(item => item.activeSessions),
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y;
+                                        if (label.includes('Response Time')) {
+                                            label += ' ms';
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Response Time (ms)'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Active Sessions'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+            setCharts(prev => ({ ...prev, systemMetricsTimeline: systemMetricsTimelineChart }));
+        }
+
+        // Performance Metrics Chart
+        if (performanceMetricsChartRef.current && !charts.performanceMetrics &&
+            (chartData.performanceMetrics.cpu.length > 0 || chartData.performanceMetrics.memory.length > 0)) {
+            const ctx = performanceMetricsChartRef.current.getContext('2d');
+            const performanceMetricsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.performanceMetrics.cpu.map(item => {
+                        return moment(item.timestamp).tz(userTimezone).format('HH:mm');
+                    }),
+                    datasets: [
+                        {
+                            label: 'CPU Usage (%)',
+                            data: chartData.performanceMetrics.cpu.map(item => item.usage),
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Memory Usage (%)',
+                            data: chartData.performanceMetrics.memory.map(item => item.usage),
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Disk Usage (%)',
+                            data: chartData.performanceMetrics.disk.map(item => item.usage),
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Network (MB/s)',
+                            data: chartData.performanceMetrics.network.map(item => item.throughput),
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y;
+                                        if (label.includes('Usage')) {
+                                            label += '%';
+                                        } else if (label.includes('Network')) {
+                                            label += ' MB/s';
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Usage (%)'
+                            },
+                            max: 100,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Network (MB/s)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+            setCharts(prev => ({ ...prev, performanceMetrics: performanceMetricsChart }));
+        }
+    };
+
     // Update charts when data changes (real-time updates)
     const updateSecurityEventsChart = () => {
         if (charts.securityEvents && chartData.securityEvents.length > 0) {
@@ -788,9 +1264,9 @@ const Dashboard = () => {
             charts.securityEvents.data.datasets[0].data = chartData.securityEvents.map(item => item.events);
             charts.securityEvents.data.datasets[1].data = chartData.securityEvents.map(item => item.failedLogins);
             charts.securityEvents.update();
-        } else {
-            // If chart doesn't exist, initialize
-            initializeCharts();
+        } else if (activeTab === 'security') {
+            // If chart doesn't exist and we're on security tab, initialize
+            initializeSecurityCharts();
         }
     };
 
@@ -799,9 +1275,9 @@ const Dashboard = () => {
             // Update chart data directly
             charts.loginSuccess.data.datasets[0].data = [chartData.loginSuccessRate.successful, chartData.loginSuccessRate.failed];
             charts.loginSuccess.update();
-        } else {
-            // If chart doesn't exist, initialize
-            initializeCharts();
+        } else if (activeTab === 'security') {
+            // If chart doesn't exist and we're on security tab, initialize
+            initializeSecurityCharts();
         }
     };
 
@@ -811,9 +1287,111 @@ const Dashboard = () => {
             charts.deviceUsage.data.labels = chartData.deviceUsage.map(item => item.device);
             charts.deviceUsage.data.datasets[0].data = chartData.deviceUsage.map(item => item.percentage);
             charts.deviceUsage.update();
-        } else {
-            // If chart doesn't exist, initialize
-            initializeCharts();
+        } else if (activeTab === 'analytics') {
+            // If chart doesn't exist and we're on analytics tab, initialize
+            initializeAnalyticsCharts();
+        }
+    };
+
+    const updateLoginSuccessDoughnutChart = () => {
+        if (charts.loginSuccessDoughnut && (chartData.loginSuccessRate.successful > 0 || chartData.loginSuccessRate.failed > 0)) {
+            // Update chart data directly
+            charts.loginSuccessDoughnut.data.datasets[0].data = [chartData.loginSuccessRate.successful, chartData.loginSuccessRate.failed];
+            charts.loginSuccessDoughnut.update();
+        } else if (activeTab === 'security') {
+            // If chart doesn't exist and we're on security tab, initialize
+            initializeSecurityCharts();
+        }
+    };
+
+    const updateSecurityEventsLineChart = () => {
+        if (charts.securityEventsLine && chartData.securityEvents.length > 0) {
+            // Update chart data directly
+            charts.securityEventsLine.data.labels = chartData.securityEvents.map(item => {
+                return moment(item.date).tz(userTimezone).format('MMM D');
+            });
+            charts.securityEventsLine.data.datasets[0].data = chartData.securityEvents.map(item => item.events);
+            charts.securityEventsLine.data.datasets[1].data = chartData.securityEvents.map(item => item.failedLogins);
+            charts.securityEventsLine.update();
+        } else if (activeTab === 'security') {
+            // If chart doesn't exist and we're on security tab, initialize
+            initializeSecurityCharts();
+        }
+    };
+
+    const updateSystemHealthChart = () => {
+        if (charts.systemHealth && systemHealthChartRef.current) {
+            const ctx = systemHealthChartRef.current.getContext('2d');
+
+            // Calculate overall health score (0-100)
+            const getHealthScore = () => {
+                let score = 0;
+                let totalMetrics = 0;
+
+                // Database health (0-25 points)
+                if (systemHealth.database.status === 'operational') score += 25;
+                else if (systemHealth.database.status === 'ok') score += 20;
+                else if (systemHealth.database.status === 'degraded') score += 10;
+                totalMetrics++;
+
+                // Email service health (0-25 points)
+                if (systemHealth.emailService.status === 'operational') score += 25;
+                else if (systemHealth.emailService.status === 'ok') score += 20;
+                else if (systemHealth.emailService.status === 'degraded') score += 10;
+                totalMetrics++;
+
+                // API response health (0-25 points)
+                if (systemHealth.apiResponse.status === 'excellent') score += 25;
+                else if (systemHealth.apiResponse.status === 'good') score += 20;
+                else if (systemHealth.apiResponse.status === 'slow') score += 10;
+                totalMetrics++;
+
+                // Uptime health (0-25 points)
+                if (systemHealth.uptime.status === 'ok') score += 25;
+                else if (systemHealth.uptime.status === 'degraded') score += 15;
+                totalMetrics++;
+
+                return Math.round(score);
+            };
+
+            const healthScore = getHealthScore();
+
+            charts.systemHealth.data.datasets[0].data = [healthScore, 100 - healthScore];
+            charts.systemHealth.update();
+        }
+    };
+
+    const updateSystemMetricsTimelineChart = () => {
+        if (charts.systemMetricsTimeline && chartData.systemMetricsTimeline.length > 0) {
+            // Update chart data directly
+            charts.systemMetricsTimeline.data.labels = chartData.systemMetricsTimeline.map(item => {
+                return moment(item.timestamp).tz(userTimezone).format('HH:mm');
+            });
+            charts.systemMetricsTimeline.data.datasets[0].data = chartData.systemMetricsTimeline.map(item => item.databaseResponseTime);
+            charts.systemMetricsTimeline.data.datasets[1].data = chartData.systemMetricsTimeline.map(item => item.apiResponseTime);
+            charts.systemMetricsTimeline.data.datasets[2].data = chartData.systemMetricsTimeline.map(item => item.activeSessions);
+            charts.systemMetricsTimeline.update();
+        } else if (activeTab === 'overview') {
+            // If chart doesn't exist and we're on overview tab, initialize
+            initializeOverviewCharts();
+        }
+    };
+
+    const updatePerformanceMetricsChart = () => {
+        if (charts.performanceMetrics &&
+            (chartData.performanceMetrics.cpu.length > 0 || chartData.performanceMetrics.memory.length > 0)) {
+            // Update chart data directly
+            charts.performanceMetrics.data.labels = chartData.performanceMetrics.cpu.map(item => {
+                return moment(item.timestamp).tz(userTimezone).format('HH:mm');
+            });
+            charts.performanceMetrics.data.datasets[0].data = chartData.performanceMetrics.cpu.map(item => item.usage);
+            charts.performanceMetrics.data.datasets[1].data = chartData.performanceMetrics.memory.map(item => item.usage);
+            charts.performanceMetrics.data.datasets[2].data = chartData.performanceMetrics.disk.map(item => item.usage);
+            charts.performanceMetrics.data.datasets[3].data = chartData.performanceMetrics.network.map(item => item.throughput);
+            charts.performanceMetrics.update();
+        } else if (activeTab === 'overview') {
+            // If chart doesn't exist and we're on overview tab, initialize
+            initializeOverviewCharts();
         }
     };
 
@@ -839,25 +1417,191 @@ const Dashboard = () => {
         }
     };
 
-    // Get status color
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'connected':
-            case 'operational':
-            case 'excellent':
-            case 'ok':
-                return 'success';
-            case 'connecting':
-            case 'good':
-                return 'warning';
-            case 'disconnected':
-            case 'error':
-            case 'slow':
-                return 'error';
-            default:
-                return 'unknown';
+    // Trend calculation functions
+    const calculateTrend = (currentValue, previousValue, isPercentage = false) => {
+        if (previousValue === 0 || previousValue === null || currentValue === null) {
+            return { direction: 'neutral', percentage: 0, arrow: '→' };
         }
+
+        const change = currentValue - previousValue;
+        const percentageChange = (change / previousValue) * 100;
+
+        let direction = 'neutral';
+        let arrow = '→';
+
+        if (percentageChange > 0) {
+            direction = 'up';
+            arrow = '▲';
+        } else if (percentageChange < 0) {
+            direction = 'down';
+            arrow = '▼';
+        }
+
+        // Debug logging
+        console.log(`Trend calculation: current=${currentValue}, previous=${previousValue}, change=${change}, percentage=${percentageChange.toFixed(2)}%`);
+
+        return {
+            direction,
+            percentage: Math.abs(percentageChange),
+            arrow,
+            change
+        };
     };
+
+    const getTrendDisplay = (metric, currentData, historicalData) => {
+        let currentValue, previousValue;
+
+        switch (metric) {
+            case 'database':
+                currentValue = currentData.database.responseTime || 0;
+                previousValue = historicalData.database.responseTime || 0;
+                break;
+            case 'emailService':
+                currentValue = currentData.emailService.deliveryRate || 0;
+                previousValue = historicalData.emailService.deliveryRate || 0;
+                break;
+            case 'apiResponse':
+                currentValue = currentData.apiResponse.avgResponseTime || 0;
+                previousValue = historicalData.apiResponse.avgResponseTime || 0;
+                break;
+            case 'uptime':
+                currentValue = currentData.uptime.uptime || 0;
+                previousValue = historicalData.uptime.uptime || 0;
+                break;
+            case 'securityEvents':
+                currentValue = currentData.securityEvents || 0;
+                previousValue = historicalData.securityEvents || 0;
+                break;
+            case 'failedLogins':
+                currentValue = currentData.failedLogins || 0;
+                previousValue = historicalData.failedLogins || 0;
+                break;
+            case 'successfulLogins':
+                currentValue = currentData.successfulLogins || 0;
+                previousValue = historicalData.successfulLogins || 0;
+                break;
+            case 'activeSessions':
+                currentValue = currentData.activeSessions || 0;
+                previousValue = historicalData.activeSessions || 0;
+                break;
+            default:
+                return { direction: 'neutral', percentage: 0, arrow: '→' };
+        }
+
+        return calculateTrend(currentValue, previousValue);
+    };
+
+    const updateHistoricalData = (newData) => {
+        setHistoricalData(prev => ({
+            systemHealth: prev.systemHealth,
+            securityStats: prev.securityStats,
+            lastUpdate: new Date()
+        }));
+
+        // Store current data as historical after a delay
+        setTimeout(() => {
+            const updatedHistoricalData = {
+                systemHealth: newData.systemHealth || historicalData.systemHealth,
+                securityStats: newData.securityStats || historicalData.securityStats,
+                lastUpdate: new Date()
+            };
+
+            setHistoricalData(updatedHistoricalData);
+
+            // Update active sessions historical data
+            setHistoricalActiveSessions(activeSessionsCount);
+
+            // Persist to localStorage
+            try {
+                localStorage.setItem('dashboardHistoricalData', JSON.stringify(updatedHistoricalData));
+                localStorage.setItem('dashboardHistoricalActiveSessions', JSON.stringify(activeSessionsCount));
+            } catch (error) {
+                console.warn('Failed to save historical data to localStorage:', error);
+            }
+        }, 5000); // Store as historical after 5 seconds
+    };
+
+    // Load historical data from localStorage on mount
+    useEffect(() => {
+        try {
+            const savedData = localStorage.getItem('dashboardHistoricalData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                // Only use saved data if it's less than 1 hour old
+                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                if (parsedData.lastUpdate && new Date(parsedData.lastUpdate) > oneHourAgo) {
+                    setHistoricalData(parsedData);
+                }
+            }
+
+            // Load historical active sessions data
+            const savedActiveSessions = localStorage.getItem('dashboardHistoricalActiveSessions');
+            if (savedActiveSessions) {
+                const parsedActiveSessions = JSON.parse(savedActiveSessions);
+                setHistoricalActiveSessions(parsedActiveSessions);
+            }
+        } catch (error) {
+            console.warn('Failed to load historical data from localStorage:', error);
+        }
+    }, []);
+
+    // Manage body class for rate limit warning
+    useEffect(() => {
+        if (rateLimitWarning) {
+            document.body.classList.add('has-rate-limit-warning');
+        } else {
+            document.body.classList.remove('has-rate-limit-warning');
+        }
+
+        // Cleanup on unmount
+        return () => {
+            document.body.classList.remove('has-rate-limit-warning');
+        };
+    }, [rateLimitWarning]);
+
+    // Test function to simulate data changes (for development only)
+    const testTrendCalculation = () => {
+        console.log('Testing trend calculations...');
+
+        // Simulate some test data
+        const testCurrentData = {
+            systemHealth: {
+                database: { responseTime: 150 },
+                emailService: { deliveryRate: 99.2 },
+                apiResponse: { avgResponseTime: 450 },
+                uptime: { uptime: 86400 }
+            },
+            securityStats: {
+                securityEvents: 12,
+                failedLogins: 3,
+                successfulLogins: 45
+            }
+        };
+
+        const testHistoricalData = {
+            systemHealth: {
+                database: { responseTime: 120 },
+                emailService: { deliveryRate: 98.8 },
+                apiResponse: { avgResponseTime: 520 },
+                uptime: { uptime: 82800 }
+            },
+            securityStats: {
+                securityEvents: 8,
+                failedLogins: 5,
+                successfulLogins: 42
+            }
+        };
+
+        // Test each metric
+        const metrics = ['database', 'emailService', 'apiResponse', 'uptime', 'securityEvents', 'failedLogins', 'successfulLogins'];
+        metrics.forEach(metric => {
+            const trend = getTrendDisplay(metric, testCurrentData, testHistoricalData);
+            console.log(`${metric}: ${trend.arrow} ${trend.percentage.toFixed(1)}% (${trend.direction})`);
+        });
+    };
+
+    // Uncomment the next line to test trend calculations in development
+    // useEffect(() => { testTrendCalculation(); }, []);
 
     // Helper function to get country coordinates
     const getCountryCoordinates = (countryName) => {
@@ -897,7 +1641,7 @@ const Dashboard = () => {
         switch (action) {
             case 'edit-profile':
                 // Redirect to profile page with edit mode flag
-                window.location.href = '/profile?edit=true';
+                window.location.href = '/profile';
                 break;
             case 'change-password':
                 setShowChangePassword(true);
@@ -909,10 +1653,6 @@ const Dashboard = () => {
             case 'verify-email':
                 handleEmailVerification();
                 break;
-            // --- PHONE VERIFICATION UI & LOGIC DISABLED ---
-            // case 'verify-phone':
-            //     handlePhoneVerification();
-            //     break;
             default:
                 break;
         }
@@ -922,7 +1662,7 @@ const Dashboard = () => {
     const refreshProfileData = async () => {
         try {
             const api = createApiInstance();
-            
+
             // Fetch profile and security status in parallel
             const [profileResult, securityStatusResult] = await Promise.all([
                 authService.getProfile(),
@@ -944,6 +1684,14 @@ const Dashboard = () => {
                     emailVerified: profileResult.user.emailVerified || false,
                     phoneVerified: profileResult.user.phoneVerified || false
                 });
+
+                // Update active sessions trend when profile data is refreshed
+                const newActiveSessionsCount = profileResult.user?.activeSessions?.length || 0;
+                if (newActiveSessionsCount !== activeSessionsCount) {
+                    // Store current count as historical for trend calculation
+                    setHistoricalActiveSessions(activeSessionsCount);
+                    localStorage.setItem('dashboardHistoricalActiveSessions', JSON.stringify(activeSessionsCount));
+                }
             }
 
             // Update security status including password strength
@@ -971,11 +1719,10 @@ const Dashboard = () => {
 
             if (response.data.success) {
                 showSuccessToast('Verification Email Sent!', 'Check your email inbox (and spam/junk folder if not found).');
-                
+
                 // Check email verification status after a short delay to see if it was already verified
                 setTimeout(async () => {
                     try {
-                        setIsCheckingEmailVerification(true);
                         const statusResponse = await api.get('/auth/email-verification-status');
                         if (statusResponse.data.success) {
                             const { emailVerified } = statusResponse.data.data;
@@ -986,8 +1733,6 @@ const Dashboard = () => {
                         }
                     } catch (error) {
                         console.error('Error checking email verification status:', error);
-                    } finally {
-                        setIsCheckingEmailVerification(false);
                     }
                 }, 2000); // Check after 2 seconds
             } else {
@@ -999,470 +1744,378 @@ const Dashboard = () => {
         }
     };
 
-    // --- PHONE VERIFICATION UI & LOGIC DISABLED ---
-    // Handle phone verification
-    /*
-    const handlePhoneVerification = async () => {
-        const phoneNumber = prompt('Please enter your phone number (with country code):');
-        if (!phoneNumber) return;
-
-        try {
-            const api = createApiInstance();
-            const response = await api.post('/auth/send-phone-verification', {
-                phoneNumber: phoneNumber
-            });
-
-            if (response.data.success) {
-                alert('Verification code sent! Please check your phone for the SMS.');
-
-                const code = prompt('Please enter the verification code:');
-                if (code) {
-                    const verifyResponse = await api.post('/auth/verify-phone', { code });
-                    if (verifyResponse.data.success) {
-                        alert('Phone number verified successfully!');
-                        // Refresh profile data
-                        setProfileData(prev => ({ ...prev, phoneVerified: true }));
-                    } else {
-                        alert('Invalid verification code. Please try again.');
-                    }
-                }
-            } else {
-                alert('Failed to send verification code. Please try again.');
-            }
-        } catch (error) {
-            console.error('Phone verification error:', error);
-            alert('Failed to send verification code. Please try again.');
-        }
-    };
-    */
-
-    const MapLoadingPlaceholder = () => (
-        <div className="map-loading-placeholder">
-            <div className="loading-spinner">
-                <div className="spinner-ring"></div>
-            </div>
-            <div className="loading-content">
-                <h4><FiGlobe /> Geographic Activity Map</h4>
-                <p>Loading geographic data...</p>
-            </div>
-        </div>
-    );
-
     return (
-        <main className="dashboard">
+        <main className="main-content">
+            {/* Dashboard Navigation Bar */}
+            <nav className="dashboard-nav">
+                <div className="dashboard-nav-tabs">
+                    <a
+                        href="#"
+                        className={`dashboard-nav-tab ${activeTab === 'overview' ? 'active' : ''}`}
+                        onClick={e => {
+                            e.preventDefault();
+                            setActiveTab('overview');
+                        }}
+                    >
+                        Overview
+                    </a>
+                    <a
+                        href="#"
+                        className={`dashboard-nav-tab ${activeTab === 'security' ? 'active' : ''}`}
+                        onClick={e => {
+                            e.preventDefault();
+                            setActiveTab('security');
+                        }}
+                    >
+                        Security
+                    </a>
+                    <a
+                        href="#"
+                        className={`dashboard-nav-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+                        onClick={e => {
+                            e.preventDefault();
+                            setActiveTab('analytics');
+                        }}
+                    >
+                        Analytics
+                    </a>
+                    <a
+                        href="#"
+                        className={`dashboard-nav-tab ${activeTab === 'more' ? 'active' : ''}`}
+                        onClick={e => {
+                            e.preventDefault();
+                            setActiveTab('more');
+                        }}
+                    >
+                        More
+                    </a>
+                </div>
+                <div className="dashboard-nav-actions">
+                    <button type="button" className="dashboard-nav-btn" onClick={() => alert('Share clicked')}>
+                        <FiShare /> Share
+                    </button>
+                    <button type="button" className="dashboard-nav-btn" onClick={() => alert('Print clicked')}>
+                        <FiPrinter /> Print
+                    </button>
+                    <button type="button" className="dashboard-nav-btn" onClick={() => alert('Export clicked')}>
+                        <FiDownload /> Export
+                    </button>
+                </div>
+            </nav>
+
+            {/* System Health Stat Summary Row */}
+            <section className="system-health-summary-row styled-summary-row">
+                <div className="system-health-summary-item styled-summary-item">
+                    <div className="summary-label">Real-time Status</div>
+                    <div className="summary-value">
+                        <span className={`status-dot ${getStatusClass(isConnected ? 'connected' : 'disconnected')}`}></span>
+                        {isConnected ? 'connected' : 'disconnected'}
+                    </div>
+                    {lastFetchTime && (
+                        <span className='summary-sub-label'>
+                            {formatDate(lastFetchTime)}
+                        </span>
+                    )}
+                    <div className={`summary-trend ${isConnected ? 'trend-up' : 'trend-down'}`}></div>
+                </div>
+                <div className="system-health-summary-item styled-summary-item">
+                    <div className="summary-label">Database</div>
+                    <div className="summary-value">{systemHealth.database.status}</div>
+                    {(() => {
+                        const trend = getTrendDisplay('database', systemHealth, historicalData.systemHealth);
+                        return trend.percentage > 0 ? (
+                            <div className={`summary-trend ${trend.direction === 'up' ? 'trend-up' : trend.direction === 'down' ? 'trend-down' : 'trend-neutral'}`}>
+                                <span className="trend-arrow">{trend.arrow}</span> {trend.percentage.toFixed(1)}%
+                            </div>
+                        ) : null;
+                    })()}
+                </div>
+                <div className="system-health-summary-item styled-summary-item">
+                    <div className="summary-label">Email Service</div>
+                    <div className="summary-value">{systemHealth.emailService.deliveryRate}%</div>
+                    {(() => {
+                        const trend = getTrendDisplay('emailService', systemHealth, historicalData.systemHealth);
+                        return trend.percentage > 0 ? (
+                            <div className={`summary-trend ${trend.direction === 'up' ? 'trend-up' : trend.direction === 'down' ? 'trend-down' : 'trend-neutral'}`}>
+                                <span className="trend-arrow">{trend.arrow}</span> {trend.percentage.toFixed(1)}%
+                            </div>
+                        ) : null;
+                    })()}
+                </div>
+                <div className="system-health-summary-item styled-summary-item">
+                    <div className="summary-label">API Response</div>
+                    <div className="summary-value">{systemHealth.apiResponse.avgResponseTime}ms</div>
+                    {(() => {
+                        const trend = getTrendDisplay('apiResponse', systemHealth, historicalData.systemHealth);
+                        return trend.percentage > 0 ? (
+                            <div className={`summary-trend ${trend.direction === 'up' ? 'trend-up' : trend.direction === 'down' ? 'trend-down' : 'trend-neutral'}`}>
+                                <span className="trend-arrow">{trend.arrow}</span> {trend.percentage.toFixed(1)}%
+                            </div>
+                        ) : null;
+                    })()}
+                </div>
+                <div className="system-health-summary-item styled-summary-item">
+                    <div className="summary-label">Uptime</div>
+                    <div className="summary-value">{formatUptime(systemHealth.uptime.uptime)}</div>
+                    {(() => {
+                        const trend = getTrendDisplay('uptime', systemHealth, historicalData.systemHealth);
+                        return trend.percentage > 0 ? (
+                            <div className={`summary-trend ${trend.direction === 'up' ? 'trend-up' : trend.direction === 'down' ? 'trend-down' : 'trend-neutral'}`}>
+                                <span className="trend-arrow">{trend.arrow}</span> {trend.percentage.toFixed(1)}%
+                            </div>
+                        ) : null;
+                    })()}
+                </div>
+                <div className="system-health-summary-item styled-summary-item">
+                    <div className="summary-label">Active Sessions</div>
+                    <div className="summary-value">
+                        <span className={`status-dot ${getStatusClass(activeSessionsCount > 0 ? 'connected' : 'disconnected')}`}></span>
+                        {activeSessionsCount}/{maxSessions}
+                    </div>
+                    {(() => {
+                        const trend = getTrendDisplay('activeSessions',
+                            { activeSessions: activeSessionsCount },
+                            { activeSessions: historicalActiveSessions }
+                        );
+                        return trend.percentage > 0 ? (
+                            <div className={`summary-trend ${trend.direction === 'up' ? 'trend-up' : trend.direction === 'down' ? 'trend-down' : 'trend-neutral'}`}>
+                                <span className="trend-arrow">{trend.arrow}</span> {trend.percentage.toFixed(1)}%
+                            </div>
+                        ) : null;
+                    })()}
+                </div>
+            </section>
+
             {/* Rate Limit Warning */}
             {rateLimitWarning && (
                 <div className="rate-limit-warning">
                     <div className="warning-content">
-                        <span className="warning-icon"><FiAlertTriangle /></span>
                         <span className="warning-text">
-                            Too many requests from this IP. Please wait a few minutes before refreshing.
-                            API calls have been reduced to prevent further rate limiting.
+                            Too many requests from this IP. Please wait a few minutes before refreshing. API calls have been reduced to prevent further rate limiting.
                         </span>
                     </div>
+                    <button
+                        className="close-warning-btn"
+                        onClick={() => setRateLimitWarning(false)}
+                        title="Close warning"
+                    >
+                        <FiX />
+                    </button>
                 </div>
             )}
 
-            {/* Connection Status */}
-            <section className="dashboard__connection-status">
-                <div className="status-indicator-group">
-                    <div className="status-indicator">
-                        <span className={`status-dot ${getStatusClass(isConnected ? 'connected' : 'disconnected')}`}></span>
-                        <span className="status-text">
-                            Real-time Status: {isConnected ? 'Connected' : 'Disconnected'}
-                        </span>
-                    </div>
-                    {lastFetchTime && (
-                        <span className="last-update">
-                            Last Update: {formatDate(lastFetchTime)}
-                            {isConnected && ' (Real-time)'}
-                            {!isConnected && ' (Polling)'}
-                        </span>
-                    )}
-                </div>
-                <div className="timezone-info">
-                    <span className="timezone-label">Timezone:</span>
-                    <span className="timezone-value">
-                        {currentTime.format('z')} ({currentTime.format('Z')})
-                    </span>
-                    <span className="current-time">
-                        {currentTime.format('h:mm:ss A')}
-                    </span>
-                </div>
-            </section>
-
-            {/* Dashboard Grid */}
-            <section className="dashboard__grid">
-                {/* Profile Card */}
-                <article className="dashboard__card dashboard__card--profile">
-                    <div className="card-header">
-                        <h3>Profile & Account</h3>
-                    </div>
-                    <div className="card-content">
-                        <div className="profile-summary">
-                            <div className="profile-avatar"
-                                style={{
-                                    background: !profileDisplay.value && user ? initialsColor : undefined
-                                }}>
-                                <ProfilePicture user={user} size="large" />
-                            </div>
-                            <div className="profile-info">
-                                <h4 className="profile-name">
-                                    {profileData.firstName && profileData.lastName ?
-                                        `${profileData.firstName} ${profileData.lastName}` :
-                                        profileData.username || 'User'
-                                    }
-                                </h4>
-                                <p className="profile-member-since">Member Since: {formatDate(profileData.createdAt)}</p>
-                                <p className="profile-last-login">Last Login: {formatDate(profileData.lastLogin)}</p>
-                            </div>
+            {/* Dashboard Content */}
+            {activeTab === 'overview' && (
+                <section className="dashboard__grid">
+                    {/* Performance Metrics Chart - Wide */}
+                    <div className="dashboard__card dashboard__card--chart performance-metrics" style={{ gridColumn: '1 / 4' }}>
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Performance Metrics</h3>
                         </div>
-
-                        <div className="account-status">
-                            <div className="status-item">
-                                <span className="status-label">Account Status:</span>
-                                <span className={`status-badge ${getStatusClass(profileData.isActive ? 'active' : 'inactive')}`}>
-                                    {profileData.isActive ? 'Active' : 'Inactive'}
-                                </span>
-                            </div>
-                            <div className="status-item">
-                                <span className="status-label">Role:</span>
-                                <span className={`status-badge ${getStatusClass(profileData.isAdmin ? 'admin' : 'user')}`}>
-                                    {profileData.isAdmin ? 'Admin' : 'User'}
-                                </span>
-                            </div>
-                            <div className="status-item">
-                                <span className="status-label">2FA:</span>
-                                <span className={`status-badge ${getStatusClass(profileData.twoFactorEnabled ? 'enabled' : 'disabled')}`}>
-                                    {profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="account-details">
-                            <div className="detail-item">
-                                <span className="detail-label">Username:</span>
-                                <span className="detail-value">{profileData.username}</span>
-                            </div>
-                            <div className="detail-item">
-                                <span className="detail-label">Email:</span>
-                                <span className="detail-value">{profileData.email}</span>
-                            </div>
-                            <div className="detail-item">
-                                <span className="detail-label">Phone:</span>
-                                <span className="detail-value">{profileData.phone || 'No phone number'}</span>
-                            </div>
-                        </div>
-
-                        <div className="quick-actions">
-                            <div className="action-buttons">
-                                <a
-                                    href="#"
-                                    className="action-btn primary1"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        handleQuickAction('edit-profile');
-                                    }}
-                                >
-                                    Edit Profile
-                                </a>
-                                <a
-                                    href="#"
-                                    className="action-btn primary2"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        handleQuickAction('change-password');
-                                    }}
-                                >
-                                    Change Password
-                                </a>
+                        <div className="dashboard__card-content">
+                            <div className="chart-container" style={{ height: '300px' }}>
+                                <canvas ref={performanceMetricsChartRef}></canvas>
                             </div>
                         </div>
                     </div>
-                </article>
 
-                {/* Health Card */}
-                <article className="dashboard__card dashboard__card--health">
-                    <div className="card-header">
-                        <h3>System Health & Performance</h3>
+                    <div className="dashboard__card dashboard__card--todo" style={{ gridColumn: '4 / 5' }}>
+                        <TodoList />
                     </div>
-                    <div className="card-content">
-                        <div className="health-metrics">
-                            <div className="metric-item">
-                                <div className="metric-header">
-                                    <span className="metric-title"><FiServer /> Database Status</span>
-                                    <span className={`status-indicator ${getStatusClass(systemHealth.database.status)}`}></span>
-                                </div>
-                                <div className="metric-value">
-                                    <span className="metric-main">{systemHealth.database.status}</span>
-                                    <span className="metric-sub">{systemHealth.database.responseTime}ms</span>
-                                </div>
-                            </div>
 
-                            <div className="metric-item">
-                                <div className="metric-header">
-                                    <span className="metric-title"><FiMail /> Email Service</span>
-                                    <span className={`status-indicator ${getStatusClass(systemHealth.emailService.status)}`}></span>
-                                </div>
-                                <div className="metric-value">
-                                    <span className="metric-main">{systemHealth.emailService.status}</span>
-                                    <span className="metric-sub">{systemHealth.emailService.deliveryRate}% delivery</span>
-                                </div>
-                            </div>
 
-                            <div className="metric-item">
-                                <div className="metric-header">
-                                    <span className="metric-title"><FiActivity /> API Response</span>
-                                    <span className={`status-indicator ${getStatusClass(systemHealth.apiResponse.status)}`}></span>
-                                </div>
-                                <div className="metric-value">
-                                    <span className="metric-main">{systemHealth.apiResponse.status}</span>
-                                    <span className="metric-sub">{systemHealth.apiResponse.avgResponseTime}ms avg</span>
-                                </div>
-                            </div>
+                </section>
+            )}
 
-                            <div className="metric-item">
-                                <div className="metric-header">
-                                    <span className="metric-title"><FiClock /> System Uptime</span>
-                                    <span className={`status-indicator ${getStatusClass(systemHealth.uptime.status)}`}></span>
-                                </div>
-                                <div className="metric-value">
-                                    <span className="metric-main">{formatUptime(systemHealth.uptime.uptime)}</span>
-                                    <span className="metric-sub">
-                                        {systemHealth.uptime.lastCheck &&
-                                            `Last check: ${formatDate(systemHealth.uptime.lastCheck)}`
-                                        }
-                                    </span>
-                                </div>
-                            </div>
+            {activeTab === 'security' && (
+                <section className="dashboard__grid">
+                    {/* Security Status Card */}
+                    <div className="dashboard__card dashboard__card--security" style={{ gridColumn: '1 / 3' }}>
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Security Status</h3>
                         </div>
-
-                        <div className="health-summary">
-                            <div className="summary-item">
-                                <span className="summary-label">Overall Status:</span>
-                                <span className={`summary-value ${getStatusClass(systemHealth.uptime.status)}`}>
-                                    {systemHealth.uptime.status === 'ok' ? 'All Systems Operational' :
-                                        systemHealth.uptime.status === 'degraded' ? 'Degraded Performance' :
-                                            'System Issues Detected'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                {/* Stats Card */}
-                <article className="dashboard__card dashboard__card--stats">
-                    <div className="card-header">
-                        <h3>Quick Stats</h3>
-                        <span className="stats-period">Last {securityStats.period}</span>
-                    </div>
-                    <div className="card-content">
-                        <div className="stats-grid">
-                            <div className="stat-item">
-                                <span className="stat-number">{activeSessionsCount}/{maxSessions}</span>
-                                <span className="stat-label"><FiWifi /> Active Sessions</span>
-                            </div>
-                            <div className="stat-item">
-                                <span className="stat-number">{securityStats.failedLogins || 0}</span>
-                                <span className="stat-label"><FiAlertCircle /> Failed Logins</span>
-                            </div>
-                            <div className="stat-item">
-                                <span className="stat-number">{securityStats.securityEvents || 0}</span>
-                                <span className="stat-label"><FiShield /> Security Events</span>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                {/* Security Card */}
-                <article className="dashboard__card dashboard__card--security">
-                    <div className="card-header">
-                        <h3>Security Status</h3>
-                    </div>
-                    <div className="card-content">
-                        <div className="security-status-list">
-                            <div className={`security-status-item ${getStatusClass('good')}`}>
-                                <span className="status-icon success"><FiShieldCheck /></span>
-                                <div>
-                                    <div className="status-title">Account Security</div>
-                                    <div className="status-desc">Your account is secure.</div>
-                                </div>
-                            </div>
-                            <div className={`security-status-item ${getStatusClass(securityStatus.passwordStrength?.status)}`}>
-                                <span className={`status-icon ${securityStatus.passwordStrength?.status === 'strong' ? 'success' : securityStatus.passwordStrength?.status === 'medium' ? 'warning' : 'error'}`}>
-                                    {securityStatus.passwordStrength?.status === 'strong' ? <FiCheckCircle /> : <FiAlertCircle />}
-                                </span>
-                                <div>
-                                    <div className="status-title">Password Strength</div>
-                                    <div className="status-desc">
-                                        {securityStatus.passwordStrength?.status === 'strong' ?
-                                            'Your password is strong and secure.' :
-                                            securityStatus.passwordStrength?.status === 'unknown' ?
-                                                <>Password strength cannot be determined for your account. <a href="#" onClick={(e) => { e.preventDefault(); handleQuickAction('change-password'); }}>Change password</a> to update strength.</> :
-                                                <>
-                                                    Your password is weak. <a href="#" onClick={(e) => {
-                                                        e.preventDefault();
-                                                        handleQuickAction('change-password');
-                                                    }}>Change password</a>
-                                                </>
-                                        }
+                        <div className="dashboard__card-content">
+                            <div className="security-status-grid">
+                                {/* Password Status */}
+                                <div className="security-status-item">
+                                    <div className="security-status-header">
+                                        <span className="security-status-label">Password</span>
+                                        <span className={`security-status-badge ${securityStatus.passwordStrength.status === 'strong' ? 'status-success' : securityStatus.passwordStrength.status === 'medium' ? 'status-warning' : 'status-error'}`}>
+                                            {securityStatus.passwordStrength.status}
+                                        </span>
                                     </div>
-                                </div>
-                            </div>
-                            <div className={`security-status-item ${getStatusClass(profileData.twoFactorEnabled ? 'enabled' : 'disabled')}`}>
-                                <span className={`status-icon ${profileData.twoFactorEnabled ? 'success' : 'warning'}`}>
-                                    {profileData.twoFactorEnabled ? <FiCheckCircle /> : <FiLock />}
-                                </span>
-                                <div>
-                                    <div className="status-title">Two-Factor Auth</div>
-                                    <div className="status-desc">
-                                        {profileData.twoFactorEnabled ?
-                                            '2FA is enabled and active.' :
-                                            <>
-                                                2FA is disabled. <a href="#" onClick={() => handleQuickAction('toggle-2fa')}>Enable now</a>
-                                            </>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                            <div className={`security-status-item ${profileData.emailVerified ? 'good' : 'warning'}`}>
-                                <span className={`status-icon ${profileData.emailVerified ? 'success' : 'warning'}`}>
-                                    {isCheckingEmailVerification ? (
-                                        <div className="loading-spinner-small"></div>
-                                    ) : profileData.emailVerified ? (
-                                        <FiCheckCircle />
-                                    ) : (
-                                        <FiMail />
-                                    )}
-                                </span>
-                                <div>
-                                    <div className="status-title">Email Verification</div>
-                                    <div className="status-desc">
-                                        {isCheckingEmailVerification ? (
-                                            'Checking verification status...'
-                                        ) : profileData.emailVerified ? (
-                                            'Email is verified and secure.'
-                                        ) : (
-                                            <>
-                                                Email not verified. <a href="#" onClick={() => handleQuickAction('verify-email')}>Verify now</a>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            {/* --- PHONE VERIFICATION UI & LOGIC DISABLED --- */}
-                            {/* <div className={`security-status-item ${getStatusClass(profileData.phoneVerified ? 'good' : 'warning')}`}>
-                                <span className={`status-icon ${profileData.phoneVerified ? 'success' : 'warning'}`}>
-                                    {profileData.phoneVerified ? <FiCheckCircle /> : <FiSmartphone />}
-                                </span>
-                                <div>
-                                    <div className="status-title">Phone Verification</div>
-                                    <div className="status-desc">
-                                        {profileData.phoneVerified ? 
-                                            'Phone is verified and secure.' : 
-                                            <>
-                                                Phone not verified. <a href="#" onClick={() => handleQuickAction('verify-phone')}>Verify now</a>
-                                            </>
-                                        }
-                                    </div>
-                                </div>
-                            </div> */}
-                        </div>
-                    </div>
-                </article>
-
-                {/* Security Events Chart */}
-                <article className="dashboard__card dashboard__card--chart dashboard__card--security-events">
-                    <div className="card-header">
-                        <h3>Security Events Over Time</h3>
-                    </div>
-                    <div className="card-content">
-                        <div className="chart-container">
-                            <canvas ref={securityEventsChartRef} height="300"></canvas>
-                        </div>
-                    </div>
-                </article>
-
-                {/* Login Success Rate Chart */}
-                <article className="dashboard__card dashboard__card--chart dashboard__card--login-success">
-                    <div className="card-header">
-                        <h3>Login Success Rate</h3>
-                    </div>
-                    <div className="card-content">
-                        <div className="chart-container">
-                            <canvas ref={loginSuccessChartRef} height="300"></canvas>
-                        </div>
-                        <div className="chart-stats">
-                            <div className="stat-item">
-                                <span className="stat-number">{chartData.loginSuccessRate.successful}%</span>
-                                <span className="stat-label">Successful</span>
-                            </div>
-                            <div className="stat-item">
-                                <span className="stat-number">{chartData.loginSuccessRate.failed}%</span>
-                                <span className="stat-label">Failed</span>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                {/* Device Usage Chart */}
-                <article className="dashboard__card dashboard__card--chart dashboard__card--device-usage">
-                    <div className="card-header">
-                        <h3>Device Usage</h3>
-                    </div>
-                    <div className="card-content">
-                        <div className="chart-container">
-                            <canvas ref={deviceUsageChartRef} height="300"></canvas>
-                        </div>
-                    </div>
-                </article>
-
-                {/* Geographic Activity Map */}
-                <article className="dashboard__card dashboard__card--map">
-                    <div className="card-header">
-                        <h3>Geographic Activity</h3>
-                    </div>
-                    <div className="card-content">
-                        <MapContainer
-                            center={[20, 0]}
-                            zoom={2}
-                            style={{ height: '300px', width: '100%' }}
-                            className="geographic-map"
-                        >
-                            <TileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            />
-                            {chartData.geographicActivity.map((location, index) => {
-                                const coordinates = getCountryCoordinates(location.country);
-
-                                return (
-                                    <CircleMarker
-                                        key={index}
-                                        center={[coordinates.lat, coordinates.lng]}
-                                        radius={Math.max(8, Math.sqrt(location.logins) * 4)}
-                                        color={location.country === 'Local' ? "#10B981" : "#3B82F6"}
-                                        fillColor={location.country === 'Local' ? "#10B981" : "#3B82F6"}
-                                        fillOpacity={0.8}
-                                        weight={2}
+                                    <button
+                                        className="security-action-btn"
+                                        onClick={() => handleQuickAction('change-password')}
                                     >
-                                        <Popup>
-                                            <div className="map-popup">
-                                                <h4>{location.country}</h4>
-                                                <p><strong>Logins:</strong> {location.logins}</p>
-                                                <p><strong>Percentage:</strong> {location.percentage}%</p>
-                                                {location.country === 'Local' && (
-                                                    <p><em>Local network activity</em></p>
-                                                )}
-                                            </div>
-                                        </Popup>
-                                    </CircleMarker>
-                                );
-                            })}
-                        </MapContainer>
+                                        Change Password
+                                    </button>
+                                </div>
+
+                                {/* Email Verification Status */}
+                                <div className="security-status-item">
+                                    <div className="security-status-header">
+                                        <span className="security-status-label">Email Verification</span>
+                                        <span className={`security-status-badge ${profileData.emailVerified ? 'status-success' : 'status-error'}`}>
+                                            {profileData.emailVerified ? 'Verified' : 'Not Verified'}
+                                        </span>
+                                    </div>
+                                    {!profileData.emailVerified && (
+                                        <button
+                                            className="security-action-btn"
+                                            onClick={() => handleQuickAction('verify-email')}
+                                        >
+                                            Verify Email
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Two-Factor Authentication Status */}
+                                <div className="security-status-item">
+                                    <div className="security-status-header">
+                                        <span className="security-status-label">Two-Factor Auth</span>
+                                        <span className={`security-status-badge ${profileData.twoFactorEnabled ? 'status-success' : 'status-error'}`}>
+                                            {profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                                        </span>
+                                    </div>
+                                    <button
+                                        className="security-action-btn"
+                                        onClick={() => handleQuickAction('toggle-2fa')}
+                                    >
+                                        {profileData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+                                    </button>
+                                </div>
+
+                                {/* Account Security Status */}
+                                <div className="security-status-item">
+                                    <div className="security-status-header">
+                                        <span className="security-status-label">Account Security</span>
+                                        <span className={`security-status-badge ${profileData.emailVerified && profileData.twoFactorEnabled && securityStatus.passwordStrength.status === 'strong' ? 'status-success' : 'status-warning'}`}>
+                                            {profileData.emailVerified && profileData.twoFactorEnabled && securityStatus.passwordStrength.status === 'strong' ? 'Secure' : 'Needs Attention'}
+                                        </span>
+                                    </div>
+                                    <div className="security-score">
+                                        <div className="security-score-bar">
+                                            <div
+                                                className="security-score-fill"
+                                                style={{
+                                                    width: `${(() => {
+                                                        let score = 0;
+                                                        if (profileData.emailVerified) score += 33;
+                                                        if (profileData.twoFactorEnabled) score += 33;
+                                                        if (securityStatus.passwordStrength.status === 'strong') score += 34;
+                                                        return score;
+                                                    })()}%`
+                                                }}
+                                            ></div>
+                                        </div>
+                                        <span className="security-score-text">
+                                            {(() => {
+                                                let score = 0;
+                                                if (profileData.emailVerified) score += 33;
+                                                if (profileData.twoFactorEnabled) score += 33;
+                                                if (securityStatus.passwordStrength.status === 'strong') score += 34;
+                                                return `${score}%`;
+                                            })()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </article>
-            </section>
+
+                    {/* Login Success vs Failed Doughnut Chart */}
+                    <div className="dashboard__card dashboard__card--chart" style={{ gridColumn: '3 / 4' }}>
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Login Success Rate</h3>
+                        </div>
+                        <div className="dashboard__card-content">
+                            <div className="chart-container" style={{ height: '300px' }}>
+                                <canvas ref={loginSuccessDoughnutChartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Security Events vs Failed Logins Line Chart */}
+                    <div className="dashboard__card dashboard__card--chart" style={{ gridColumn: '4 / 5' }}>
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Security Events Timeline</h3>
+                        </div>
+                        <div className="dashboard__card-content">
+                            <div className="chart-container" style={{ height: '300px' }}>
+                                <canvas ref={securityEventsLineChartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {activeTab === 'analytics' && (
+                <section className="dashboard__grid">
+                    {/* Geographic Activity Map */}
+                    <div className="dashboard__card dashboard__card--chart">
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Geographic Activity</h3>
+                        </div>
+                        <div className="dashboard__card-content">
+                            <div className="map-container" style={{ height: '400px' }}>
+                                <MapContainer
+                                    center={[20, 0]}
+                                    zoom={2}
+                                    style={{ height: '100%', width: '100%' }}
+                                    ref={geographicMapRef}
+                                >
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
+                                    {chartData.geographicActivity && chartData.geographicActivity.map((location, index) => {
+                                        const coords = getCountryCoordinates(location.country);
+                                        return (
+                                            <CircleMarker
+                                                key={index}
+                                                center={[coords.lat, coords.lng]}
+                                                radius={Math.max(5, Math.min(20, location.logins * 2))}
+                                                fillColor={location.logins > 10 ? '#ef4444' : location.logins > 5 ? '#f59e0b' : '#10b981'}
+                                                color={location.logins > 10 ? '#dc2626' : location.logins > 5 ? '#d97706' : '#059669'}
+                                                weight={2}
+                                                opacity={0.8}
+                                                fillOpacity={0.6}
+                                            >
+                                                <Popup>
+                                                    <div className="map-popup">
+                                                        <h4>{location.country}</h4>
+                                                        <p><strong>Logins:</strong> {location.logins}</p>
+                                                        <p><strong>Percentage:</strong> {location.percentage}%</p>
+                                                    </div>
+                                                </Popup>
+                                            </CircleMarker>
+                                        );
+                                    })}
+                                </MapContainer>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Device Usage Chart */}
+                    <div className="dashboard__card dashboard__card--chart">
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Device Usage</h3>
+                        </div>
+                        <div className="dashboard__card-content">
+                            <div className="chart-container" style={{ height: '300px' }}>
+                                <canvas ref={deviceUsageChartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {activeTab === 'more' && (
+                <section className="dashboard__grid">
+
+                </section>
+            )}
 
             {/* Change Password Modal */}
             <ChangePasswordModal

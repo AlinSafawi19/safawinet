@@ -26,7 +26,6 @@ import {
     FiLock,
     FiUnlock
 } from 'react-icons/fi';
-import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 
 const Profile = () => {
     const user = authService.getCurrentUser();
@@ -351,16 +350,15 @@ const Profile = () => {
 
     return (
         <div className="profile-container">
-            <div className="header-content">
-                <h1 className="page-title">
-                    <FiUser /> Profile & Account Settings
-                </h1>
-                <p className="page-description">
-                    Manage your account information and preferences
-                </p>
-            </div>
-
             <div className="profile-content">
+                <div className="header-content">
+                    <h1 className="page-title">
+                        <FiUser /> Profile & Account Settings
+                    </h1>
+                    <p className="page-description">
+                        Manage your account information and preferences
+                    </p>
+                </div>
                 {/* Account Information Section */}
                 <section className="profile-section">
                     <div className="section-header">
@@ -372,11 +370,7 @@ const Profile = () => {
                                 disabled={isLoading}
                                 className="btn btn-primary"
                             >
-                                {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : (
-                                    <>
-                                        <FiSave /> Save Changes
-                                    </>
-                                )}
+                                {isLoading ? 'Saving Changes...' : 'Save Changes'}
                             </button>
                         </div>
                     </div>
@@ -465,7 +459,6 @@ const Profile = () => {
                                     onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, firstName: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, firstName: false }))}
-                                    placeholder={inputFocus.firstName || editForm.firstName ? '' : 'First Name'}
                                     className="form-input"
                                 />
                                 <label htmlFor="firstName" className="form-label">First Name</label>
@@ -479,7 +472,6 @@ const Profile = () => {
                                     onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, lastName: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, lastName: false }))}
-                                    placeholder={inputFocus.lastName || editForm.lastName ? '' : 'Last Name'}
                                     className="form-input"
                                 />
                                 <label htmlFor="lastName" className="form-label">Last Name</label>
@@ -495,7 +487,6 @@ const Profile = () => {
                                     onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, username: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, username: false }))}
-                                    placeholder={inputFocus.username || editForm.username ? '' : 'Username'}
                                     className="form-input"
                                 />
                                 <label htmlFor="username" className="form-label">Username</label>
@@ -509,7 +500,6 @@ const Profile = () => {
                                     onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, email: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, email: false }))}
-                                    placeholder={inputFocus.email || editForm.email ? '' : 'Email Address'}
                                     className="form-input"
                                 />
                                 <label htmlFor="email" className="form-label">Email Address</label>
@@ -525,7 +515,6 @@ const Profile = () => {
                                     onKeyPress={handleKeyPress}
                                     onFocus={() => setInputFocus(f => ({ ...f, phone: true }))}
                                     onBlur={() => setInputFocus(f => ({ ...f, phone: false }))}
-                                    placeholder={inputFocus.phone || editForm.phone ? '' : 'Phone Number'}
                                     className="form-input"
                                 />
                                 <label htmlFor="phone" className="form-label">Phone Number</label>

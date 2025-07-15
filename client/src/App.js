@@ -4,7 +4,6 @@ import './App.css';
 import Login from './pages/Login';
 import DashboardLayout from './components/DashboardLayout';
 import Dashboard from './pages/Dashboard';
-import LoadingOverlay from './components/LoadingOverlay';
 import authService from './services/authService';
 import AuditLogs from './pages/AuditLogs';
 import KnowledgeGuide from './pages/KnowledgeGuide';
@@ -12,6 +11,7 @@ import EmailVerification from './pages/EmailVerification';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
+import CreateUser from './pages/CreateUser';
 import { applyUserTheme } from './utils/themeUtils';
 import { CalculatorProvider } from './contexts/CalculatorContext';
 import Calculator from './components/Calculator';
@@ -44,7 +44,7 @@ const ProtectedRoute = ({ children }) => {
   if (isLoading) {
     return (
       <div className="App">
-        <LoadingOverlay isLoading={true} />
+        
       </div>
     );
   }
@@ -84,7 +84,7 @@ const LoginPage = () => {
   if (isLoading) {
     return (
       <div className="App">
-        <LoadingOverlay isLoading={true} />
+        
       </div>
     );
   }
@@ -171,6 +171,21 @@ const UsersPage = () => {
   );
 };
 
+// Create User Page component
+const CreateUserPage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <DashboardLayout onLogout={handleLogout}>
+      <CreateUser />
+    </DashboardLayout>
+  );
+};
+
 function App() {
   // Apply user theme on app load
   useEffect(() => {
@@ -225,6 +240,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/create"
+              element={
+                <ProtectedRoute>
+                  <CreateUserPage />
                 </ProtectedRoute>
               }
             />

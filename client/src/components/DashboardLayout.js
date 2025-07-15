@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import authService from '../services/authService';
-import LoadingOverlay from './LoadingOverlay';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { initializeTheme } from '../utils/themeUtils';
@@ -14,7 +13,6 @@ const DashboardLayout = ({ onLogout, children }) => {
     });
     const [isMobile, setIsMobile] = useState(false);
     const logoutTimerRef = useRef(null);
-    console.log(user);
 
     // Apply theme based on user preferences
     useEffect(() => {
@@ -28,10 +26,10 @@ const DashboardLayout = ({ onLogout, children }) => {
         const handleResize = () => {
             const mobileBreakpoint = 768;
             const newIsMobile = window.innerWidth <= mobileBreakpoint;
-            
+
             if (newIsMobile !== isMobile) {
                 setIsMobile(newIsMobile);
-                
+
                 // When transitioning to mobile, reset sidebar state and close mobile menu
                 if (newIsMobile) {
                     setIsSidebarCollapsed(false);
@@ -96,35 +94,51 @@ const DashboardLayout = ({ onLogout, children }) => {
         // Only allow sidebar toggle on desktop
         if (!isMobile) {
             setIsSidebarCollapsed(collapsed);
+            // Save the collapsed state to localStorage
+            localStorage.setItem('sidebarCollapsed', JSON.stringify(collapsed));
+        }
+    };
+
+    const handleHeaderSidebarToggle = () => {
+        if (isMobile) {
+            // On mobile, toggle the mobile menu
+            setIsMobileMenuOpen(!isMobileMenuOpen);
+        } else {
+            // On desktop, toggle the sidebar collapsed state
+            handleSidebarToggle(!isSidebarCollapsed);
         }
     };
 
     // Ensure we have a valid user before rendering
     if (!user) {
         return (
-            <div className="App">
-                <LoadingOverlay isLoading={true} />
+            <div>
+
             </div>
         );
     }
 
     return (
-        <div className="dashboard-layout">
-            <div className={`layout-container ${!isMobile && isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-                <Header onLogout={onLogout} onMobileMenuToggle={toggleMobileMenu} />
-                
-                <div className={`layout-content ${!isMobile && isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-                    <Sidebar 
-                        isMobileMenuOpen={isMobileMenuOpen} 
-                        onCloseMobileMenu={closeMobileMenu}
-                        onSidebarToggle={handleSidebarToggle}
-                        onLogout={onLogout}
-                        isMobile={isMobile}
-                    />
-                    <main className="main-content">
-                        {children}
-                    </main>
-                </div>
+        <div>
+            <Header
+                onLogout={onLogout}
+                onSidebarToggle={handleHeaderSidebarToggle}
+                isSidebarCollapsed={isSidebarCollapsed}
+                isMobile={isMobile}
+                isMobileMenuOpen={isMobileMenuOpen}
+            />
+            <Sidebar
+                isMobileMenuOpen={isMobileMenuOpen}
+                onCloseMobileMenu={closeMobileMenu}
+                onSidebarToggle={handleSidebarToggle}
+                onLogout={onLogout}
+                isMobile={isMobile}
+                isCollapsed={isSidebarCollapsed}
+            />
+            <div className={`dashboard-content${isSidebarCollapsed ? ' collapsed' : ''}`}>
+                <main>
+                    {children}
+                </main>
             </div>
         </div>
     );

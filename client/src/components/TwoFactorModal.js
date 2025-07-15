@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiX, FiShield, FiQrCode, FiKey, FiCheckCircle, FiAlertCircle, FiCopy, FiDownload, FiEyeOff, FiEye, FiRefreshCw } from 'react-icons/fi';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 import googleAuthIcon from '../assets/images/google-authenticator-icon.png';
 
 const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
@@ -15,6 +14,7 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
     const [verificationCode, setVerificationCode] = useState('');
     const [showSecret, setShowSecret] = useState(false);
     const [showBackupCodes, setShowBackupCodes] = useState(false);
+    const [inputFocus, setInputFocus] = useState({ verificationCode: false });
 
     // Create API instance
     const createApiInstance = () => {
@@ -101,7 +101,7 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
     // Handle disable 2FA
     const handleDisable2FA = async (e) => {
         e.preventDefault();
-        
+
         if (!verificationCode.trim()) {
             setError('Please enter the verification code');
             return;
@@ -172,8 +172,8 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
 
         try {
             const api = createApiInstance();
-            const response = await api.post('/auth/2fa/regenerate-backup-codes', { 
-                code: verificationCode 
+            const response = await api.post('/auth/2fa/regenerate-backup-codes', {
+                code: verificationCode
             });
 
             if (response.data.success) {
@@ -261,7 +261,7 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                 </div>
 
                 <div className="modal-content">
-                {step === 'setup' && mode === 'enable' && (
+                    {step === 'setup' && mode === 'enable' && (
                         <div className="modal-description">
                             <p className="description-text">
                                 Two-factor authentication adds an extra layer of security to your account.
@@ -317,19 +317,19 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                         </div>
                     )}
 
-                {step === 'setup' && mode === 'disable' && (
-                    <div className="modal-description">
-                        <p className="description-text">
-                            To disable two-factor authentication, please enter the 6-digit code from your authenticator app.
-                        </p>
-                        <div className="security-notice">
-                            <FiAlertCircle />
-                            <span className="notice-text">
-                                Disabling 2FA will make your account less secure. Consider keeping it enabled.
-                            </span>
+                    {step === 'setup' && mode === 'disable' && (
+                        <div className="modal-description">
+                            <p className="description-text">
+                                To disable two-factor authentication, please enter the 6-digit code from your authenticator app.
+                            </p>
+                            <div className="security-notice">
+                                <FiAlertCircle />
+                                <span className="notice-text">
+                                    Disabling 2FA will make your account less secure. Consider keeping it enabled.
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
                     {step === 'qr-view' && mode === 'enable' && (
                         <div className="qr-setup-section">
@@ -392,37 +392,37 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                     )}
 
                     {step === 'backup-view' && mode === 'enable' && (
-                            <div className="backup-codes-section">
+                        <div className="backup-codes-section">
                             <h3 className="setup-title">Step 2: Backup Codes</h3>
                             <p className="setup-description">
                                 Save these backup codes in a secure location. You can use them if you lose access to your authenticator app:
                             </p>
 
-                                <div className="backup-codes-container">
-                                    <div className="backup-codes-grid">
-                                        {backupCodes.map((code, index) => (
-                                            <div key={index} className="backup-code">
-                                                {code}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="backup-actions">
-                                        <button
-                                            type="button"
-                                            onClick={() => copyToClipboard(backupCodes.join('\n'))}
-                                            className="btn btn-secondary btn-sm"
-                                        >
-                                            <FiCopy /> Copy All
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={downloadBackupCodes}
-                                            className="btn btn-secondary btn-sm"
-                                        >
-                                            <FiDownload /> Download
-                                        </button>
-                                    </div>
+                            <div className="backup-codes-container">
+                                <div className="backup-codes-grid">
+                                    {backupCodes.map((code, index) => (
+                                        <div key={index} className="backup-code">
+                                            {code}
+                                        </div>
+                                    ))}
                                 </div>
+                                <div className="backup-actions">
+                                    <button
+                                        type="button"
+                                        onClick={() => copyToClipboard(backupCodes.join('\n'))}
+                                        className="btn btn-secondary btn-sm"
+                                    >
+                                        <FiCopy /> Copy All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={downloadBackupCodes}
+                                        className="btn btn-secondary btn-sm"
+                                    >
+                                        <FiDownload /> Download
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="backup-instructions">
                                 <h4>Important:</h4>
@@ -447,13 +447,15 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                             </div>
 
                             <form onSubmit={handleVerification} className="modal-form">
-                                <div className="form-group">
+                                <div className={`form-group floating-label${inputFocus.verificationCode ? ' focused' : ''}${verificationCode ? ' filled' : ''}`}> 
                                     <input
                                         type="text"
                                         id="verificationCode"
                                         value={verificationCode}
                                         onChange={(e) => setVerificationCode(e.target.value)}
-                                        placeholder=" "
+                                        onFocus={() => setInputFocus(f => ({ ...f, verificationCode: true }))}
+                                        onBlur={() => setInputFocus(f => ({ ...f, verificationCode: false }))}
+                                        placeholder=""
                                         maxLength="6"
                                         pattern="[0-9]{6}"
                                         className="form-input"
@@ -466,10 +468,10 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                     <div className="form-error">{error}</div>
                                 )}
                             </form>
-                    </div>
-                )}
+                        </div>
+                    )}
 
-                {step === 'verify' && mode === 'disable' && (
+                    {step === 'verify' && mode === 'disable' && (
                         <div className="modal-description">
                             <p className="description-text">
                                 To disable two-factor authentication, please enter the 6-digit code from your authenticator app.
@@ -479,32 +481,34 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                 <span className="notice-text">
                                     Disabling 2FA will make your account less secure. Consider keeping it enabled.
                                 </span>
-                        </div>
-
-                        <form onSubmit={handleDisable2FA} className="modal-form">
-                            <div className="form-group">
-                                <input
-                                    type="text"
-                                        id="disableVerificationCode"
-                                    value={verificationCode}
-                                    onChange={(e) => setVerificationCode(e.target.value)}
-                                        placeholder=" "
-                                    maxLength="6"
-                                    pattern="[0-9]{6}"
-                                        className="form-input"
-                                    autoComplete="one-time-code"
-                                />
-                                    <label htmlFor="disableVerificationCode" className="form-label">6-digit verification code</label>
                             </div>
 
-                            {error && (
-                                <div className="form-error">{error}</div>
-                            )}
-                        </form>
-                    </div>
-                )}
+                            <form onSubmit={handleDisable2FA} className="modal-form">
+                                <div className={`form-group floating-label${inputFocus.verificationCode ? ' focused' : ''}${verificationCode ? ' filled' : ''}`}> 
+                                    <input
+                                        type="text"
+                                        id="disableVerificationCode"
+                                        value={verificationCode}
+                                        onChange={(e) => setVerificationCode(e.target.value)}
+                                        onFocus={() => setInputFocus(f => ({ ...f, verificationCode: true }))}
+                                        onBlur={() => setInputFocus(f => ({ ...f, verificationCode: false }))}
+                                        placeholder=""
+                                        maxLength="6"
+                                        pattern="[0-9]{6}"
+                                        className="form-input"
+                                        autoComplete="one-time-code"
+                                    />
+                                    <label htmlFor="disableVerificationCode" className="form-label">6-digit verification code</label>
+                                </div>
 
-                {step === 'success' && (
+                                {error && (
+                                    <div className="form-error">{error}</div>
+                                )}
+                            </form>
+                        </div>
+                    )}
+
+                    {step === 'success' && (
                         <div className="success-content">
                             <div className="success-icon">
                                 <FiCheckCircle />
@@ -546,7 +550,7 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                 disabled={isLoading}
                                 className="btn btn-primary"
                             >
-                                {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Start Setup'}
+                                {isLoading ? 'Starting Setup...' : 'Start Setup'}
                             </button>
                         </div>
                     )}
@@ -630,7 +634,7 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                 disabled={isLoading}
                                 className="btn btn-primary"
                             >
-                                {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Verify & Enable'}
+                                {isLoading ? 'Verifying & Enabling...' : 'Verify & Enable'}
                             </button>
                         </div>
                     )}
@@ -650,26 +654,26 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                 disabled={isLoading}
                                 className="btn btn-danger"
                             >
-                                {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Disable 2FA'}
+                                {isLoading ? 'Disabling 2FA...' : 'Disable 2FA'}
                             </button>
                         </div>
                     )}
 
                     {step === 'success' && (
-                            <div className="success-actions">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleClose();
-                                        if (onSuccess) onSuccess();
-                                    }}
-                                    className="btn btn-primary"
-                                >
-                                    Got it
-                                </button>
-                            </div>
+                        <div className="success-actions">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    handleClose();
+                                    if (onSuccess) onSuccess();
+                                }}
+                                className="btn btn-primary"
+                            >
+                                Got it
+                            </button>
+                        </div>
                     )}
-                    </div>
+                </div>
             </div>
         </div>
     );

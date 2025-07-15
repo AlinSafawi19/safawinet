@@ -34,7 +34,7 @@ import { getStatusClass } from '../utils/classUtils';
 
 const AuditLogs = () => {
   const user = authService.getCurrentUser();
-  const sidebarRef = useRef(null);
+  // Remove sidebarRef, filtersVisible, and sidebar toggling logic
 
   // Apply user theme preference
   useEffect(() => {
@@ -61,24 +61,7 @@ const AuditLogs = () => {
     limit: 25,
     total: 0
   });
-  const [filtersVisible, setFiltersVisible] = useState(false);
-
-  // Close sidebar when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (filtersVisible && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setFiltersVisible(false);
-      }
-    };
-
-    if (filtersVisible) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [filtersVisible]);
+  // Remove sidebarRef, filtersVisible, and sidebar toggling logic
 
   // Create a single axios instance for all API calls
   const createApiInstance = useCallback(() => {
@@ -283,7 +266,7 @@ const AuditLogs = () => {
 
   // Toggle filters sidebar
   const toggleFilters = () => {
-    setFiltersVisible(!filtersVisible);
+    // setFiltersVisible(!filtersVisible); // This line is removed
   };
 
   // Handle quick filter selection
@@ -430,62 +413,90 @@ const AuditLogs = () => {
   const customStyles = {
     control: (provided, state) => ({
       ...provided,
-      backgroundColor: 'var(--bg-main)',
-      border: `1px solid ${state.isFocused ? 'var(--accent-red)' : 'var(--border-color)'}`,
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(215, 38, 56, 0.1)' : 'none',
+      backgroundColor: '#f4f5f7',
+      border: `1.5px solid ${state.isFocused ? '#1f3bb3' : '#e3e6ea'}`,
+      borderRadius: '8px',
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(31, 59, 179, 0.08)' : 'none',
+      minHeight: '44px',
+      fontSize: '1rem',
+      color: '#222',
+      transition: 'border-color 0.2s, box-shadow 0.2s',
       '&:hover': {
-        borderColor: 'var(--gray-500)'
+        borderColor: '#1f3bb3'
       }
     }),
     menu: (provided) => ({
       ...provided,
-      backgroundColor: 'var(--bg-main)',
-      border: '1px solid var(--border-color)',
-      borderRadius: '0.5rem',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      backgroundColor: '#fff',
+      border: '1px solid #e3e6ea',
+      borderRadius: '8px',
+      boxShadow: '0 4px 16px rgba(60,60,60,0.10)',
       zIndex: 9999
     }),
     option: (provided, state) => ({
       ...provided,
       backgroundColor: state.isSelected
-        ? 'var(--accent-red)'
+        ? '#1f3bb3'
         : state.isFocused
-          ? 'var(--gray-100)'
+          ? '#eaf0fb'
           : 'transparent',
-      color: state.isSelected ? 'white' : 'var(--text-main)',
+      color: state.isSelected ? '#fff' : '#222',
+      fontWeight: state.isSelected ? 600 : 400,
+      fontSize: '1rem',
+      cursor: 'pointer',
       '&:hover': {
-        backgroundColor: state.isSelected ? 'var(--accent-red)' : 'var(--gray-100)'
+        backgroundColor: state.isSelected ? '#1f3bb3' : '#eaf0fb'
       }
     }),
     singleValue: (provided) => ({
       ...provided,
-      color: 'var(--text-main)'
+      color: '#222',
+      fontWeight: 500
     }),
     input: (provided) => ({
       ...provided,
-      color: 'var(--text-main)'
+      color: '#222'
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: 'var(--text-muted)'
+      color: '#bfc5ce',
+      fontWeight: 400
+    }),
+    dropdownIndicator: (provided, state) => ({
+      ...provided,
+      color: state.isFocused ? '#1f3bb3' : '#bfc5ce',
+      '&:hover': {
+        color: '#1f3bb3'
+      }
+    }),
+    indicatorSeparator: (provided) => ({
+      ...provided,
+      backgroundColor: '#e3e6ea'
+    }),
+    clearIndicator: (provided) => ({
+      ...provided,
+      color: '#bfc5ce',
+      '&:hover': {
+        color: '#1f3bb3'
+      }
     })
   };
 
   return (
-    <div className="audit-logs">
-      <div className="page-header">
-        <div className="header-content">
-          <h1 className="page-title">
+    <div className="audit-logs-container">
+      <div className="audit-logs-header-row">
+        <div className="audit-logs-header">
+          <h1 className="audit-logs-title">
             <FiActivity /> Audit Logs
           </h1>
-          <p className="page-description">
+          <p className="audit-logs-description">
             View detailed security events and user activity logs
           </p>
         </div>
-        <div className="header-actions">
+        <div className="audit-logs-controls">
           {/* Row Limit Selector */}
-          <div className="row-limit-controls">
-            <label htmlFor="row-limit" className="limit-label">
+          <div className="row-limit-selector">
+            <label htmlFor="row-limit">
               Rows per page:
             </label>
             <Select
@@ -497,107 +508,158 @@ const AuditLogs = () => {
               placeholder="Select rows per page..."
               isClearable={false}
               isSearchable={false}
-              className="limit-select"
             />
           </div>
           <button
-            className="btn btn--secondary"
-            onClick={toggleFilters}
-            aria-label="Toggle filters"
-          >
-            <FiFilter />
-            Filters
-          </button>
-          <button
-            className="btn btn--secondary"
+            className="refresh-btn"
             onClick={handleRefresh}
             disabled={loading}
           >
-            <FiRefreshCw className={loading ? 'spinning' : ''} />
+            <FiRefreshCw />
             Refresh
           </button>
         </div>
       </div>
 
-      <div className="audit-content">
-        {/* Main Content */}
-        <div className={`audit-main ${filtersVisible ? 'with-sidebar' : ''}`}>
-          {/* Results Summary */}
-          <div className="audit-summary">
-            <div className="summary-stats">
-              <div className="stat-item">
-                <span className="stat-number">{pagination.total}</span>
-                <span className="stat-label">Total Events</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">
-                  {auditLogs.filter(log => log.riskLevel === 'high' || log.riskLevel === 'critical').length}
-                </span>
-                <span className="stat-label">High Risk</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">
-                  {auditLogs.filter(log => log.action === 'login_failed').length}
-                </span>
-                <span className="stat-label">Failed Logins</span>
-              </div>
-            </div>
+      {/* Filters Row - now above summary cards and table */}
+      <div className="filters-row">
+        <div className="filters-group">
+          <div className="filter-group">
+            <h4>Action Type</h4>
+            <Select
+              value={actionOptions.find(option => option.value === filters.action)}
+              onChange={(selectedOption) => handleFilterChange('action', selectedOption ? selectedOption.value : '')}
+              options={actionOptions}
+              styles={customStyles}
+              placeholder="Select action type..."
+              isClearable
+              isSearchable
+            />
           </div>
+          <div className="filter-group">
+            <h4>Risk Level</h4>
+            <Select
+              value={riskLevelOptions.find(option => option.value === filters.riskLevel)}
+              onChange={(selectedOption) => handleFilterChange('riskLevel', selectedOption ? selectedOption.value : '')}
+              options={riskLevelOptions}
+              styles={customStyles}
+              placeholder="Select risk level..."
+              isClearable
+              isSearchable
+            />
+          </div>
+          <div className="filter-group">
+            <h4>Status</h4>
+            <Select
+              value={statusOptions.find(option => option.value === filters.success)}
+              onChange={(selectedOption) => handleFilterChange('success', selectedOption ? selectedOption.value : '')}
+              options={statusOptions}
+              styles={customStyles}
+              placeholder="Select status..."
+              isClearable
+              isSearchable
+            />
+          </div>
+          <div className="filter-group">
+            <h4>Time Range</h4>
+            <Select
+              value={timeRangeOptions.find(option => option.value === filters.dateRange)}
+              onChange={(selectedOption) => handleFilterChange('dateRange', selectedOption ? selectedOption.value : '24h')}
+              options={timeRangeOptions}
+              styles={customStyles}
+              placeholder="Select time range..."
+              isClearable={false}
+              isSearchable
+            />
+          </div>
+        </div>
+        <div className="filter-actions">
+          <button
+            className="clear-filters-btn"
+            onClick={handleClearFilters}
+          >
+            Clear All Filters
+          </button>
+        </div>
+      </div>
 
+      {/* Move summary cards here, directly below filters */}
+      <div className="summary-cards">
+        <div className="summary-card">
+          <span className="summary-value">{pagination.total}</span>
+          <span className="summary-label">Total Events</span>
+        </div>
+        <div className="summary-card">
+          <span className="summary-value">
+            {auditLogs.filter(log => log.riskLevel === 'high' || log.riskLevel === 'critical').length}
+          </span>
+          <span className="summary-label">High Risk</span>
+        </div>
+        <div className="summary-card">
+          <span className="summary-value">
+            {auditLogs.filter(log => log.action === 'login_failed').length}
+          </span>
+          <span className="summary-label">Failed Logins</span>
+        </div>
+      </div>
+
+      <div className="audit-logs-main-content">
+        {/* Main Content */}
+        <div className="audit-logs-content">
           {/* Quick Filter Buttons */}
-          <div className="quick-filters">
-            <div className="quick-filter-buttons">
+          <div className="quick-filters-row">
+            <div className="quick-filters">
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('failed_logins') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('failed_logins') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('failed_logins')}
               >
                 <FiAlertTriangle />
                 Failed Logins
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('high_risk') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('high_risk') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('high_risk')}
               >
                 <FiAlertCircle />
                 High Risk
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('critical_events') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('critical_events') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('critical_events')}
               >
                 <FiShield />
                 Critical Events
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('successful_logins') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('successful_logins') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('successful_logins')}
               >
                 <FiCheckCircle />
                 Successful Logins
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('two_factor') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('two_factor') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('two_factor')}
               >
                 <FiShield />
                 2FA Events
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('security_alerts') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('security_alerts') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('security_alerts')}
               >
                 <FiAlertTriangle />
                 Security Alerts
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('recent_hour') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('recent_hour') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('recent_hour')}
               >
                 <FiClock />
                 Last Hour
               </button>
               <button
-                className={`quick-filter-btn ${isQuickFilterActive('last_week') ? 'active' : ''}`}
+                className={`quick-filter-btn${isQuickFilterActive('last_week') ? ' active' : ''}`}
                 onClick={() => handleQuickFilter('last_week')}
               >
                 <FiCalendar />
@@ -609,30 +671,30 @@ const AuditLogs = () => {
           {/* Audit Logs Table */}
           <div className="audit-table-container">
             {loading ? (
-              <div className="loading-state">
-                <div className="loading-spinner"></div>
+              <div className="audit-logs-loading">
+                <div className="spinner"></div>
                 <p>Loading audit logs...</p>
               </div>
             ) : error ? (
-              <div className="error-state">
+              <div className="audit-logs-error">
                 <FiAlertCircle />
                 <p>{error}</p>
-                <button className="btn btn--primary" onClick={fetchAuditLogs}>
+                <button className="retry-btn" onClick={fetchAuditLogs}>
                   Try Again
                 </button>
               </div>
             ) : auditLogs.length === 0 ? (
-              <div className="empty-state">
+              <div className="audit-logs-empty">
                 <FiEye />
                 <h3>No Audit Logs Found</h3>
                 <p>No security events match your current filters.</p>
-                <button className="btn btn--secondary" onClick={handleClearFilters}>
+                <button className="clear-filters-btn" onClick={handleClearFilters}>
                   Clear Filters
                 </button>
               </div>
             ) : (
               <>
-                <div className="table-responsive">
+                <div className="audit-table-scroll">
                   <table className="audit-table">
                     <thead>
                       <tr>
@@ -648,11 +710,11 @@ const AuditLogs = () => {
                     </thead>
                     <tbody>
                       {auditLogs.map((log, index) => (
-                        <tr key={log._id || index} className={`audit-row`}>
-                          <td className="action-cell">
-                            <div className="action-info">
-                              <div className="action-details">
-                                <span className="action-name">
+                        <tr key={log._id || index}>
+                          <td>
+                            <div className="action-cell">
+                              <div className="action-name">
+                                <span>
                                   {getActionDisplayName(log.action)}
                                 </span>
                               </div>
@@ -668,57 +730,57 @@ const AuditLogs = () => {
                               {log.riskLevel || 'low'}
                             </span>
                           </td>
-                          <td className="ip-cell">
-                            <span className="ip-address">{log.ip}</span>
+                          <td>
+                            <span>{log.ip}</span>
                           </td>
-                          <td className="device-cell">
-                            <span className="device-info">{log.device || 'Unknown'}</span>
+                          <td>
+                            <span>{log.device || 'Unknown'}</span>
                           </td>
-                          <td className="location-cell">
+                          <td>
                             {log.location ? (
-                              <div className="location-info">
-                                <span className="location-country">
+                              <div className="location-cell">
+                                <span>
                                   <FiMapPin /> {log.location.country || 'Unknown'}
                                 </span>
                                 {log.location.city && (
-                                  <span className="location-city">{log.location.city}</span>
+                                  <span>{log.location.city}</span>
                                 )}
                               </div>
                             ) : (
-                              <span className="no-location">No location data</span>
+                              <span>No location data</span>
                             )}
                           </td>
-                          <td className="timestamp-cell">
-                            <span className="timestamp">
+                          <td>
+                            <span>
                               {formatDate(log.timestamp)}
                             </span>
                           </td>
-                          <td className="details-cell">
+                          <td>
                             {log.details ? (
-                              <div className="details-content">
+                              <div className="details-cell">
                                 {log.details.type && (
-                                  <span className="detail-item">
+                                  <span className="details-type">
                                     Type: {log.details.type}
                                   </span>
                                 )}
                                 {log.details.message && (
-                                  <span className="detail-item">
+                                  <span className="details-message">
                                     {log.details.message}
                                   </span>
                                 )}
                                 {log.details.severity && (
-                                  <span className="detail-item">
+                                  <span className="details-severity">
                                     Severity: {log.details.severity}
                                   </span>
                                 )}
                                 {log.details.reason && (
-                                  <span className="detail-item">
+                                  <span className="details-reason">
                                     {log.details.reason.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())}
                                   </span>
                                 )}
                               </div>
                             ) : (
-                              <span className="detail-item">No additional details</span>
+                              <span>No additional details</span>
                             )}
                           </td>
                         </tr>
@@ -728,12 +790,12 @@ const AuditLogs = () => {
                 </div>
 
                 {/* Pagination and Row Limit Controls */}
-                <div className="pagination-container">
+                <div className="audit-pagination-row">
                   {/* Pagination */}
                   {pagination.total > pagination.limit && (
-                    <div className="pagination">
+                    <div className="pagination-controls">
                       <button
-                        className="btn btn--secondary"
+                        className="pagination-btn"
                         disabled={pagination.page === 1}
                         onClick={() => handlePageChange(pagination.page - 1)}
                       >
@@ -742,13 +804,13 @@ const AuditLogs = () => {
 
                       <span className="pagination-info">
                         Page {pagination.page} of {Math.ceil(pagination.total / pagination.limit)}
-                        <span className="total-info">
+                        <span className="pagination-total">
                           ({pagination.total} total records)
                         </span>
                       </span>
 
                       <button
-                        className="btn btn--secondary"
+                        className="pagination-btn"
                         disabled={pagination.page >= Math.ceil(pagination.total / pagination.limit)}
                         onClick={() => handlePageChange(pagination.page + 1)}
                       >
@@ -759,83 +821,6 @@ const AuditLogs = () => {
                 </div>
               </>
             )}
-          </div>
-        </div>
-
-        {/* Filters Sidebar */}
-        <div className={`filters-sidebar ${filtersVisible ? 'visible' : ''}`} ref={sidebarRef}>
-          <div className="sidebar-header">
-            <h3>Filters</h3>
-            <button
-              className="sidebar-close-btn"
-              onClick={toggleFilters}
-              aria-label="Close filters"
-            >
-              <FiX />
-            </button>
-          </div>
-
-          <div className="sidebar-content">
-            <div className="filter-section">
-              <h4>Action Type</h4>
-              <Select
-                value={actionOptions.find(option => option.value === filters.action)}
-                onChange={(selectedOption) => handleFilterChange('action', selectedOption ? selectedOption.value : '')}
-                options={actionOptions}
-                styles={customStyles}
-                placeholder="Select action type..."
-                isClearable
-                isSearchable
-              />
-            </div>
-
-            <div className="filter-section">
-              <h4>Risk Level</h4>
-              <Select
-                value={riskLevelOptions.find(option => option.value === filters.riskLevel)}
-                onChange={(selectedOption) => handleFilterChange('riskLevel', selectedOption ? selectedOption.value : '')}
-                options={riskLevelOptions}
-                styles={customStyles}
-                placeholder="Select risk level..."
-                isClearable
-                isSearchable
-              />
-            </div>
-
-            <div className="filter-section">
-              <h4>Status</h4>
-              <Select
-                value={statusOptions.find(option => option.value === filters.success)}
-                onChange={(selectedOption) => handleFilterChange('success', selectedOption ? selectedOption.value : '')}
-                options={statusOptions}
-                styles={customStyles}
-                placeholder="Select status..."
-                isClearable
-                isSearchable
-              />
-            </div>
-
-            <div className="filter-section">
-              <h4>Time Range</h4>
-              <Select
-                value={timeRangeOptions.find(option => option.value === filters.dateRange)}
-                onChange={(selectedOption) => handleFilterChange('dateRange', selectedOption ? selectedOption.value : '24h')}
-                options={timeRangeOptions}
-                styles={customStyles}
-                placeholder="Select time range..."
-                isClearable={false}
-                isSearchable
-              />
-            </div>
-
-            <div className="filter-actions">
-              <button
-                className="btn btn--primary btn--full"
-                onClick={handleClearFilters}
-              >
-                Clear All Filters
-              </button>
-            </div>
           </div>
         </div>
       </div>

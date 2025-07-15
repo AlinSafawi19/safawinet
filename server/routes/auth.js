@@ -2628,4 +2628,170 @@ router.post('/refresh', async (req, res) => {
     }
 });
 
+// Get system metrics timeline data
+router.get('/system-metrics-timeline', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hours = parseInt(req.query.hours) || 6; // Default to 6 hours
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        // Get user activity for simulation
+        const userActivity = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    timestamp: { $gte: cutoff }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%dT%H:00:00.000Z",
+                            date: "$timestamp"
+                        }
+                    },
+                    activityCount: { $sum: 1 },
+                    loginCount: {
+                        $sum: { $cond: [{ $eq: ["$action", "login"] }, 1, 0] }
+                    },
+                    apiCallCount: {
+                        $sum: { $cond: [{ $in: ["$action", ["login", "profile_update", "password_change"]] }, 1, 0] }
+                    }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Create timeline data points with simulated metrics
+        const timelineData = [];
+        const now = new Date();
+        
+        for (let i = hours - 1; i >= 0; i--) {
+            const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
+            const timeKey = timestamp.toISOString().split('.')[0] + 'Z';
+            
+            const activity = userActivity.find(item => item._id === timeKey);
+            const baseLoad = activity ? activity.activityCount : 0;
+            
+            // Simulate database response time (40-80ms based on activity)
+            const dbResponseTime = 40 + (baseLoad * 2) + Math.floor(Math.random() * 20);
+            
+            // Simulate API response time (100-200ms based on activity)
+            const apiResponseTime = 100 + (baseLoad * 5) + Math.floor(Math.random() * 50);
+            
+            // Simulate active sessions (1-5 based on login activity)
+            const activeSessions = activity ? Math.min(5, Math.max(1, activity.loginCount + 1)) : Math.floor(Math.random() * 3) + 1;
+
+            timelineData.push({
+                timestamp: timestamp,
+                databaseResponseTime: Math.round(dbResponseTime),
+                apiResponseTime: Math.round(apiResponseTime),
+                activeSessions: activeSessions
+            });
+        }
+
+        res.json({
+            success: true,
+            data: timelineData
+        });
+    } catch (error) {
+        console.error('System metrics timeline fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch system metrics timeline'
+        });
+    }
+});
+
+// Get performance metrics data
+router.get('/performance-metrics', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hours = parseInt(req.query.hours) || 6; // Default to 6 hours
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+        // Get user activity for simulation
+        const userActivity = await AuditLog.aggregate([
+            {
+                $match: {
+                    userId: userId,
+                    timestamp: { $gte: cutoff }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m-%dT%H:00:00.000Z",
+                            date: "$timestamp"
+                        }
+                    },
+                    activityCount: { $sum: 1 },
+                    loginCount: {
+                        $sum: { $cond: [{ $eq: ["$action", "login"] }, 1, 0] }
+                    },
+                    apiCallCount: {
+                        $sum: { $cond: [{ $in: ["$action", ["login", "profile_update", "password_change"]] }, 1, 0] }
+                    }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        // Generate performance metrics based on activity
+        const performanceData = {
+            cpu: [],
+            memory: [],
+            disk: [],
+            network: []
+        };
+
+        const now = new Date();
+        
+        for (let i = hours - 1; i >= 0; i--) {
+            const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
+            const timeKey = timestamp.toISOString().split('.')[0] + 'Z';
+            
+            const activity = userActivity.find(item => item._id === timeKey);
+            const baseLoad = activity ? Math.min(activity.activityCount * 3, 60) : 15;
+            
+            // CPU usage (15-75% based on activity)
+            performanceData.cpu.push({
+                timestamp: timestamp,
+                usage: Math.max(15, Math.min(75, baseLoad + Math.floor(Math.random() * 15)))
+            });
+
+            // Memory usage (35-65% based on activity)
+            performanceData.memory.push({
+                timestamp: timestamp,
+                usage: Math.max(35, Math.min(65, baseLoad * 0.8 + Math.floor(Math.random() * 10)))
+            });
+
+            // Disk usage (55-75% with slow growth)
+            performanceData.disk.push({
+                timestamp: timestamp,
+                usage: Math.max(55, Math.min(75, 60 + (i * 0.3) + Math.floor(Math.random() * 5)))
+            });
+
+            // Network throughput (0.5-4 MB/s based on activity)
+            performanceData.network.push({
+                timestamp: timestamp,
+                throughput: Math.max(0.5, Math.min(4, (baseLoad / 25) + Math.random() * 1.5))
+            });
+        }
+
+        res.json({
+            success: true,
+            data: performanceData
+        });
+    } catch (error) {
+        console.error('Performance metrics fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch performance metrics'
+        });
+    }
+});
+
 module.exports = router; 

@@ -124,6 +124,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  role: {
+    type: String,
+    enum: ['admin', 'manager', 'viewer', 'custom'],
+    default: 'viewer'
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -190,11 +195,11 @@ const userSchema = new mongoose.Schema({
     page: {
       type: String,
       required: true,
-      enum: ['users']
+      enum: ['dashboard', 'users', 'audit-logs', 'knowledge-guide', 'profile', 'reports', 'analytics', 'notifications', 'settings', 'backups', 'integrations', 'security', 'help', 'support']
     },
     actions: [{
       type: String,
-      enum: ['view', 'add', 'edit', 'delete']
+      enum: ['view', 'add', 'edit', 'delete', 'export']
     }]
   }],
   lastLogin: {

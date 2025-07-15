@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import LoadingOverlay from '../components/LoadingOverlay';
 import { FiMail } from 'react-icons/fi';
 
 const EmailVerification = () => {
@@ -74,10 +73,6 @@ const EmailVerification = () => {
                 </div>
 
                 <div className="verification-content">
-                    {verificationStatus === 'verifying' && (
-                        <LoadingOverlay isLoading={verificationStatus === 'verifying'} />
-                    )}
-
                     {verificationStatus === 'success' && (
                         <div className="verification-success">
                             <div className="success-icon">✅</div>

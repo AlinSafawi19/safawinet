@@ -7,7 +7,6 @@ import {
     FiUser,
     FiLogOut,
     FiChevronDown,
-    FiMenu,
     FiTool,
     FiPlus,
     FiCalendar,
@@ -15,17 +14,15 @@ import {
     FiFileText,
     FiDollarSign,
     FiTrendingUp,
-    FiGrid,
-    FiChevronUp
+    FiGrid
 } from 'react-icons/fi';
 import authService from '../services/authService';
 import ProfilePicture from './ProfilePicture';
-import logo from '../assets/images/logo.png';
 import Swal from 'sweetalert2';
 import { useCalculator } from '../contexts/CalculatorContext';
 import { useLiraRateConverter } from '../contexts/LiraRateConverterContext';
 
-const Header = ({ onLogout, onMobileMenuToggle }) => {
+const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpen }) => {
     const user = authService.getCurrentUser();
     const navigate = useNavigate();
     const { openCalculator } = useCalculator();
@@ -36,6 +33,15 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
     const [inboxCount, setInboxCount] = useState(7);
     const profileRef = useRef(null);
     const toolsRef = useRef(null);
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 0);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const tools = [
         { id: 'calculator', label: 'Calculator', icon: <FiPlus />, action: () => openCalculator() },
@@ -110,108 +116,206 @@ const Header = ({ onLogout, onMobileMenuToggle }) => {
     }, []);
 
     return (
-        <header className="header">
-            <div className="header-container">
-                <div className="header-left">
-                    <button
-                        onClick={onMobileMenuToggle}
-                        aria-label="Toggle mobile menu"
-                        className="mobile-menu-btn"
-                    >
-                        <FiMenu />
-                    </button>
-                    <img src={logo} alt="SafawiNet Logo" className="header-logo" />
+        <div className={`header-container${isScrolled ? ' scrolled' : ''}${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+            <div className="header-left">
+                <button
+                    onClick={onSidebarToggle}
+                    className="sidebar-toggle-btn"
+                    title={isMobile ? (isMobileMenuOpen ? 'Close menu' : 'Open menu') : (isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+                    aria-label={isMobile ? (isMobileMenuOpen ? 'Close menu' : 'Open menu') : (isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+                >
+                    {isMobile ? (
+                        // Mobile: Show X when menu is open, hamburger when closed
+                        <div className={`hamburger-menu ${isMobileMenuOpen ? 'active' : ''}`}>
+                            <span className="hamburger-line"></span>
+                            <span className="hamburger-line"></span>
+                            <span className="hamburger-line"></span>
+                        </div>
+                    ) : (
+                        // Desktop: Show hamburger when sidebar is expanded, X when collapsed
+                        <div className={`hamburger-menu ${isSidebarCollapsed ? '' : 'active'}`}>
+                            <span className="hamburger-line"></span>
+                            <span className="hamburger-line"></span>
+                            <span className="hamburger-line"></span>
+                        </div>
+                    )}
+                </button>
+                {!isSidebarCollapsed && (
+                    <span className="text-logo">
+                        Safawi<span className="text-logo-blue">Net</span>
+                    </span>
+                )}
+            </div >
+            <header
+                className={`dashboard-header${isSidebarCollapsed ? '' : ''}`}
+                style={{}}
+            >
+                {/* Greeting Section */}
+                <div className="dashboard-greeting">
+                    <span className="dashboard-greeting-main">
+                        Good Morning{user?.firstName || user?.lastName ? ',' : ''} <b>{user?.firstName} {user?.lastName}</b>
+                    </span>
+                    <span className="dashboard-greeting-subtext">
+                        Hope you have a productive day!
+                    </span>
                 </div>
                 <div className="header-right">
-                    <div className="header-actions">
-                        <button
-                            onClick={() => handleTabClick('inbox')}
-                            className="action-btn"
-                        >
-                            <div className="action-icon">
-                                <FiInbox />
-                                {inboxCount > 0 && (
-                                    <span className="notification-badge">{inboxCount}</span>
-                                )}
-                            </div>
-                            <span className="action-label">Inbox</span>
-                        </button>
-                        <button
-                            onClick={() => handleTabClick('notifications')}
-                            className="action-btn"
-                        >
-                            <div className="action-icon">
-                                <FiBell />
-                                {notificationCount > 0 && (
-                                    <span className="notification-badge">{notificationCount}</span>
-                                )}
-                            </div>
-                            <span className="action-label">Notifications</span>
-                        </button>
-                        <div ref={toolsRef} className="dropdown-container">
+                    {/* Desktop View */}
+                    {!isMobile && (
+                        <>
                             <button
-                                onClick={toggleToolsDropdown}
-                                className="dropdown-btn"
+                                className="header-tab"
+                                onClick={() => handleTabClick('inbox')}
                             >
-                                <FiTool />
-                                <span className="dropdown-label">Tools</span>
-                                {showToolsDropdown ? <FiChevronUp /> : <FiChevronDown />}                            </button>
-                            {showToolsDropdown && (
-                                <div className="dropdown-menu">
-                                    {tools.map((tool) => (
-                                        <button
-                                            key={tool.id}
-                                            onClick={() => handleToolClick(tool)}
-                                            className="dropdown-item"
-                                        >
-                                            <span className="item-icon">{tool.icon}</span>
-                                            <span className="item-label">{tool.label}</span>
-                                        </button>
-                                    ))}
+                                <div className="header-tab-icon">
+                                    <FiInbox />
+                                    {inboxCount > 0 && (
+                                        <span className="header-tab-badge">{inboxCount}</span>
+                                    )}
                                 </div>
-                            )}
+                                <span>Inbox</span>
+                            </button>
+                            <button
+                                className="header-tab"
+                                onClick={() => handleTabClick('notifications')}
+                            >
+                                <div className="header-tab-icon">
+                                    <FiBell />
+                                    {notificationCount > 0 && (
+                                        <span className="header-tab-badge">{notificationCount}</span>
+                                    )}
+                                </div>
+                                <span>Notifications</span>
+                            </button>
+                            <div ref={toolsRef} className={`header-tools-dropdown ${showToolsDropdown ? 'open' : ''}`}>
+                                <button
+                                    className="header-tools-button"
+                                    onClick={toggleToolsDropdown}
+                                >
+                                    <FiTool />
+                                    <span>Tools</span>
+                                    <span className="chevron-icon">
+                                        <FiChevronDown />
+                                    </span>
+                                </button>
+                                {showToolsDropdown && (
+                                    <div className="header-tools-menu">
+                                        {tools.map((tool) => (
+                                            <button
+                                                key={tool.id}
+                                                onClick={() => handleToolClick(tool)}
+                                            >
+                                                <span>{tool.icon}</span>
+                                                <span>{tool.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Mobile View - Compact Icons */}
+                    {isMobile && (
+                        <div className="mobile-header-actions">
+                            {/* Mobile Notifications */}
+                            <button
+                                className="mobile-action-btn"
+                                onClick={() => handleTabClick('notifications')}
+                                title="Notifications"
+                            >
+                                <div className="mobile-action-icon">
+                                    <FiBell />
+                                    {notificationCount > 0 && (
+                                        <span className="mobile-badge">{notificationCount}</span>
+                                    )}
+                                </div>
+                            </button>
+
+                            {/* Mobile Inbox */}
+                            <button
+                                className="mobile-action-btn"
+                                onClick={() => handleTabClick('inbox')}
+                                title="Inbox"
+                            >
+                                <div className="mobile-action-icon">
+                                    <FiInbox />
+                                    {inboxCount > 0 && (
+                                        <span className="mobile-badge">{inboxCount}</span>
+                                    )}
+                                </div>
+                            </button>
+
+                            {/* Mobile Tools Dropdown */}
+                            <div ref={toolsRef} className={`mobile-tools-dropdown ${showToolsDropdown ? 'open' : ''}`}>
+                                <button
+                                    className="mobile-action-btn"
+                                    onClick={toggleToolsDropdown}
+                                    title="Tools"
+                                >
+                                    <div className="mobile-action-icon">
+                                        <FiTool />
+                                        <span className="chevron-icon">
+                                            <FiChevronDown />
+                                        </span>
+                                    </div>
+                                </button>
+                                {showToolsDropdown && (
+                                    <div className="mobile-tools-menu">
+                                        {tools.map((tool) => (
+                                            <button
+                                                key={tool.id}
+                                                onClick={() => handleToolClick(tool)}
+                                            >
+                                                <span>{tool.icon}</span>
+                                                <span>{tool.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                    <div ref={profileRef} className="dropdown-container">
+                    )}
+
+                    {/* Profile Dropdown - Both Desktop and Mobile */}
+                    <div ref={profileRef} className={`header-profile-dropdown ${showProfileDropdown ? 'open' : ''}`}>
                         <button
+                            className={`header-profile-button ${isMobile ? 'mobile-profile-btn' : ''}`}
                             onClick={toggleProfileDropdown}
-                            className="dropdown-btn"
                         >
                             <ProfilePicture user={user} size="small" />
-                            <div className="profile-info">
-                                <span className="profile-name">{user?.fullName || `${user?.firstName} ${user?.lastName}` || user?.username}</span>
-                                <span className="profile-role">{user?.isAdmin ? 'Administrator' : 'User'}</span>
-                            </div>
-                            {showProfileDropdown ? <FiChevronUp /> : <FiChevronDown />}
+                            <span className="chevron-icon">
+                                <FiChevronDown />
+                            </span>
                         </button>
 
                         {showProfileDropdown && (
-                            <div className="dropdown-menu">
-                                <button
-                                    onClick={() => {
-                                        setShowProfileDropdown(false);
-                                        navigate('/profile');
-                                    }}
-                                    className="dropdown-item"
-                                >
-                                    <FiUser />
-                                    <span>Profile</span>
+                            <div className={`header-profile-menu custom-profile-dropdown ${isMobile ? 'mobile-profile-menu' : ''}`}>
+                                <div className="profile-info">
+                                    <ProfilePicture user={user} size="large" />
+                                    <div className="profile-details">
+                                        <div className="profile-name">{user?.firstName} {user?.lastName}</div>
+                                        <div className="profile-email">{user?.email}</div>
+                                    </div>
+                                </div>
+                                <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/profile'); }}>
+                                    <FiUser className="dropdown-icon" />
+                                    <span>My Profile</span>
                                 </button>
                                 <button className="dropdown-item">
-                                    <FiSettings />
+                                    <FiSettings className="dropdown-icon" />
                                     <span>Settings</span>
                                 </button>
-                                <div className="menu-divider"></div>
-                                <button onClick={handleLogout} className="dropdown-item menu-item-danger">
-                                    <FiLogOut />
-                                    <span>Logout</span>
+                                <button className="dropdown-item signout" onClick={handleLogout}>
+                                    <FiLogOut className="dropdown-icon" />
+                                    <span>Sign Out</span>
                                 </button>
                             </div>
                         )}
                     </div>
                 </div>
-            </div>
-        </header>
+            </header >
+        </div>
     );
 };
 

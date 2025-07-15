@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { FiMail, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
-import ButtonLoadingOverlay from './ButtonLoadingOverlay';
 
 const ForgotPasswordModal = ({ isOpen, onClose }) => {
     const [email, setEmail] = useState('');
@@ -148,7 +147,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                                     type="submit"
                                     className="btn btn-primary"
                                 >
-                                    {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Send Reset Link'}
+                                    {isLoading ? 'Sending Reset Link...' : 'Send Reset Link'}
                                 </button>
                             </div>
                         </form>

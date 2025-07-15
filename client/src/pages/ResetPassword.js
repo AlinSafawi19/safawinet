@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from '../services/authService';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiAlertCircle, FiX } from 'react-icons/fi';
 import logo from '../assets/images/logo.png';
-import ButtonLoadingOverlay from '../components/ButtonLoadingOverlay';
 
 const ResetPassword = () => {
     const navigate = useNavigate();
@@ -352,7 +351,7 @@ const ResetPassword = () => {
                             type="submit"
                             className="btn btn-primary"
                         >
-                            {isLoading ? <ButtonLoadingOverlay isLoading={isLoading} /> : 'Reset Password'}
+                            {isLoading ? 'Resetting Password...' : 'Reset Password'}
                         </button>
                     </div>
                 </form>
