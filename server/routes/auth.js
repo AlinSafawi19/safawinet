@@ -6,7 +6,7 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { validateInput, sanitizeInput } = require('../middleware/validation');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
@@ -15,6 +15,7 @@ const securityConfig = require('../config/security');
 const passwordStrengthAnalyzer = require('../utils/passwordStrength');
 const rateLimit = require('express-rate-limit');
 const { uploadProfilePicture, handleUploadError, deleteOldProfilePicture, getProfilePictureUrl } = require('../middleware/upload');
+const moment = require('moment-timezone');
 
 const router = express.Router();
 
@@ -2074,49 +2075,111 @@ router.get('/security-status', authenticateToken, async (req, res) => {
     }
 });
 
-// Get audit logs for the current user
+// Get audit logs for the current user with enhanced server-side pagination
 router.get('/audit-logs', authenticateToken, async (req, res) => {
     try {
         const userId = req.user._id;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
-        const cutoff = req.query.cutoff ? new Date(req.query.cutoff) : new Date(Date.now() - 24 * 60 * 60 * 1000);
         
-        // Build query
+        // Parse and validate pagination parameters
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 25)); // Max 1000, min 1, default 25
+        
+        // Use user's timezone for cutoff calculation
+        const userTimezone = req.query.timezone || 'Asia/Beirut';
+        let cutoff;
+        if (req.query.cutoff) {
+            // Interpret cutoff in user's timezone, then convert to UTC for MongoDB
+            cutoff = moment.tz(req.query.cutoff, userTimezone).utc().toDate();
+        } else {
+            // Default to 24 hours ago in user's timezone
+            cutoff = moment.tz(userTimezone).subtract(24, 'hours').utc().toDate();
+        }
+        
+        // Build query with enhanced filtering
         const query = {
-            userId: userId,
             timestamp: { $gte: cutoff }
         };
 
-        // Add filters
-        if (req.query.action) {
-            query.action = req.query.action;
+        // For non-admin users, only show their own logs
+        if (!req.user.isAdmin) {
+            query.userId = userId;
         }
-        if (req.query.riskLevel) {
-            query.riskLevel = req.query.riskLevel;
+
+        // Add action filter
+        if (req.query.action && req.query.action.trim()) {
+            query.action = req.query.action.trim();
         }
-        if (req.query.success !== undefined) {
+        
+        // Add risk level filter
+        if (req.query.riskLevel && req.query.riskLevel.trim()) {
+            const validRiskLevels = ['low', 'medium', 'high', 'critical'];
+            if (validRiskLevels.includes(req.query.riskLevel.trim())) {
+                query.riskLevel = req.query.riskLevel.trim();
+            }
+        }
+        
+        // Add success filter
+        if (req.query.success !== undefined && req.query.success !== '') {
             query.success = req.query.success === 'true';
         }
 
-        // Get total count
-        const total = await AuditLog.countDocuments(query);
+        // Enhanced server-side filtering with debugging
+        const filterParams = {
+            userId: req.user.isAdmin ? null : userId,
+            page,
+            limit,
+            cutoff,
+            action: req.query.action && req.query.action.trim() ? req.query.action.trim() : null,
+            riskLevel: req.query.riskLevel && req.query.riskLevel.trim() ? req.query.riskLevel.trim() : null,
+            success: req.query.success !== undefined && req.query.success !== '' ? req.query.success === 'true' : null
+        };
 
-        // Get audit logs with pagination
-        const logs = await AuditLog.find(query)
-            .sort({ timestamp: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .select('-__v');
+        // Add debugging logs to verify server-side filtering
+        console.log('🔍 Server-side filtering parameters:', {
+            page: filterParams.page,
+            limit: filterParams.limit,
+            action: filterParams.action,
+            riskLevel: filterParams.riskLevel,
+            success: filterParams.success,
+            cutoff: filterParams.cutoff,
+            isAdmin: req.user.isAdmin
+        });
+
+        const paginationResult = await AuditLog.getPaginatedLogs(filterParams);
+
+        console.log('📊 Server-side pagination results:', {
+            totalRecords: paginationResult.total,
+            returnedRecords: paginationResult.logs.length,
+            currentPage: paginationResult.page,
+            totalPages: paginationResult.totalPages,
+            hasNextPage: paginationResult.hasNextPage
+        });
+
+        // Calculate summary statistics for the filtered data
+        const highRiskCount = paginationResult.logs.filter(log => 
+            log.riskLevel === 'high' || log.riskLevel === 'critical'
+        ).length;
+        
+        const failedLoginsCount = paginationResult.logs.filter(log => 
+            log.action === 'login_failed'
+        ).length;
 
         res.json({
             success: true,
             data: {
-                logs,
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit)
+                logs: paginationResult.logs,
+                total: paginationResult.total,
+                page: paginationResult.page,
+                limit: paginationResult.limit,
+                totalPages: paginationResult.totalPages,
+                hasNextPage: paginationResult.hasNextPage,
+                hasPrevPage: paginationResult.hasPrevPage,
+                nextPage: paginationResult.hasNextPage ? paginationResult.page + 1 : null,
+                prevPage: paginationResult.hasPrevPage ? paginationResult.page - 1 : null,
+                summary: {
+                    highRiskCount,
+                    failedLoginsCount
+                }
             }
         });
     } catch (error) {
@@ -2124,6 +2187,136 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch audit logs'
+        });
+    }
+});
+
+// Get all audit logs (admin only) with enhanced server-side pagination
+router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        // Parse and validate pagination parameters
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 25));
+        
+        // Parse date range with better validation
+        let cutoff;
+        if (req.query.cutoff) {
+            cutoff = new Date(req.query.cutoff);
+            if (isNaN(cutoff.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid cutoff date format'
+                });
+            }
+        } else {
+            // Default to 24 hours ago
+            cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        }
+        
+        // Build query with enhanced filtering for admin
+        const query = {
+            timestamp: { $gte: cutoff }
+        };
+
+        // Add action filter
+        if (req.query.action && req.query.action.trim()) {
+            query.action = req.query.action.trim();
+        }
+        
+        // Add risk level filter
+        if (req.query.riskLevel && req.query.riskLevel.trim()) {
+            const validRiskLevels = ['low', 'medium', 'high', 'critical'];
+            if (validRiskLevels.includes(req.query.riskLevel.trim())) {
+                query.riskLevel = req.query.riskLevel.trim();
+            }
+        }
+        
+        // Add success filter
+        if (req.query.success !== undefined && req.query.success !== '') {
+            query.success = req.query.success === 'true';
+        }
+
+        // Add user filter for admin
+        if (req.query.userId && req.query.userId.trim()) {
+            query.userId = req.query.userId.trim();
+        }
+
+        // Add IP filter for admin
+        if (req.query.ip && req.query.ip.trim()) {
+            query.ip = { $regex: req.query.ip.trim(), $options: 'i' };
+        }
+
+        // Add device filter
+        if (req.query.device && req.query.device.trim()) {
+            query.device = { $regex: req.query.device.trim(), $options: 'i' };
+        }
+
+        // Add location filters
+        if (req.query.country && req.query.country.trim()) {
+            query['location.country'] = { $regex: req.query.country.trim(), $options: 'i' };
+        }
+        if (req.query.city && req.query.city.trim()) {
+            query['location.city'] = { $regex: req.query.city.trim(), $options: 'i' };
+        }
+
+        // Add session ID filter
+        if (req.query.sessionId && req.query.sessionId.trim()) {
+            query.sessionId = req.query.sessionId.trim();
+        }
+
+        // Use optimized pagination method for admin
+        const paginationResult = await AuditLog.getPaginatedLogs({
+            userId: null, // Admin can see all users
+            page,
+            limit,
+            cutoff,
+            action: req.query.action && req.query.action.trim() ? req.query.action.trim() : null,
+            riskLevel: req.query.riskLevel && req.query.riskLevel.trim() ? req.query.riskLevel.trim() : null,
+            success: req.query.success !== undefined && req.query.success !== '' ? req.query.success === 'true' : null,
+            ip: req.query.ip && req.query.ip.trim() ? req.query.ip.trim() : null
+        });
+
+        // Populate user information for admin view
+        const logsWithUsers = await AuditLog.populate(paginationResult.logs, {
+            path: 'userId',
+            select: 'username firstName lastName email'
+        });
+
+        // Calculate summary statistics for the filtered data
+        const highRiskCount = logsWithUsers.filter(log => 
+            log.riskLevel === 'high' || log.riskLevel === 'critical'
+        ).length;
+        
+        const failedLoginsCount = logsWithUsers.filter(log => 
+            log.action === 'login_failed'
+        ).length;
+
+        const uniqueUsersCount = new Set(logsWithUsers.map(log => log.userId?._id?.toString() || log.userId?.toString())).size;
+
+        res.json({
+            success: true,
+            data: {
+                logs: logsWithUsers,
+                total: paginationResult.total,
+                page: paginationResult.page,
+                limit: paginationResult.limit,
+                totalPages: paginationResult.totalPages,
+                hasNextPage: paginationResult.hasNextPage,
+                hasPrevPage: paginationResult.hasPrevPage,
+                nextPage: paginationResult.hasNextPage ? paginationResult.page + 1 : null,
+                prevPage: paginationResult.hasPrevPage ? paginationResult.page - 1 : null,
+                summary: {
+                    highRiskCount,
+                    failedLoginsCount,
+                    uniqueUsersCount
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Admin audit logs fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch admin audit logs'
         });
     }
 });

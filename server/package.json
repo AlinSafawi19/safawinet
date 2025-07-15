@@ -13,6 +13,7 @@
     "backup-db": "node scripts/backupDb.js",
     "restore-db": "node scripts/restoreDb.js",
     "delete-db": "node scripts/deleteDb.js",
+    "clear-limits": "node clear-rate-limits.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

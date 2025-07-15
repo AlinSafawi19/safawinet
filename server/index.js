@@ -70,10 +70,10 @@ app.use(cors({
   allowedHeaders: securityConfig.cors.allowedHeaders
 }));
 
-// Global rate limiting
+// Global rate limiting - Development friendly
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: isDevelopment ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 minute in dev, 15 minutes in prod
+  max: isDevelopment ? 500 : 100, // 500 requests per minute in dev, 100 per 15 minutes in prod
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'

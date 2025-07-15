@@ -97,6 +97,14 @@ auditLogSchema.index({ ip: 1, timestamp: -1 });
 auditLogSchema.index({ success: 1, timestamp: -1 });
 auditLogSchema.index({ riskLevel: 1, timestamp: -1 });
 
+// Compound indexes for pagination queries
+auditLogSchema.index({ userId: 1, action: 1, timestamp: -1 });
+auditLogSchema.index({ userId: 1, riskLevel: 1, timestamp: -1 });
+auditLogSchema.index({ userId: 1, success: 1, timestamp: -1 });
+auditLogSchema.index({ action: 1, riskLevel: 1, timestamp: -1 });
+auditLogSchema.index({ action: 1, success: 1, timestamp: -1 });
+auditLogSchema.index({ riskLevel: 1, success: 1, timestamp: -1 });
+
 // Static method to log events
 auditLogSchema.statics.logEvent = function(eventData) {
   const log = new this(eventData);
@@ -151,6 +159,113 @@ auditLogSchema.statics.getSecurityAlerts = function(hours = 24) {
 auditLogSchema.statics.cleanOldLogs = function(days = 90) {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   return this.deleteMany({ timestamp: { $lt: cutoff } });
+};
+
+// Static method for paginated audit logs with comprehensive server-side filtering
+auditLogSchema.statics.getPaginatedLogs = function(options) {
+  const {
+    userId = null,
+    page = 1,
+    limit = 25,
+    cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000),
+    action = null,
+    riskLevel = null,
+    success = null,
+    ip = null,
+    device = null,
+    location = null,
+    sessionId = null
+  } = options;
+
+  // Build comprehensive server-side query
+  const query = { timestamp: { $gte: cutoff } };
+  
+  // User filtering
+  if (userId) query.userId = userId;
+  
+  // Action filtering
+  if (action) {
+    if (Array.isArray(action)) {
+      query.action = { $in: action };
+    } else {
+      query.action = action;
+    }
+  }
+  
+  // Risk level filtering
+  if (riskLevel) {
+    if (Array.isArray(riskLevel)) {
+      query.riskLevel = { $in: riskLevel };
+    } else {
+      query.riskLevel = riskLevel;
+    }
+  }
+  
+  // Success/failure filtering
+  if (success !== null && success !== undefined) {
+    query.success = success;
+  }
+  
+  // IP address filtering
+  if (ip) {
+    query.ip = { $regex: ip, $options: 'i' };
+  }
+  
+  // Device filtering
+  if (device) {
+    query.device = { $regex: device, $options: 'i' };
+  }
+  
+  // Location filtering
+  if (location) {
+    if (location.country) {
+      query['location.country'] = { $regex: location.country, $options: 'i' };
+    }
+    if (location.city) {
+      query['location.city'] = { $regex: location.city, $options: 'i' };
+    }
+  }
+  
+  // Session ID filtering
+  if (sessionId) {
+    query.sessionId = sessionId;
+  }
+
+  // Calculate pagination
+  const skip = (page - 1) * limit;
+
+  // Add debugging for query construction
+  console.log('🔍 Database query:', JSON.stringify(query, null, 2));
+
+  return Promise.all([
+    this.countDocuments(query),
+    this.find(query)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('-__v')
+      .lean()
+  ]).then(([total, logs]) => {
+    const result = {
+      logs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page < Math.ceil(total / limit),
+      hasPrevPage: page > 1
+    };
+    
+    console.log('📊 Query results:', {
+      totalRecords: total,
+      returnedRecords: logs.length,
+      page: page,
+      limit: limit,
+      totalPages: result.totalPages
+    });
+    
+    return result;
+  });
 };
 
 module.exports = mongoose.model('AuditLog', auditLogSchema); 

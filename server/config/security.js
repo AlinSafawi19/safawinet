@@ -23,15 +23,15 @@ const securityConfig = {
 
   // Rate Limiting Configuration
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    maxAttempts: parseInt(process.env.RATE_LIMIT_MAX_ATTEMPTS) || 5,
-    blockDurationMs: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION_MS) || 30 * 60 * 1000, // 30 minutes
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || (process.env.NODE_ENV === 'development' ? 1 * 60 * 1000 : 15 * 60 * 1000), // 1 minute in dev, 15 minutes in prod
+    maxAttempts: parseInt(process.env.RATE_LIMIT_MAX_ATTEMPTS) || (process.env.NODE_ENV === 'development' ? 20 : 5),
+    blockDurationMs: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION_MS) || (process.env.NODE_ENV === 'development' ? 5 * 60 * 1000 : 30 * 60 * 1000), // 5 minutes in dev, 30 minutes in prod
     // Per-user rate limiting
-    userWindowMs: 60 * 60 * 1000, // 1 hour
-    userMaxAttempts: 10,
+    userWindowMs: process.env.NODE_ENV === 'development' ? 5 * 60 * 1000 : 60 * 60 * 1000, // 5 minutes in dev, 1 hour in prod
+    userMaxAttempts: process.env.NODE_ENV === 'development' ? 50 : 10,
     // API rate limiting
-    apiWindowMs: 15 * 60 * 1000, // 15 minutes
-    apiMaxRequests: 100
+    apiWindowMs: process.env.NODE_ENV === 'development' ? 1 * 60 * 1000 : 15 * 60 * 1000, // 1 minute in dev, 15 minutes in prod
+    apiMaxRequests: process.env.NODE_ENV === 'development' ? 500 : 100
   },
 
   // Cookie Configuration

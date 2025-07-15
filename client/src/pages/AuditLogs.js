@@ -59,7 +59,14 @@ const AuditLogs = () => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 25,
-    total: 0
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+  const [summaryStats, setSummaryStats] = useState({
+    highRiskCount: 0,
+    failedLoginsCount: 0
   });
   // Remove sidebarRef, filtersVisible, and sidebar toggling logic
 
@@ -89,30 +96,32 @@ const AuditLogs = () => {
     try {
       const api = createApiInstance();
 
-      // Calculate date range
+      // Calculate date range in user's timezone
       let cutoff;
+      const now = moment.tz(userTimezone);
       switch (filters.dateRange) {
         case '1h':
-          cutoff = new Date(Date.now() - 60 * 60 * 1000);
+          cutoff = now.clone().subtract(1, 'hour');
           break;
         case '24h':
-          cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          cutoff = now.clone().subtract(24, 'hours');
           break;
         case '7d':
-          cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          cutoff = now.clone().subtract(7, 'days');
           break;
         case '30d':
-          cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          cutoff = now.clone().subtract(30, 'days');
           break;
         default:
-          cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          cutoff = now.clone().subtract(24, 'hours');
       }
 
       // Build query parameters
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        cutoff: cutoff.toISOString()
+        cutoff: cutoff.toISOString(),
+        timezone: userTimezone // Send user's timezone to backend
       };
 
       if (filters.action) params.action = filters.action;
@@ -125,8 +134,16 @@ const AuditLogs = () => {
         setAuditLogs(response.data.data.logs);
         setPagination(prev => ({
           ...prev,
-          total: response.data.data.total
+          total: response.data.data.total,
+          totalPages: response.data.data.totalPages,
+          hasNextPage: response.data.data.hasNextPage,
+          hasPrevPage: response.data.data.hasPrevPage
         }));
+        
+        // Update summary statistics from server
+        if (response.data.data.summary) {
+          setSummaryStats(response.data.data.summary);
+        }
       } else {
         setError('Failed to fetch audit logs');
       }
@@ -136,7 +153,7 @@ const AuditLogs = () => {
     } finally {
       setLoading(false);
     }
-  }, [createApiInstance, filters, pagination.page, pagination.limit]);
+  }, [createApiInstance, filters, pagination.page, pagination.limit, userTimezone]);
 
   // Fetch audit logs on mount and when filters change
   useEffect(() => {
@@ -591,13 +608,13 @@ const AuditLogs = () => {
         </div>
         <div className="summary-card">
           <span className="summary-value">
-            {auditLogs.filter(log => log.riskLevel === 'high' || log.riskLevel === 'critical').length}
+            {summaryStats.highRiskCount}
           </span>
           <span className="summary-label">High Risk</span>
         </div>
         <div className="summary-card">
           <span className="summary-value">
-            {auditLogs.filter(log => log.action === 'login_failed').length}
+            {summaryStats.failedLoginsCount}
           </span>
           <span className="summary-label">Failed Logins</span>
         </div>
@@ -788,40 +805,131 @@ const AuditLogs = () => {
                     </tbody>
                   </table>
                 </div>
-
-                {/* Pagination and Row Limit Controls */}
-                <div className="audit-pagination-row">
-                  {/* Pagination */}
-                  {pagination.total > pagination.limit && (
-                    <div className="pagination-controls">
-                      <button
-                        className="pagination-btn"
-                        disabled={pagination.page === 1}
-                        onClick={() => handlePageChange(pagination.page - 1)}
-                      >
-                        Previous
-                      </button>
-
-                      <span className="pagination-info">
-                        Page {pagination.page} of {Math.ceil(pagination.total / pagination.limit)}
-                        <span className="pagination-total">
-                          ({pagination.total} total records)
-                        </span>
-                      </span>
-
-                      <button
-                        className="pagination-btn"
-                        disabled={pagination.page >= Math.ceil(pagination.total / pagination.limit)}
-                        onClick={() => handlePageChange(pagination.page + 1)}
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
-                </div>
               </>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && !error && auditLogs.length > 0 && (
+            <div className="pagination-controls">
+              <div className="pagination-info">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} events
+              </div>
+              <div className="pagination-navigation">
+                <button
+                  className="pagination-btn pagination-prev"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  title="Previous page"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                  </svg>
+                </button>
+
+                {/* Page indicators */}
+                <div className="page-indicators">
+                  {(() => {
+                    const indicators = [];
+                    const totalPages = Math.ceil(pagination.total / pagination.limit);
+                    const currentPage = pagination.page;
+                    
+                    if (pagination.totalPages <= 7) {
+                      // Show all pages if 7 or fewer
+                      for (let i = 1; i <= pagination.totalPages; i++) {
+                        indicators.push(
+                          <button
+                            key={i}
+                            className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                            onClick={() => handlePageChange(i)}
+                            title={`Page ${i}`}
+                          >
+                            <span className="indicator-number">{i}</span>
+                          </button>
+                        );
+                      }
+                    } else {
+                      // Show first page
+                      indicators.push(
+                        <button
+                          key={1}
+                          className={`page-indicator ${1 === currentPage ? 'active' : ''}`}
+                          onClick={() => handlePageChange(1)}
+                          title="Page 1"
+                        >
+                          <span className="indicator-number">1</span>
+                        </button>
+                      );
+                      
+                      // Add ellipsis if needed after first page
+                      if (currentPage > 4) {
+                        indicators.push(
+                          <span key="ellipsis1" className="page-ellipsis">
+                            ...
+                          </span>
+                        );
+                      }
+                      
+                      // Show pages around current page
+                      const start = Math.max(2, currentPage - 1);
+                      const end = Math.min(pagination.totalPages - 1, currentPage + 1);
+                      
+                      for (let i = start; i <= end; i++) {
+                        if (i !== 1 && i !== pagination.totalPages) {
+                          indicators.push(
+                            <button
+                              key={i}
+                              className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                              onClick={() => handlePageChange(i)}
+                              title={`Page ${i}`}
+                            >
+                              <span className="indicator-number">{i}</span>
+                            </button>
+                          );
+                        }
+                      }
+                      
+                      // Add ellipsis if needed before last page
+                      if (currentPage < pagination.totalPages - 3) {
+                        indicators.push(
+                          <span key="ellipsis2" className="page-ellipsis">
+                            ...
+                          </span>
+                        );
+                      }
+                      
+                      // Show last page
+                      if (pagination.totalPages > 1) {
+                        indicators.push(
+                          <button
+                            key={pagination.totalPages}
+                            className={`page-indicator ${pagination.totalPages === currentPage ? 'active' : ''}`}
+                            onClick={() => handlePageChange(pagination.totalPages)}
+                            title={`Page ${pagination.totalPages}`}
+                          >
+                            <span className="indicator-number">{pagination.totalPages}</span>
+                          </button>
+                        );
+                      }
+                    }
+                    
+                    return indicators;
+                  })()}
+                </div>
+
+                <button
+                  className="pagination-btn pagination-next"
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNextPage}
+                  title="Next page"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
