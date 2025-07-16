@@ -4,20 +4,8 @@ const { config } = require('../config/config');
 
 // Available pages and actions for the system
 const AVAILABLE_PAGES = [
-    'dashboard',
     'users',
-    'audit-logs',
-    'knowledge-guide',
-    'profile',
-    'reports',
-    'analytics',
-    'notifications',
-    'settings',
-    'backups',
-    'integrations',
-    'security',
-    'help',
-    'support'
+    'audit-logs'
 ];
 
 const AVAILABLE_ACTIONS = ['view', 'view_own', 'add', 'edit', 'delete', 'export'];
@@ -44,35 +32,16 @@ const ROLE_TEMPLATES = {
         name: 'Manager',
         description: 'User management and operational oversight',
         permissions: [
-            { page: 'dashboard', actions: ['view'] },
             { page: 'users', actions: ['view', 'add', 'edit'] },
-            { page: 'audit-logs', actions: ['view'] },
-            { page: 'knowledge-guide', actions: ['view'] },
-            { page: 'profile', actions: ['view', 'edit'] },
-            { page: 'reports', actions: ['view', 'add', 'edit'] },
-            { page: 'analytics', actions: ['view', 'add', 'edit'] },
-            { page: 'notifications', actions: ['view'] },
-            { page: 'settings', actions: ['view'] },
-            { page: 'help', actions: ['view'] },
-            { page: 'support', actions: ['view'] }
+            { page: 'audit-logs', actions: ['view'] }
         ]
     },
     supervisor: {
         name: 'Supervisor',
         description: 'Team oversight and advanced reporting',
         permissions: [
-            { page: 'dashboard', actions: ['view'] },
             { page: 'users', actions: ['view', 'add', 'edit'] },
-            { page: 'audit-logs', actions: ['view'] },
-            { page: 'knowledge-guide', actions: ['view'] },
-            { page: 'profile', actions: ['view', 'edit'] },
-            { page: 'reports', actions: ['view', 'add', 'edit'] },
-            { page: 'analytics', actions: ['view', 'add', 'edit'] },
-            { page: 'notifications', actions: ['view', 'add'] },
-            { page: 'settings', actions: ['view'] },
-            { page: 'backups', actions: ['view'] },
-            { page: 'help', actions: ['view'] },
-            { page: 'support', actions: ['view'] }
+            { page: 'audit-logs', actions: ['view', 'export'] }
         ]
     }
 };

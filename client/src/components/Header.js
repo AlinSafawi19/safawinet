@@ -61,7 +61,7 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, logout',
+            confirmButtonText: 'Sign out',
             cancelButtonText: 'Cancel',
             reverseButtons: true
         });

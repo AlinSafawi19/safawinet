@@ -174,7 +174,8 @@ auditLogSchema.statics.getPaginatedLogs = function(options) {
     ip = null,
     device = null,
     location = null,
-    sessionId = null
+    sessionId = null,
+    filterUserId = null
   } = options;
 
   // Build comprehensive server-side query
@@ -182,6 +183,15 @@ auditLogSchema.statics.getPaginatedLogs = function(options) {
   
   // User filtering
   if (userId) query.userId = userId;
+  if (filterUserId) {
+    // Support both single user ID and multiple user IDs (comma-separated)
+    const userIds = filterUserId.split(',').map(id => id.trim()).filter(id => id);
+    if (userIds.length === 1) {
+      query.userId = userIds[0];
+    } else if (userIds.length > 1) {
+      query.userId = { $in: userIds };
+    }
+  }
   
   // Action filtering
   if (action) {

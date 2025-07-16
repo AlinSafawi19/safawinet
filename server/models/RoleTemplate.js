@@ -29,7 +29,7 @@ const roleTemplateSchema = new mongoose.Schema({
     page: {
       type: String,
       required: true,
-      enum: ['users', 'audit_logs']
+      enum: ['users', 'audit-logs']
     },
     actions: [{
       type: String,

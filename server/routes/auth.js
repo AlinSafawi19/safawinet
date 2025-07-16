@@ -21,159 +21,159 @@ const blockedIPs = new Map();
 
 // Helper functions for real-time data (copied from index.js)
 async function getSecurityStats(user) {
-  // Get security events from last 24 hours
-  const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Get security events from last 24 hours
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const securityEvents = await AuditLog.countDocuments({
-    userId: user._id,
-    eventType: { $in: ['login_failed', 'suspicious_activity', 'security_alert'] },
-    timestamp: { $gte: last24Hours }
-  });
+    const securityEvents = await AuditLog.countDocuments({
+        userId: user._id,
+        eventType: { $in: ['login_failed', 'suspicious_activity', 'security_alert'] },
+        timestamp: { $gte: last24Hours }
+    });
 
-  const failedLogins = await AuditLog.countDocuments({
-    userId: user._id,
-    eventType: 'login_failed',
-    timestamp: { $gte: last24Hours }
-  });
+    const failedLogins = await AuditLog.countDocuments({
+        userId: user._id,
+        eventType: 'login_failed',
+        timestamp: { $gte: last24Hours }
+    });
 
-  const successfulLogins = await AuditLog.countDocuments({
-    userId: user._id,
-    eventType: 'login_success',
-    timestamp: { $gte: last24Hours }
-  });
+    const successfulLogins = await AuditLog.countDocuments({
+        userId: user._id,
+        eventType: 'login_success',
+        timestamp: { $gte: last24Hours }
+    });
 
-  return {
-    securityEvents,
-    failedLogins,
-    successfulLogins,
-    period: '24 hours'
-  };
+    return {
+        securityEvents,
+        failedLogins,
+        successfulLogins,
+        period: '24 hours'
+    };
 }
 
 async function getChartData(user) {
-  const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  // Security events over time
-  const securityEvents = await AuditLog.aggregate([
-    {
-      $match: {
-        userId: user._id,
-        eventType: { $in: ['login_failed', 'suspicious_activity', 'security_alert'] },
-        timestamp: { $gte: last7Days }
-      }
-    },
-    {
-      $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
-        events: { $sum: 1 },
-        failedLogins: {
-          $sum: { $cond: [{ $eq: ["$eventType", "login_failed"] }, 1, 0] }
+    // Security events over time
+    const securityEvents = await AuditLog.aggregate([
+        {
+            $match: {
+                userId: user._id,
+                eventType: { $in: ['login_failed', 'suspicious_activity', 'security_alert'] },
+                timestamp: { $gte: last7Days }
+            }
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
+                events: { $sum: 1 },
+                failedLogins: {
+                    $sum: { $cond: [{ $eq: ["$eventType", "login_failed"] }, 1, 0] }
+                }
+            }
+        },
+        { $sort: { _id: 1 } }
+    ]);
+
+    // Login success rate
+    const loginStats = await AuditLog.aggregate([
+        {
+            $match: {
+                userId: user._id,
+                eventType: { $in: ['login_success', 'login_failed'] },
+                timestamp: { $gte: last24Hours }
+            }
+        },
+        {
+            $group: {
+                _id: "$eventType",
+                count: { $sum: 1 }
+            }
         }
-      }
-    },
-    { $sort: { _id: 1 } }
-  ]);
+    ]);
 
-  // Login success rate
-  const loginStats = await AuditLog.aggregate([
-    {
-      $match: {
-        userId: user._id,
-        eventType: { $in: ['login_success', 'login_failed'] },
-        timestamp: { $gte: last24Hours }
-      }
-    },
-    {
-      $group: {
-        _id: "$eventType",
-        count: { $sum: 1 }
-      }
-    }
-  ]);
+    const successful = loginStats.find(stat => stat._id === 'login_success')?.count || 0;
+    const failed = loginStats.find(stat => stat._id === 'login_failed')?.count || 0;
+    const total = successful + failed;
+    const successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
 
-  const successful = loginStats.find(stat => stat._id === 'login_success')?.count || 0;
-  const failed = loginStats.find(stat => stat._id === 'login_failed')?.count || 0;
-  const total = successful + failed;
-  const successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
+    // Geographic activity
+    const geographicActivity = await AuditLog.aggregate([
+        {
+            $match: {
+                userId: user._id,
+                eventType: 'login_success',
+                timestamp: { $gte: last24Hours },
+                location: { $exists: true, $ne: null }
+            }
+        },
+        {
+            $group: {
+                _id: '$location.country',
+                logins: { $sum: 1 }
+            }
+        },
+        { $sort: { logins: -1 } },
+        { $limit: 10 }
+    ]);
 
-  // Geographic activity
-  const geographicActivity = await AuditLog.aggregate([
-    {
-      $match: {
-        userId: user._id,
-        eventType: 'login_success',
-        timestamp: { $gte: last24Hours },
-        location: { $exists: true, $ne: null }
-      }
-    },
-    {
-      $group: {
-        _id: '$location.country',
-        logins: { $sum: 1 }
-      }
-    },
-    { $sort: { logins: -1 } },
-    { $limit: 10 }
-  ]);
+    // Device usage
+    const deviceData = await AuditLog.aggregate([
+        {
+            $match: {
+                userId: user._id,
+                eventType: 'login_success',
+                timestamp: { $gte: last24Hours },
+                device: { $exists: true, $ne: null }
+            }
+        },
+        {
+            $group: {
+                _id: '$device',
+                usage: { $sum: 1 }
+            }
+        },
+        { $sort: { usage: -1 } },
+        { $limit: 10 }
+    ]);
 
-  // Device usage
-  const deviceData = await AuditLog.aggregate([
-    {
-      $match: {
-        userId: user._id,
-        eventType: 'login_success',
-        timestamp: { $gte: last24Hours },
-        device: { $exists: true, $ne: null }
-      }
-    },
-    {
-      $group: {
-        _id: '$device',
-        usage: { $sum: 1 }
-      }
-    },
-    { $sort: { usage: -1 } },
-    { $limit: 10 }
-  ]);
+    // Calculate total usage and percentages for device data
+    const totalUsage = deviceData.reduce((sum, item) => sum + item.usage, 0);
+    const deviceUsage = deviceData.map(item => ({
+        device: item._id,
+        usage: item.usage,
+        percentage: totalUsage > 0 ? Math.round((item.usage / totalUsage) * 100) : 0
+    }));
 
-  // Calculate total usage and percentages for device data
-  const totalUsage = deviceData.reduce((sum, item) => sum + item.usage, 0);
-  const deviceUsage = deviceData.map(item => ({
-    device: item._id,
-    usage: item.usage,
-    percentage: totalUsage > 0 ? Math.round((item.usage / totalUsage) * 100) : 0
-  }));
+    // Calculate percentages for geographic data
+    const totalLogins = geographicActivity.reduce((sum, item) => sum + item.logins, 0);
+    const geographicActivityWithPercentages = geographicActivity.map(item => ({
+        country: item._id,
+        logins: item.logins,
+        percentage: totalLogins > 0 ? Math.round((item.logins / totalLogins) * 100) : 0
+    }));
 
-  // Calculate percentages for geographic data
-  const totalLogins = geographicActivity.reduce((sum, item) => sum + item.logins, 0);
-  const geographicActivityWithPercentages = geographicActivity.map(item => ({
-    country: item._id,
-    logins: item.logins,
-    percentage: totalLogins > 0 ? Math.round((item.logins / totalLogins) * 100) : 0
-  }));
-
-  return {
-    securityEvents: securityEvents.map(item => ({
-      date: item._id,
-      events: item.events,
-      failedLogins: item.failedLogins
-    })),
-    loginSuccessRate: {
-      successful: successRate,
-      failed: 100 - successRate
-    },
-    geographicActivity: geographicActivityWithPercentages,
-    deviceUsage: deviceUsage
-  };
+    return {
+        securityEvents: securityEvents.map(item => ({
+            date: item._id,
+            events: item.events,
+            failedLogins: item.failedLogins
+        })),
+        loginSuccessRate: {
+            successful: successRate,
+            failed: 100 - successRate
+        },
+        geographicActivity: geographicActivityWithPercentages,
+        deviceUsage: deviceUsage
+    };
 }
 
 // Function to extract device information from user agent
 const extractDeviceInfo = (userAgent) => {
     if (!userAgent) return 'Unknown';
-    
+
     const ua = userAgent.toLowerCase();
-    
+
     // Browser detection - check Edge first since it contains "chrome" in its user agent
     if (ua.includes('edg/') || ua.includes('edge')) {
         return 'Edge';
@@ -193,7 +193,7 @@ const extractDeviceInfo = (userAgent) => {
     if (ua.includes('ie') || ua.includes('trident')) {
         return 'Internet Explorer';
     }
-    
+
     // Mobile detection
     if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('ipad')) {
         if (ua.includes('android')) {
@@ -207,7 +207,7 @@ const extractDeviceInfo = (userAgent) => {
         }
         return 'Mobile';
     }
-    
+
     // Desktop OS detection
     if (ua.includes('windows')) {
         return 'Windows';
@@ -218,14 +218,14 @@ const extractDeviceInfo = (userAgent) => {
     if (ua.includes('linux')) {
         return 'Linux';
     }
-    
+
     return 'Other';
 };
 
 // Function to extract geographic location from IP address using real geolocation service
 const extractLocationFromIP = async (ip) => {
     if (!ip) return null;
-    
+
     try {
         const location = await geolocationService.getLocationFromIP(ip);
         return {
@@ -426,7 +426,7 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
         // Check 2FA if enabled
         if (user.twoFactorEnabled) {
             console.log('2FA check - twoFactorCode:', !!twoFactorCode, 'backupCode:', !!backupCode);
-            
+
             if (!twoFactorCode && !backupCode) {
                 console.log('2FA check - no codes provided, requiring 2FA');
                 return res.status(401).json({
@@ -465,9 +465,9 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                 console.log('2FA Login Debug - Expected code:', expectedCode, 'Provided code:', twoFactorCode, 'Secret length:', user.twoFactorSecret.length);
 
                 twoFactorVerified = speakeasy.totp.verify({
-                secret: user.twoFactorSecret,
-                encoding: 'base32',
-                token: twoFactorCode,
+                    secret: user.twoFactorSecret,
+                    encoding: 'base32',
+                    token: twoFactorCode,
                     window: 4 // Increased from 2 to 4 to allow more time steps
                 });
 
@@ -489,7 +489,7 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                     backupCodeEntry.used = true;
                     await user.save();
 
-                                        // Log backup code usage
+                    // Log backup code usage
                     await AuditLog.logEvent({
                         userId: user._id,
                         username: user.username,
@@ -499,7 +499,7 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
                         device: extractDeviceInfo(req.headers['user-agent']),
                         location: await extractLocationFromIP(req.ip),
                         success: true,
-                        details: { 
+                        details: {
                             backupCodeUsed: backupCodeEntry.code,
                             remainingCodes: user.twoFactorBackupCodes.filter(code => !code.used).length,
                             usedBackupCode: true
@@ -509,21 +509,21 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
             }
 
             if (!twoFactorVerified) {
-                            await AuditLog.logEvent({
-                userId: user._id,
-                username: user.username,
-                action: 'login_failed',
-                ip: req.ip,
-                userAgent: req.headers['user-agent'],
-                device: extractDeviceInfo(req.headers['user-agent']),
-                location: await extractLocationFromIP(req.ip),
-                success: false,
+                await AuditLog.logEvent({
+                    userId: user._id,
+                    username: user.username,
+                    action: 'login_failed',
+                    ip: req.ip,
+                    userAgent: req.headers['user-agent'],
+                    device: extractDeviceInfo(req.headers['user-agent']),
+                    location: await extractLocationFromIP(req.ip),
+                    success: false,
                     details: {
                         reason: backupCode ? 'invalid_backup_code' : 'invalid_2fa_code',
                         usedBackupCode: backupCode ? true : false
                     },
-                riskLevel: 'high'
-            });
+                    riskLevel: 'high'
+                });
 
                 return res.status(401).json({
                     success: false,
@@ -626,15 +626,15 @@ router.post('/login', enhancedRateLimit, sanitizeInput, validateInput({
         // Emit real-time dashboard updates
         try {
             const { emitUserUpdate } = require('../index');
-            
+
             // Emit security stats update
             const securityStats = await getSecurityStats(user);
             await emitUserUpdate(user._id, 'security-stats', securityStats);
-            
+
             // Emit chart data update (includes device usage)
             const chartData = await getChartData(user);
             await emitUserUpdate(user._id, 'chart-data', chartData);
-            
+
         } catch (socketError) {
             console.error('Socket.IO update error:', socketError);
             // Don't fail the login if socket update fails
@@ -988,7 +988,7 @@ router.post('/2fa/enable', authenticateToken, sanitizeInput, validateInput({
                 }
             };
             await emitUserUpdate(user._id, 'security-status', securityStatus);
-            
+
             // Also emit profile data update for 2FA status
             const profileData = {
                 firstName: user.firstName || '',
@@ -1093,7 +1093,7 @@ router.post('/2fa/disable', authenticateToken, sanitizeInput, validateInput({
                 }
             };
             await emitUserUpdate(user._id, 'security-status', securityStatus);
-            
+
             // Also emit profile data update for 2FA status
             const profileData = {
                 firstName: user.firstName || '',
@@ -1431,7 +1431,7 @@ router.post('/profile-picture', authenticateToken, uploadProfilePicture.single('
         console.log('Request file:', req.file);
         console.log('Request body:', req.body);
         console.log('User ID:', req.user._id);
-        
+
         if (!req.file) {
             console.log('No file uploaded');
             return res.status(400).json({
@@ -1456,7 +1456,7 @@ router.post('/profile-picture', authenticateToken, uploadProfilePicture.single('
         console.log('Profile picture URL:', profilePictureUrl);
         console.log('File saved as:', req.file.filename);
         console.log('File path:', req.file.path);
-        
+
         user.profilePicture = {
             url: profilePictureUrl,
             filename: req.file.filename,
@@ -2071,15 +2071,65 @@ router.get('/security-status', authenticateToken, async (req, res) => {
     }
 });
 
+// Get users for audit logs filter (admin and view permission only)
+router.get('/audit-logs/users', authenticateToken, async (req, res) => {
+    try {
+        const hasViewPermission = req.user.hasPermission('audit-logs', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('audit-logs', 'view_own');
+
+        // Only allow access if user has view permission or is admin
+        if (!req.user.isAdmin && !hasViewPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view all users.'
+            });
+        }
+
+        // Get all active users for the filter dropdown
+        const users = await User.find({ isActive: true })
+            .select('_id firstName lastName username email')
+            .sort({ firstName: 1, lastName: 1 })
+            .lean();
+
+        const userOptions = users.map(user => ({
+            value: user._id.toString(),
+            label: `${user.firstName} ${user.lastName} (${user.username})`
+        }));
+
+        res.json({
+            success: true,
+            data: userOptions
+        });
+    } catch (error) {
+        console.error('Error fetching users for audit logs filter:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users'
+        });
+    }
+});
+
 // Get audit logs for the current user with enhanced server-side pagination
 router.get('/audit-logs', authenticateToken, async (req, res) => {
     try {
         const userId = req.user._id;
-        
+
+        // Check user permissions for audit logs
+        const hasViewPermission = req.user.hasPermission('audit-logs', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('audit-logs', 'view_own');
+
+        // If user has no permissions for audit logs, deny access
+        if (!hasViewPermission && !hasViewOwnPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view audit logs.'
+            });
+        }
+
         // Parse and validate pagination parameters
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 25)); // Max 1000, min 1, default 25
-        
+
         // Use user's timezone for cutoff calculation
         const userTimezone = req.query.timezone || 'Asia/Beirut';
         let cutoff;
@@ -2090,22 +2140,37 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
             // Default to 24 hours ago in user's timezone
             cutoff = moment.tz(userTimezone).subtract(24, 'hours').utc().toDate();
         }
-        
+
         // Build query with enhanced filtering
         const query = {
             timestamp: { $gte: cutoff }
         };
 
-        // For non-admin users, only show their own logs
-        if (!req.user.isAdmin) {
-            query.userId = userId;
+        // Apply permission-based filtering
+        let filterUserId = null;
+
+        if (req.user.isAdmin) {
+            // Admin can see all logs regardless of permissions
+            filterUserId = null;
+        } else if (hasViewPermission) {
+            // User has 'view' permission - can see all logs
+            filterUserId = null;
+        } else if (hasViewOwnPermission) {
+            // User has only 'view_own' permission - can only see their own logs
+            filterUserId = userId;
+        } else {
+            // No permissions - this should not happen due to earlier check
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view audit logs.'
+            });
         }
 
         // Add action filter
         if (req.query.action && req.query.action.trim()) {
             query.action = req.query.action.trim();
         }
-        
+
         // Add risk level filter
         if (req.query.riskLevel && req.query.riskLevel.trim()) {
             const validRiskLevels = ['low', 'medium', 'high', 'critical'];
@@ -2113,21 +2178,33 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
                 query.riskLevel = req.query.riskLevel.trim();
             }
         }
-        
+
         // Add success filter
         if (req.query.success !== undefined && req.query.success !== '') {
             query.success = req.query.success === 'true';
         }
 
+        // Add user filter (only for admin and view permission users)
+        if (req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission)) {
+            // Support both single user ID and multiple user IDs (comma-separated)
+            const userIds = req.query.userId.trim().split(',').map(id => id.trim()).filter(id => id);
+            if (userIds.length === 1) {
+                query.userId = userIds[0];
+            } else if (userIds.length > 1) {
+                query.userId = { $in: userIds };
+            }
+        }
+
         // Enhanced server-side filtering with debugging
         const filterParams = {
-            userId: req.user.isAdmin ? null : userId,
+            userId: filterUserId,
             page,
             limit,
             cutoff,
             action: req.query.action && req.query.action.trim() ? req.query.action.trim() : null,
             riskLevel: req.query.riskLevel && req.query.riskLevel.trim() ? req.query.riskLevel.trim() : null,
-            success: req.query.success !== undefined && req.query.success !== '' ? req.query.success === 'true' : null
+            success: req.query.success !== undefined && req.query.success !== '' ? req.query.success === 'true' : null,
+            filterUserId: req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission) ? req.query.userId.trim() : null
         };
 
         // Add debugging logs to verify server-side filtering
@@ -2138,32 +2215,61 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
             riskLevel: filterParams.riskLevel,
             success: filterParams.success,
             cutoff: filterParams.cutoff,
-            isAdmin: req.user.isAdmin
+            isAdmin: req.user.isAdmin,
+            hasViewPermission,
+            hasViewOwnPermission,
+            filterUserId: filterUserId ? filterUserId.toString() : 'all users'
         });
 
         const paginationResult = await AuditLog.getPaginatedLogs(filterParams);
 
+        // Populate user information for logs
+        const logsWithUsers = await Promise.all(paginationResult.logs.map(async (log) => {
+            try {
+                const user = await User.findById(log.userId).select('firstName lastName username email profilePicture profileInitials').lean();
+                return {
+                    ...log,
+                    user: user ? {
+                        _id: user._id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        username: user.username,
+                        email: user.email,
+                        fullName: `${user.firstName} ${user.lastName}`,
+                        profilePicture: user.profilePicture,
+                        profileInitials: user.profileInitials
+                    } : null
+                };
+            } catch (error) {
+                console.error('Error populating user for log:', error);
+                return {
+                    ...log,
+                    user: null
+                };
+            }
+        }));
+
         console.log('📊 Server-side pagination results:', {
             totalRecords: paginationResult.total,
-            returnedRecords: paginationResult.logs.length,
+            returnedRecords: logsWithUsers.length,
             currentPage: paginationResult.page,
             totalPages: paginationResult.totalPages,
             hasNextPage: paginationResult.hasNextPage
         });
 
         // Calculate summary statistics for the filtered data
-        const highRiskCount = paginationResult.logs.filter(log => 
+        const highRiskCount = paginationResult.logs.filter(log =>
             log.riskLevel === 'high' || log.riskLevel === 'critical'
         ).length;
-        
-        const failedLoginsCount = paginationResult.logs.filter(log => 
+
+        const failedLoginsCount = paginationResult.logs.filter(log =>
             log.action === 'login_failed'
         ).length;
 
         res.json({
             success: true,
             data: {
-                logs: paginationResult.logs,
+                logs: logsWithUsers,
                 total: paginationResult.total,
                 page: paginationResult.page,
                 limit: paginationResult.limit,
@@ -2193,7 +2299,7 @@ router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res
         // Parse and validate pagination parameters
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 25));
-        
+
         // Parse date range with better validation
         let cutoff;
         if (req.query.cutoff) {
@@ -2208,7 +2314,7 @@ router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res
             // Default to 24 hours ago
             cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
         }
-        
+
         // Build query with enhanced filtering for admin
         const query = {
             timestamp: { $gte: cutoff }
@@ -2218,7 +2324,7 @@ router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res
         if (req.query.action && req.query.action.trim()) {
             query.action = req.query.action.trim();
         }
-        
+
         // Add risk level filter
         if (req.query.riskLevel && req.query.riskLevel.trim()) {
             const validRiskLevels = ['low', 'medium', 'high', 'critical'];
@@ -2226,7 +2332,7 @@ router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res
                 query.riskLevel = req.query.riskLevel.trim();
             }
         }
-        
+
         // Add success filter
         if (req.query.success !== undefined && req.query.success !== '') {
             query.success = req.query.success === 'true';
@@ -2234,7 +2340,13 @@ router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res
 
         // Add user filter for admin
         if (req.query.userId && req.query.userId.trim()) {
-            query.userId = req.query.userId.trim();
+            // Support both single user ID and multiple user IDs (comma-separated)
+            const userIds = req.query.userId.trim().split(',').map(id => id.trim()).filter(id => id);
+            if (userIds.length === 1) {
+                query.userId = userIds[0];
+            } else if (userIds.length > 1) {
+                query.userId = { $in: userIds };
+            }
         }
 
         // Add IP filter for admin
@@ -2275,15 +2387,15 @@ router.get('/admin/audit-logs', authenticateToken, requireAdmin, async (req, res
         // Populate user information for admin view
         const logsWithUsers = await AuditLog.populate(paginationResult.logs, {
             path: 'userId',
-            select: 'username firstName lastName email'
+            select: 'username firstName lastName email profilePicture profileInitials'
         });
 
         // Calculate summary statistics for the filtered data
-        const highRiskCount = logsWithUsers.filter(log => 
+        const highRiskCount = logsWithUsers.filter(log =>
             log.riskLevel === 'high' || log.riskLevel === 'critical'
         ).length;
-        
-        const failedLoginsCount = logsWithUsers.filter(log => 
+
+        const failedLoginsCount = logsWithUsers.filter(log =>
             log.action === 'login_failed'
         ).length;
 
@@ -2352,7 +2464,7 @@ router.get('/debug/permissions', authenticateToken, (req, res) => {
 router.post('/send-email-verification', authenticateToken, async (req, res) => {
     try {
         const user = await User.findById(req.user._id).select('+emailVerificationToken');
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -2369,10 +2481,10 @@ router.post('/send-email-verification', authenticateToken, async (req, res) => {
 
         // Generate verification token
         await user.generateEmailVerificationToken();
-        
+
         // Send verification email
         const emailResult = await emailService.sendEmailVerification(user, user.emailVerificationToken);
-        
+
         if (emailResult.success) {
             // Emit real-time profile data update to show verification email was sent
             try {
@@ -2419,7 +2531,7 @@ router.post('/send-email-verification', authenticateToken, async (req, res) => {
 router.post('/verify-email', async (req, res) => {
     try {
         const { token } = req.body;
-        
+
         if (!token) {
             return res.status(400).json({
                 success: false,
@@ -2441,11 +2553,11 @@ router.post('/verify-email', async (req, res) => {
 
         // Verify the email
         const verificationResult = await user.verifyEmail(token);
-        
+
         if (verificationResult) {
             // Send confirmation email
             await emailService.sendEmailVerifiedConfirmation(user);
-            
+
             res.json({
                 success: true,
                 message: 'Email verified successfully'
@@ -2469,7 +2581,7 @@ router.post('/verify-email', async (req, res) => {
 router.get('/email-verification-status', authenticateToken, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -2612,7 +2724,7 @@ router.get('/email-verification-status', authenticateToken, async (req, res) => 
 router.get('/verification-status', authenticateToken, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -2855,20 +2967,20 @@ router.get('/system-metrics-timeline', authenticateToken, async (req, res) => {
         // Create timeline data points with simulated metrics
         const timelineData = [];
         const now = new Date();
-        
+
         for (let i = hours - 1; i >= 0; i--) {
             const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
             const timeKey = timestamp.toISOString().split('.')[0] + 'Z';
-            
+
             const activity = userActivity.find(item => item._id === timeKey);
             const baseLoad = activity ? activity.activityCount : 0;
-            
+
             // Simulate database response time (40-80ms based on activity)
             const dbResponseTime = 40 + (baseLoad * 2) + Math.floor(Math.random() * 20);
-            
+
             // Simulate API response time (100-200ms based on activity)
             const apiResponseTime = 100 + (baseLoad * 5) + Math.floor(Math.random() * 50);
-            
+
             // Simulate active sessions (1-5 based on login activity)
             const activeSessions = activity ? Math.min(5, Math.max(1, activity.loginCount + 1)) : Math.floor(Math.random() * 3) + 1;
 
@@ -2937,14 +3049,14 @@ router.get('/performance-metrics', authenticateToken, async (req, res) => {
         };
 
         const now = new Date();
-        
+
         for (let i = hours - 1; i >= 0; i--) {
             const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
             const timeKey = timestamp.toISOString().split('.')[0] + 'Z';
-            
+
             const activity = userActivity.find(item => item._id === timeKey);
             const baseLoad = activity ? Math.min(activity.activityCount * 3, 60) : 15;
-            
+
             // CPU usage (15-75% based on activity)
             performanceData.cpu.push({
                 timestamp: timestamp,

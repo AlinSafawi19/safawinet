@@ -13,8 +13,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: true,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'delete', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
+            { page: 'users', actions: ['view', 'add', 'edit', 'delete', 'export'] },
+            { page: 'audit-logs', actions: ['view', 'export'] }
         ]
     },
     {
@@ -25,20 +25,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Supervisor',
-        description: 'Team oversight and advanced reporting',
-        icon: 'FiUsers',
-        color: 'bg-gradient-to-r from-indigo-500 to-purple-500',
-        isAdmin: false,
-        isDefault: true,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
+            { page: 'users', actions: ['view', 'add', 'edit', 'export'] },
+            { page: 'audit-logs', actions: ['view', 'export'] }
         ]
     },
     {
@@ -50,103 +38,7 @@ const DEFAULT_ROLE_TEMPLATES = [
         isDefault: true,
         permissions: [
             { page: 'users', actions: ['view_own'] },
-            { page: 'audit_logs', actions: ['view_own'] }
-        ]
-    },
-    {
-        name: 'Support Agent',
-        description: 'Customer support and user assistance',
-        icon: 'FiUserCheck',
-        color: 'bg-gradient-to-r from-teal-500 to-cyan-500',
-        isAdmin: false,
-        isDefault: true,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Security Analyst',
-        description: 'Security monitoring and threat analysis',
-        icon: 'FiShield',
-        color: 'bg-gradient-to-r from-orange-500 to-red-500',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Data Analyst',
-        description: 'Data analysis and reporting capabilities',
-        icon: 'FiSettings',
-        color: 'bg-gradient-to-r from-indigo-500 to-purple-500',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Team Lead',
-        description: 'Team leadership and project management',
-        icon: 'FiUsers',
-        color: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Auditor',
-        description: 'System auditing and compliance review',
-        icon: 'FiEye',
-        color: 'bg-gradient-to-r from-green-500 to-emerald-500',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Help Desk',
-        description: 'Technical support and user assistance',
-        icon: 'FiUserCheck',
-        color: 'bg-gradient-to-r from-teal-500 to-cyan-500',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view_own', 'export'] }
-        ]
-    },
-    {
-        name: 'Guest User',
-        description: 'Limited access for temporary users',
-        icon: 'FiUserX',
-        color: 'bg-gradient-to-r from-gray-500 to-gray-600',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view_own'] },
-            { page: 'audit_logs', actions: ['view_own'] }
-        ]
-    },
-    {
-        name: 'Power User',
-        description: 'Advanced user with extended permissions',
-        icon: 'FiLock',
-        color: 'bg-gradient-to-r from-purple-500 to-pink-500',
-        isAdmin: false,
-        isDefault: false,
-        permissions: [
-            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
-            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
+            { page: 'audit-logs', actions: ['view_own'] }
         ]
     }
 ];

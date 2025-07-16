@@ -5,30 +5,18 @@ import moment from 'moment';
 import 'moment-timezone';
 import Select from 'react-select';
 import { applyUserTheme } from '../utils/themeUtils';
-import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 import {
   FiAlertTriangle,
   FiCheckCircle,
-  FiLock,
-  FiMail,
   FiShield,
-  FiWifi,
-  FiShield as FiShieldCheck,
   FiAlertCircle,
-  FiGlobe,
-  FiServer,
   FiClock,
   FiActivity,
   FiEye,
-  FiFilter,
   FiRefreshCw,
   FiCalendar,
-  FiMapPin,
-  FiMonitor,
-  FiUser,
-  FiKey,
-  FiSmartphone,
-  FiX
+  FiMapPin
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
 
@@ -47,6 +35,11 @@ const AuditLogs = () => {
   const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
   const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
 
+  // Check user permissions for audit logs
+  const hasViewPermission = user ? authService.hasPermission('audit-logs', 'view') : false;
+  const hasViewOwnPermission = user ? authService.hasPermission('audit-logs', 'view_own') : false;
+  const hasAnyPermission = hasViewPermission || hasViewOwnPermission;
+
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,7 +47,8 @@ const AuditLogs = () => {
     action: '',
     riskLevel: '',
     success: '',
-    dateRange: '24h'
+    dateRange: '24h',
+    userId: '' // Changed to array for multi-select
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -68,6 +62,7 @@ const AuditLogs = () => {
     highRiskCount: 0,
     failedLoginsCount: 0
   });
+  const [userOptions, setUserOptions] = useState([]);
   // Remove sidebarRef, filtersVisible, and sidebar toggling logic
 
   // Create a single axios instance for all API calls
@@ -85,6 +80,23 @@ const AuditLogs = () => {
 
     return api;
   }, []);
+
+  // Fetch user options for filter (only for admin and view permission users)
+  const fetchUserOptions = useCallback(async () => {
+    if (!authService.isUserAuthenticated()) return;
+    if (!hasViewPermission && !authService.isAdmin()) return;
+
+    try {
+      const api = createApiInstance();
+      const response = await api.get('/auth/audit-logs/users');
+
+      if (response.data.success) {
+        setUserOptions(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching user options:', error);
+    }
+  }, [createApiInstance, hasViewPermission]);
 
   // Fetch audit logs
   const fetchAuditLogs = useCallback(async () => {
@@ -127,6 +139,10 @@ const AuditLogs = () => {
       if (filters.action) params.action = filters.action;
       if (filters.riskLevel) params.riskLevel = filters.riskLevel;
       if (filters.success !== '') params.success = filters.success;
+      if (filters.userId && Array.isArray(filters.userId) && filters.userId.length > 0) {
+        // Join multiple user IDs with commas for backend
+        params.userId = filters.userId.join(',');
+      }
 
       const response = await api.get('/auth/audit-logs', { params });
 
@@ -139,7 +155,7 @@ const AuditLogs = () => {
           hasNextPage: response.data.data.hasNextPage,
           hasPrevPage: response.data.data.hasPrevPage
         }));
-        
+
         // Update summary statistics from server
         if (response.data.data.summary) {
           setSummaryStats(response.data.data.summary);
@@ -149,7 +165,13 @@ const AuditLogs = () => {
       }
     } catch (error) {
       console.error('Error fetching audit logs:', error);
-      setError('Failed to fetch audit logs. Please try again.');
+
+      // Handle permission errors specifically
+      if (error.response?.status === 403) {
+        setError('Access denied. You do not have permission to view audit logs.');
+      } else {
+        setError('Failed to fetch audit logs. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -160,64 +182,15 @@ const AuditLogs = () => {
     fetchAuditLogs();
   }, [fetchAuditLogs]);
 
+  // Fetch user options on mount (only for admin and view permission users)
+  useEffect(() => {
+    fetchUserOptions();
+  }, [fetchUserOptions]);
+
   // Format date for display with user's timezone and date format
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return moment(dateString).tz(userTimezone).format(userDateFormat);
-  };
-
-  // Get action icon
-  const getActionIcon = (action) => {
-    switch (action) {
-      case 'login':
-        return <FiUser />;
-      case 'login_failed':
-        return <FiAlertTriangle />;
-      case 'logout':
-        return <FiUser />;
-      case 'password_change':
-        return <FiKey />;
-      case 'password_reset_request':
-        return <FiKey />;
-      case 'password_reset_complete':
-        return <FiKey />;
-      case 'two_factor_enable':
-        return <FiShield />;
-      case 'two_factor_disable':
-        return <FiShield />;
-      case 'two_factor_verify':
-        return <FiShield />;
-      case 'two_factor_backup_used':
-        return <FiShield />;
-      case 'account_lock':
-        return <FiLock />;
-      case 'account_unlock':
-        return <FiLock />;
-      case 'session_create':
-        return <FiWifi />;
-      case 'session_destroy':
-        return <FiWifi />;
-      case 'profile_update':
-        return <FiUser />;
-      case 'permission_change':
-        return <FiShield />;
-      case 'user_create':
-        return <FiUser />;
-      case 'user_update':
-        return <FiUser />;
-      case 'user_delete':
-        return <FiUser />;
-      case 'admin_action':
-        return <FiShield />;
-      case 'suspicious_activity':
-        return <FiAlertCircle />;
-      case 'rate_limit_exceeded':
-        return <FiAlertTriangle />;
-      case 'security_alert':
-        return <FiAlertTriangle />;
-      default:
-        return <FiActivity />;
-    }
   };
 
   // Get action display name
@@ -246,7 +219,7 @@ const AuditLogs = () => {
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: value
+      [filterType]: filterType === 'userId' ? (Array.isArray(value) ? value : []) : value
     }));
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
@@ -276,14 +249,10 @@ const AuditLogs = () => {
       action: '',
       riskLevel: '',
       success: '',
-      dateRange: '24h'
+      dateRange: '24h',
+      userId: [] // Changed to empty array
     });
     setPagination(prev => ({ ...prev, page: 1 }));
-  };
-
-  // Toggle filters sidebar
-  const toggleFilters = () => {
-    // setFiltersVisible(!filtersVisible); // This line is removed
   };
 
   // Handle quick filter selection
@@ -294,7 +263,8 @@ const AuditLogs = () => {
           action: 'login_failed',
           riskLevel: '',
           success: 'false',
-          dateRange: '24h'
+          dateRange: '24h',
+          userId: []
         });
         break;
       case 'high_risk':
@@ -302,7 +272,8 @@ const AuditLogs = () => {
           action: '',
           riskLevel: 'high',
           success: '',
-          dateRange: '24h'
+          dateRange: '24h',
+          userId: []
         });
         break;
       case 'critical_events':
@@ -310,7 +281,8 @@ const AuditLogs = () => {
           action: '',
           riskLevel: 'critical',
           success: '',
-          dateRange: '24h'
+          dateRange: '24h',
+          userId: []
         });
         break;
       case 'successful_logins':
@@ -318,7 +290,8 @@ const AuditLogs = () => {
           action: 'login',
           riskLevel: '',
           success: 'true',
-          dateRange: '24h'
+          dateRange: '24h',
+          userId: []
         });
         break;
       case 'two_factor':
@@ -326,7 +299,8 @@ const AuditLogs = () => {
           action: 'two_factor_enable',
           riskLevel: '',
           success: '',
-          dateRange: '24h'
+          dateRange: '24h',
+          userId: []
         });
         break;
       case 'security_alerts':
@@ -334,7 +308,8 @@ const AuditLogs = () => {
           action: 'security_alert',
           riskLevel: '',
           success: '',
-          dateRange: '24h'
+          dateRange: '24h',
+          userId: []
         });
         break;
       case 'recent_hour':
@@ -342,7 +317,8 @@ const AuditLogs = () => {
           action: '',
           riskLevel: '',
           success: '',
-          dateRange: '1h'
+          dateRange: '1h',
+          userId: []
         });
         break;
       case 'last_week':
@@ -350,7 +326,8 @@ const AuditLogs = () => {
           action: '',
           riskLevel: '',
           success: '',
-          dateRange: '7d'
+          dateRange: '7d',
+          userId: []
         });
         break;
       default:
@@ -470,6 +447,26 @@ const AuditLogs = () => {
       color: '#222',
       fontWeight: 500
     }),
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: '#eaf0fb',
+      borderRadius: '6px',
+      border: '1px solid #1f3bb3'
+    }),
+    multiValueLabel: (provided) => ({
+      ...provided,
+      color: '#1f3bb3',
+      fontWeight: 500,
+      fontSize: '0.875rem'
+    }),
+    multiValueRemove: (provided) => ({
+      ...provided,
+      color: '#1f3bb3',
+      '&:hover': {
+        backgroundColor: '#1f3bb3',
+        color: '#fff'
+      }
+    }),
     input: (provided) => ({
       ...provided,
       color: '#222'
@@ -499,6 +496,33 @@ const AuditLogs = () => {
     })
   };
 
+  // Show access denied message if user has no permissions
+  if (!hasAnyPermission) {
+    return (
+      <div className="audit-logs-container">
+        <div className="audit-logs-header-row">
+          <div className="audit-logs-header">
+            <h1 className="audit-logs-title">
+              <FiActivity /> Audit Logs
+            </h1>
+            <p className="audit-logs-description">
+              View detailed security events and user activity logs
+            </p>
+          </div>
+        </div>
+        <div className="audit-logs-main-content">
+          <div className="audit-logs-content">
+            <div className="audit-logs-error">
+              <FiAlertTriangle />
+              <h3>Access Denied</h3>
+              <p>You do not have permission to view audit logs. Please contact your administrator for access.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="audit-logs-container">
       <div className="audit-logs-header-row">
@@ -508,6 +532,11 @@ const AuditLogs = () => {
           </h1>
           <p className="audit-logs-description">
             View detailed security events and user activity logs
+            {hasViewOwnPermission && !hasViewPermission && (
+              <span className="permission-notice">
+                {' '}(Viewing your own logs only)
+              </span>
+            )}
           </p>
         </div>
         <div className="audit-logs-controls">
@@ -589,6 +618,25 @@ const AuditLogs = () => {
               isSearchable
             />
           </div>
+          {(hasViewPermission || authService.isAdmin()) && (
+            <div className="filter-group">
+              <h4>Users</h4>
+              <Select
+                value={Array.isArray(filters.userId) ? filters.userId.map(userId => userOptions.find(option => option.value === userId)).filter(Boolean) : []}
+                onChange={(selectedOptions) => {
+                  const selectedUserIds = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                  handleFilterChange('userId', selectedUserIds);
+                }}
+                options={userOptions}
+                styles={customStyles}
+                placeholder="Select users..."
+                isMulti
+                isClearable
+                isSearchable
+                closeMenuOnSelect={false}
+              />
+            </div>
+          )}
         </div>
         <div className="filter-actions">
           <button
@@ -715,6 +763,7 @@ const AuditLogs = () => {
                   <table className="audit-table">
                     <thead>
                       <tr>
+                        {(hasViewPermission || authService.isAdmin()) && <th>User</th>}
                         <th>Action</th>
                         <th>Status</th>
                         <th>Risk Level</th>
@@ -728,6 +777,57 @@ const AuditLogs = () => {
                     <tbody>
                       {auditLogs.map((log, index) => (
                         <tr key={log._id || index}>
+                          {(hasViewPermission || authService.isAdmin()) && (
+                            <td className="user-cell">
+                              {log.user ? (
+                                <div className="user-info">
+                                  <div
+                                    className="user-avatar"
+                                    style={{ backgroundColor: getInitialsColor(log.user.username || log.user.email || log.user.firstName || '') }}
+                                  >
+                                    {(() => {
+                                      const profileDisplay = getProfileDisplay(log.user);
+
+                                      if (profileDisplay.type === 'image') {
+                                        return (
+                                          <>
+                                            <img
+                                              src={profileDisplay.value}
+                                              alt={`${log.user.fullName}'s profile picture`}
+                                              className="user-profile-image"
+                                              onError={(e) => {
+                                                // Fall back to initials if image fails to load
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                              }}
+                                            />
+                                            <div
+                                              className="user-initials"
+                                              style={{ display: 'none' }}
+                                            >
+                                              {log.user.profileInitials || profileDisplay.value}
+                                            </div>
+                                          </>
+                                        );
+                                      } else {
+                                        return (
+                                          <div className="user-initials">
+                                            {profileDisplay.value}
+                                          </div>
+                                        );
+                                      }
+                                    })()}
+                                  </div>
+                                  <div className="user-details">
+                                    <div className="user-name">{log.user.fullName}</div>
+                                    <div className="user-email">{log.user.username}</div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span>Unknown User</span>
+                              )}
+                            </td>
+                          )}
                           <td>
                             <div className="action-cell">
                               <div className="action-name">
@@ -833,7 +933,7 @@ const AuditLogs = () => {
                     const indicators = [];
                     const totalPages = Math.ceil(pagination.total / pagination.limit);
                     const currentPage = pagination.page;
-                    
+
                     if (pagination.totalPages <= 7) {
                       // Show all pages if 7 or fewer
                       for (let i = 1; i <= pagination.totalPages; i++) {
@@ -860,7 +960,7 @@ const AuditLogs = () => {
                           <span className="indicator-number">1</span>
                         </button>
                       );
-                      
+
                       // Add ellipsis if needed after first page
                       if (currentPage > 4) {
                         indicators.push(
@@ -869,11 +969,11 @@ const AuditLogs = () => {
                           </span>
                         );
                       }
-                      
+
                       // Show pages around current page
                       const start = Math.max(2, currentPage - 1);
                       const end = Math.min(pagination.totalPages - 1, currentPage + 1);
-                      
+
                       for (let i = start; i <= end; i++) {
                         if (i !== 1 && i !== pagination.totalPages) {
                           indicators.push(
@@ -888,7 +988,7 @@ const AuditLogs = () => {
                           );
                         }
                       }
-                      
+
                       // Add ellipsis if needed before last page
                       if (currentPage < pagination.totalPages - 3) {
                         indicators.push(
@@ -897,7 +997,7 @@ const AuditLogs = () => {
                           </span>
                         );
                       }
-                      
+
                       // Show last page
                       if (pagination.totalPages > 1) {
                         indicators.push(
@@ -912,7 +1012,7 @@ const AuditLogs = () => {
                         );
                       }
                     }
-                    
+
                     return indicators;
                   })()}
                 </div>
