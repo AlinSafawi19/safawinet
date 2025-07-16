@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
+const speakeasy = require('speakeasy');
 const crypto = require('crypto');
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
@@ -2289,6 +2290,146 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch audit logs'
+        });
+    }
+});
+
+// Export audit logs to CSV/Excel
+router.get('/audit-logs/export', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Check user permissions for audit logs export
+        const hasViewPermission = req.user.hasPermission('audit-logs', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('audit-logs', 'view_own');
+        const hasExportPermission = req.user.hasPermission('audit-logs', 'export');
+
+        // If user has no permissions for audit logs, deny access
+        if (!hasViewPermission && !hasViewOwnPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view audit logs.'
+            });
+        }
+
+        // Check if user has export permission
+        if (!hasExportPermission && !req.user.isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to export audit logs.'
+            });
+        }
+
+        // Use user's timezone for cutoff calculation
+        const userTimezone = req.query.timezone || 'Asia/Beirut';
+        let cutoff;
+        if (req.query.cutoff) {
+            cutoff = moment.tz(req.query.cutoff, userTimezone).utc().toDate();
+        } else {
+            cutoff = moment.tz(userTimezone).subtract(24, 'hours').utc().toDate();
+        }
+
+        // Build query with enhanced filtering
+        const query = {
+            timestamp: { $gte: cutoff }
+        };
+
+        // Apply permission-based filtering
+        let filterUserId = null;
+
+        if (req.user.isAdmin) {
+            filterUserId = null;
+        } else if (hasViewPermission) {
+            filterUserId = null;
+        } else if (hasViewOwnPermission) {
+            filterUserId = userId;
+        }
+
+        // Add action filter
+        if (req.query.action && req.query.action.trim()) {
+            query.action = req.query.action.trim();
+        }
+
+        // Add risk level filter
+        if (req.query.riskLevel && req.query.riskLevel.trim()) {
+            const validRiskLevels = ['low', 'medium', 'high', 'critical'];
+            if (validRiskLevels.includes(req.query.riskLevel.trim())) {
+                query.riskLevel = req.query.riskLevel.trim();
+            }
+        }
+
+        // Add success filter
+        if (req.query.success !== undefined && req.query.success !== '') {
+            query.success = req.query.success === 'true';
+        }
+
+        // Add user filter (only for admin and view permission users)
+        if (req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission)) {
+            const userIds = req.query.userId.trim().split(',').map(id => id.trim()).filter(id => id);
+            if (userIds.length === 1) {
+                query.userId = userIds[0];
+            } else if (userIds.length > 1) {
+                query.userId = { $in: userIds };
+            }
+        }
+
+        // Get all logs matching the criteria (no pagination for export)
+        const logs = await AuditLog.find(query)
+            .populate('userId', 'firstName lastName username email')
+            .sort({ timestamp: -1 })
+            .lean();
+
+        // Format data for export
+        const exportData = logs.map(log => ({
+            'User': log.userId ? `${log.userId.firstName} ${log.userId.lastName}` : 'Unknown User',
+            'Username': log.userId ? log.userId.username : 'Unknown',
+            'Email': log.userId ? log.userId.email : 'Unknown',
+            'Action': log.action.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()),
+            'Status': log.success ? 'Success' : 'Failed',
+            'Risk Level': log.riskLevel || 'low',
+            'IP Address': log.ip || 'Unknown',
+            'Device': log.device || 'Unknown',
+            'Country': log.location?.country || 'Unknown',
+            'City': log.location?.city || 'Unknown',
+            'Timestamp': moment(log.timestamp).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss'),
+            'Details': log.details?.message || log.details?.reason || 'No additional details'
+        }));
+
+        // Set response headers for CSV download
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${moment().format('YYYY-MM-DD-HH-mm-ss')}.csv"`);
+
+        // Create CSV content
+        if (exportData.length === 0) {
+            res.send('No data to export');
+            return;
+        }
+
+        // Get headers from first row
+        const headers = Object.keys(exportData[0]);
+        
+        // Create CSV content
+        const csvContent = [
+            headers.join(','),
+            ...exportData.map(row => 
+                headers.map(header => {
+                    const value = row[header] || '';
+                    // Escape commas and quotes in CSV
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                        return `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value;
+                }).join(',')
+            )
+        ].join('\n');
+
+        res.send(csvContent);
+
+    } catch (error) {
+        console.error('Export audit logs error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to export audit logs'
         });
     }
 });

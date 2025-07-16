@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import BackupCodeModal from '../components/BackupCodeModal';
-import logo from '../assets/images/logo.png';
 import { showErrorToast } from '../utils/sweetAlertConfig';
 import { FiEye, FiEyeOff, FiShield, FiKey } from 'react-icons/fi';
 import { FaLock } from 'react-icons/fa';
@@ -247,7 +246,9 @@ const Login = ({ onLoginSuccess }) => {
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-logo">
-            <img src={logo} alt="SafawiNet Logo" className="logo-image" />
+            <span className="text-logo">
+              Safawi<span className="text-logo-blue">Net</span>
+            </span>
           </div>
           <p className="auth-welcome"><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
         </div>

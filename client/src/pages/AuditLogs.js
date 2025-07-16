@@ -16,7 +16,8 @@ import {
   FiEye,
   FiRefreshCw,
   FiCalendar,
-  FiMapPin
+  FiMapPin,
+  FiDownload
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
 
@@ -38,6 +39,7 @@ const AuditLogs = () => {
   // Check user permissions for audit logs
   const hasViewPermission = user ? authService.hasPermission('audit-logs', 'view') : false;
   const hasViewOwnPermission = user ? authService.hasPermission('audit-logs', 'view_own') : false;
+  const hasExportPermission = user ? authService.hasPermission('audit-logs', 'export') : false;
   const hasAnyPermission = hasViewPermission || hasViewOwnPermission;
 
   const [auditLogs, setAuditLogs] = useState([]);
@@ -241,6 +243,80 @@ const AuditLogs = () => {
   // Refresh audit logs
   const handleRefresh = () => {
     fetchAuditLogs();
+  };
+
+  // Export audit logs to CSV
+  const handleExport = async () => {
+    if (!hasExportPermission && !authService.isAdmin()) {
+      setError('You do not have permission to export audit logs.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const api = createApiInstance();
+
+      // Calculate date range in user's timezone
+      let cutoff;
+      const now = moment.tz(userTimezone);
+      switch (filters.dateRange) {
+        case '1h':
+          cutoff = now.clone().subtract(1, 'hour');
+          break;
+        case '24h':
+          cutoff = now.clone().subtract(24, 'hours');
+          break;
+        case '7d':
+          cutoff = now.clone().subtract(7, 'days');
+          break;
+        case '30d':
+          cutoff = now.clone().subtract(30, 'days');
+          break;
+        default:
+          cutoff = now.clone().subtract(24, 'hours');
+      }
+
+      // Build query parameters for export
+      const params = {
+        cutoff: cutoff.toISOString(),
+        timezone: userTimezone
+      };
+
+      if (filters.action) params.action = filters.action;
+      if (filters.riskLevel) params.riskLevel = filters.riskLevel;
+      if (filters.success !== '') params.success = filters.success;
+      if (filters.userId && Array.isArray(filters.userId) && filters.userId.length > 0) {
+        params.userId = filters.userId.join(',');
+      }
+
+      // Make the export request
+      const response = await api.get('/auth/audit-logs/export', { 
+        params,
+        responseType: 'blob' // Important for file download
+      });
+
+      // Create download link
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `audit-logs-${moment().format('YYYY-MM-DD-HH-mm-ss')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error exporting audit logs:', error);
+      
+      if (error.response?.status === 403) {
+        setError('Access denied. You do not have permission to export audit logs.');
+      } else {
+        setError('Failed to export audit logs. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Clear filters
@@ -564,6 +640,17 @@ const AuditLogs = () => {
             <FiRefreshCw />
             Refresh
           </button>
+          {(hasExportPermission || authService.isAdmin()) && (
+            <button
+              className="export-btn"
+              onClick={handleExport}
+              disabled={loading}
+              title="Export audit logs to CSV"
+            >
+              <FiDownload />
+              Export CSV
+            </button>
+          )}
         </div>
       </div>
 
