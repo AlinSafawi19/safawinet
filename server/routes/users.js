@@ -1,18 +1,108 @@
 const express = require('express');
+const moment = require('moment-timezone');
 const User = require('../models/User');
 const { authenticateToken, requireAdmin, requirePermission } = require('../middleware/auth');
 const emailService = require('../services/emailService');
 
 const router = express.Router();
 
-// Get all users (admin only)
-router.get('/', authenticateToken, requirePermission('users', 'view'), async (req, res) => {
+// Get users with server-side pagination and permission-based filtering
+router.get('/', authenticateToken, async (req, res) => {
     try {
-        const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+        const {
+            page = 1,
+            limit = 25,
+            search = '',
+            role = '',
+            isActive = '',
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
+
+        // Check user permissions
+        const hasViewPermission = req.user.hasPermission('users', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('users', 'view_own');
+
+        if (!req.user.isAdmin && !hasViewPermission && !hasViewOwnPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view users.'
+            });
+        }
+
+        // Build query based on permissions
+        let query = {};
+
+        // If user has view_own permission but not view permission, only show users they created
+        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+            query.createdBy = req.user._id;
+        }
+
+        // Add search filter
+        if (search) {
+            query.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Add role filter
+        if (role) {
+            query.role = role;
+        }
+
+        // Add active status filter
+        if (isActive !== '') {
+            query.isActive = isActive === 'true';
+        }
+
+        // Build sort object
+        const sortObject = {};
+        sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        // Calculate pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Execute query with pagination
+        const [users, total] = await Promise.all([
+            User.find(query)
+                .select('-password')
+                .sort(sortObject)
+                .skip(skip)
+                .limit(parseInt(limit))
+                .populate('createdBy', 'username firstName lastName')
+                .lean(),
+            User.countDocuments(query)
+        ]);
+
+        // Calculate pagination info
+        const totalPages = Math.ceil(total / parseInt(limit));
+        const hasNextPage = parseInt(page) < totalPages;
+        const hasPrevPage = parseInt(page) > 1;
 
         res.json({
             success: true,
-            data: users
+            data: {
+                users,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    totalPages,
+                    hasNextPage,
+                    hasPrevPage
+                },
+                filters: {
+                    search,
+                    role,
+                    isActive,
+                    sortBy,
+                    sortOrder
+                }
+            }
         });
     } catch (error) {
         console.error('Get users error:', error);
@@ -23,9 +113,189 @@ router.get('/', authenticateToken, requirePermission('users', 'view'), async (re
     }
 });
 
-// Get single user by ID
-router.get('/:id', authenticateToken, requirePermission('users', 'view'), async (req, res) => {
+// Get users for filter dropdown (admin and view permission only)
+router.get('/filter-options', authenticateToken, async (req, res) => {
     try {
+        const hasViewPermission = req.user.hasPermission('users', 'view');
+        
+        // Only allow access if user has view permission or is admin
+        if (!req.user.isAdmin && !hasViewPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view all users.'
+            });
+        }
+
+        // Get all active users for the filter dropdown
+        const users = await User.find({ isActive: true })
+            .select('_id firstName lastName username email')
+            .sort({ firstName: 1, lastName: 1 })
+            .lean();
+
+        const userOptions = users.map(user => ({
+            value: user._id.toString(),
+            label: `${user.firstName} ${user.lastName} (${user.username})`
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                users: userOptions,
+                roles: ['admin', 'manager', 'viewer', 'custom'],
+                statuses: [
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' }
+                ]
+            }
+        });
+    } catch (error) {
+        console.error('Get filter options error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch filter options'
+        });
+    }
+});
+
+// Export users to CSV
+router.get('/export', authenticateToken, async (req, res) => {
+    try {
+        // Check user permissions
+        const hasViewPermission = req.user.hasPermission('users', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('users', 'view_own');
+        const hasExportPermission = req.user.hasPermission('users', 'export');
+
+        if (!req.user.isAdmin && !hasViewPermission && !hasViewOwnPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view users.'
+            });
+        }
+
+        if (!req.user.isAdmin && !hasExportPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to export users.'
+            });
+        }
+
+        const {
+            search = '',
+            role = '',
+            isActive = '',
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
+
+        // Build query based on permissions
+        let query = {};
+
+        // If user has view_own permission but not view permission, only export users they created
+        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+            query.createdBy = req.user._id;
+        }
+
+        // Add search filter
+        if (search) {
+            query.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Add role filter
+        if (role) {
+            query.role = role;
+        }
+
+        // Add active status filter
+        if (isActive !== '') {
+            query.isActive = isActive === 'true';
+        }
+
+        // Build sort object
+        const sortObject = {};
+        sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        // Get all users matching the query (no pagination for export)
+        const users = await User.find(query)
+            .select('-password')
+            .sort(sortObject)
+            .populate('createdBy', 'username firstName lastName')
+            .lean();
+
+        // Convert to CSV format
+        const csvHeaders = [
+            'ID',
+            'Username',
+            'Email',
+            'First Name',
+            'Last Name',
+            'Phone',
+            'Role',
+            'Status',
+            'Created At',
+            'Created By',
+            'Last Login',
+            'Two Factor Enabled'
+        ];
+
+        // Get user's timezone and date format preferences
+        const userTimezone = req.user.userPreferences?.timezone || 'Asia/Beirut';
+        const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+
+        const csvRows = users.map(user => [
+            user._id,
+            user.username || '',
+            user.email || '',
+            user.firstName || '',
+            user.lastName || '',
+            user.phone || '',
+            user.role || '',
+            user.isActive ? 'Active' : 'Inactive',
+            user.createdAt ? moment(user.createdAt).tz(userTimezone).format(userDateFormat) : '',
+            user.createdBy ? `${user.createdBy.firstName} ${user.createdBy.lastName}` : 'System',
+            user.lastLogin ? moment(user.lastLogin).tz(userTimezone).format(userDateFormat) : '',
+            user.twoFactorEnabled ? 'Yes' : 'No'
+        ]);
+
+        // Combine headers and rows
+        const csvContent = [csvHeaders, ...csvRows]
+            .map(row => row.map(field => `"${field}"`).join(','))
+            .join('\n');
+
+        // Set response headers for CSV download
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="users-${new Date().toISOString().split('T')[0]}.csv"`);
+        
+        res.send(csvContent);
+
+    } catch (error) {
+        console.error('Export users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to export users'
+        });
+    }
+});
+
+// Get single user by ID with permission checking
+router.get('/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check user permissions
+        const hasViewPermission = req.user.hasPermission('users', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('users', 'view_own');
+
+        if (!req.user.isAdmin && !hasViewPermission && !hasViewOwnPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not have permission to view users.'
+            });
+        }
+
         const user = await User.findById(req.params.id).select('-password');
 
         if (!user) {
@@ -33,6 +303,16 @@ router.get('/:id', authenticateToken, requirePermission('users', 'view'), async 
                 success: false,
                 message: 'User not found'
             });
+        }
+
+        // If user has view_own permission but not view permission, check if they created this user
+        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+            if (user.createdBy.toString() !== req.user._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You can only view users you created.'
+                });
+            }
         }
 
         res.json({

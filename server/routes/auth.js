@@ -2320,8 +2320,10 @@ router.get('/audit-logs/export', authenticateToken, async (req, res) => {
             });
         }
 
-        // Use user's timezone for cutoff calculation
-        const userTimezone = req.query.timezone || 'Asia/Beirut';
+        // Use user's timezone and date format preferences
+        const userTimezone = req.user.userPreferences?.timezone || req.query.timezone || 'Asia/Beirut';
+        const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+        
         let cutoff;
         if (req.query.cutoff) {
             cutoff = moment.tz(req.query.cutoff, userTimezone).utc().toDate();
@@ -2391,7 +2393,7 @@ router.get('/audit-logs/export', authenticateToken, async (req, res) => {
             'Device': log.device || 'Unknown',
             'Country': log.location?.country || 'Unknown',
             'City': log.location?.city || 'Unknown',
-            'Timestamp': moment(log.timestamp).tz(userTimezone).format('YYYY-MM-DD HH:mm:ss'),
+            'Timestamp': moment(log.timestamp).tz(userTimezone).format(userDateFormat),
             'Details': log.details?.message || log.details?.reason || 'No additional details'
         }));
 

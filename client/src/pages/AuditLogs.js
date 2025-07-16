@@ -290,7 +290,7 @@ const AuditLogs = () => {
       }
 
       // Make the export request
-      const response = await api.get('/auth/audit-logs/export', { 
+      const response = await api.get('/auth/audit-logs/export', {
         params,
         responseType: 'blob' // Important for file download
       });
@@ -308,7 +308,7 @@ const AuditLogs = () => {
 
     } catch (error) {
       console.error('Error exporting audit logs:', error);
-      
+
       if (error.response?.status === 403) {
         setError('Access denied. You do not have permission to export audit logs.');
       } else {
@@ -654,7 +654,7 @@ const AuditLogs = () => {
         </div>
       </div>
 
-      {/* Filters Row - now above summary cards and table */}
+      {/* Filters Row */}
       <div className="filters-row">
         <div className="filters-group">
           <div className="filter-group">
@@ -706,7 +706,7 @@ const AuditLogs = () => {
             />
           </div>
           {(hasViewPermission || authService.isAdmin()) && (
-            <div className="filter-group">
+            <div className="filter-group users-filter">
               <h4>Users</h4>
               <Select
                 value={Array.isArray(filters.userId) ? filters.userId.map(userId => userOptions.find(option => option.value === userId)).filter(Boolean) : []}
@@ -724,14 +724,14 @@ const AuditLogs = () => {
               />
             </div>
           )}
-        </div>
-        <div className="filter-actions">
-          <button
-            className="clear-filters-btn"
-            onClick={handleClearFilters}
-          >
-            Clear All Filters
-          </button>
+          <div className="filter-actions">
+            <button
+              className="clear-filters-btn"
+              onClick={handleClearFilters}
+            >
+              Clear All Filters
+            </button>
+          </div>
         </div>
       </div>
 
