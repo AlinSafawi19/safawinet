@@ -175,11 +175,27 @@ auditLogSchema.statics.getPaginatedLogs = function(options) {
     device = null,
     location = null,
     sessionId = null,
-    filterUserId = null
+    filterUserId = null,
+    startDate = null,
+    endDate = null,
+    sortBy = 'timestamp',
+    sortOrder = 'desc'
   } = options;
 
   // Build comprehensive server-side query
-  const query = { timestamp: { $gte: cutoff } };
+  const query = {};
+  
+  // Handle date filtering with timezone awareness
+  if (startDate && endDate) {
+    // Custom date range provided (already converted to UTC by the route)
+    query.timestamp = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate)
+    };
+  } else {
+    // Use cutoff date (already converted to UTC by the route)
+    query.timestamp = { $gte: cutoff };
+  }
   
   // User filtering
   if (userId) query.userId = userId;
@@ -244,13 +260,25 @@ auditLogSchema.statics.getPaginatedLogs = function(options) {
   // Calculate pagination
   const skip = (page - 1) * limit;
 
+  // Build sort object with timezone-aware sorting
+  const sortObject = {};
+  
+  // Handle timestamp sorting (always sort by UTC timestamp for consistency)
+  if (sortBy === 'timestamp') {
+    sortObject.timestamp = sortOrder === 'desc' ? -1 : 1;
+  } else {
+    // For other fields, use normal sorting
+    sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+  }
+
   // Add debugging for query construction
   console.log('🔍 Database query:', JSON.stringify(query, null, 2));
+  console.log('📅 Sort configuration:', JSON.stringify(sortObject, null, 2));
 
   return Promise.all([
     this.countDocuments(query),
     this.find(query)
-      .sort({ timestamp: -1 })
+      .sort(sortObject)
       .skip(skip)
       .limit(limit)
       .select('-__v')
@@ -271,7 +299,9 @@ auditLogSchema.statics.getPaginatedLogs = function(options) {
       returnedRecords: logs.length,
       page: page,
       limit: limit,
-      totalPages: result.totalPages
+      totalPages: result.totalPages,
+      sortBy: sortBy,
+      sortOrder: sortOrder
     });
     
     return result;

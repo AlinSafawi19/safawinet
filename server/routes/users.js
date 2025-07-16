@@ -16,7 +16,11 @@ router.get('/', authenticateToken, async (req, res) => {
             role = '',
             isActive = '',
             sortBy = 'createdAt',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            createdAfter,
+            createdBefore,
+            createdBy = '',
+            userTimezone = 'Asia/Beirut'
         } = req.query;
 
         // Check user permissions
@@ -33,9 +37,53 @@ router.get('/', authenticateToken, async (req, res) => {
         // Build query based on permissions
         let query = {};
 
-        // If user has view_own permission but not view permission, only show users they created
-        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
-            query.createdBy = req.user._id;
+        // Exclude the currently logged-in user from the results
+        query._id = { $ne: req.user._id };
+
+        // Handle created by filter with permission checking
+        if (createdBy) {
+            // Split comma-separated values
+            const createdByValues = createdBy.split(',').map(val => val.trim()).filter(val => val);
+            
+            if (createdByValues.length === 0) {
+                // No valid values, apply permission-based filtering
+                if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                    query.createdBy = req.user._id;
+                }
+            } else {
+                // Handle multiple values
+                const orConditions = [];
+                const userIds = [];
+                for (const value of createdByValues) {
+                    if (value === 'system') {
+                        orConditions.push({ createdBy: { $exists: false } });
+                    } else if (value === 'me') {
+                        orConditions.push({ createdBy: req.user._id });
+                    } else {
+                        // For specific user IDs, validate that the current user has permission
+                        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                            if (value !== req.user._id.toString()) {
+                                return res.status(403).json({
+                                    success: false,
+                                    message: 'Access denied. You can only filter by users you created.'
+                                });
+                            }
+                        }
+                        userIds.push(value);
+                    }
+                }
+                if (userIds.length > 0) {
+                    orConditions.push({ createdBy: { $in: userIds } });
+                }
+                if (orConditions.length > 0) {
+                    query.$or = orConditions;
+                }
+            }
+        } else {
+            // If no createdBy filter is specified, apply permission-based filtering
+            if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                query.createdBy = req.user._id;
+            }
         }
 
         // Add search filter
@@ -59,9 +107,45 @@ router.get('/', authenticateToken, async (req, res) => {
             query.isActive = isActive === 'true';
         }
 
-        // Build sort object
+        // Add date range filter with timezone handling
+        if (createdAfter || createdBefore) {
+            query.createdAt = {};
+            
+            if (createdAfter) {
+                // createdAfter is already in UTC from client
+                query.createdAt.$gte = new Date(createdAfter);
+            }
+            
+            if (createdBefore) {
+                // createdBefore is already in UTC from client
+                query.createdAt.$lte = new Date(createdBefore);
+            }
+        }
+
+        // Build sort object with timezone-aware sorting
         const sortObject = {};
-        sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        
+        // Handle special cases for date fields with null values and timezone consistency
+        if (sortBy === 'lastLogin') {
+            // For lastLogin, handle null values by sorting them last
+            // Always sort by UTC timestamp for consistency with filtering
+            if (sortOrder === 'desc') {
+                sortObject.lastLogin = -1;
+                // Add secondary sort to ensure consistent ordering
+                sortObject.createdAt = -1;
+            } else {
+                sortObject.lastLogin = 1;
+                // Add secondary sort to ensure consistent ordering
+                sortObject.createdAt = 1;
+            }
+        } else if (sortBy === 'createdAt') {
+            // For createdAt, use normal sorting (already in UTC)
+            // This ensures consistency with the timezone-aware filtering
+            sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        } else {
+            // For other fields, use normal sorting
+            sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        }
 
         // Calculate pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -100,7 +184,10 @@ router.get('/', authenticateToken, async (req, res) => {
                     role,
                     isActive,
                     sortBy,
-                    sortOrder
+                    sortOrder,
+                    createdAfter,
+                    createdBefore,
+                    createdBy
                 }
             }
         });
@@ -126,8 +213,11 @@ router.get('/filter-options', authenticateToken, async (req, res) => {
             });
         }
 
-        // Get all active users for the filter dropdown
-        const users = await User.find({ isActive: true })
+        // Get all active users for the filter dropdown (excluding current user)
+        const users = await User.find({ 
+            isActive: true,
+            _id: { $ne: req.user._id }
+        })
             .select('_id firstName lastName username email')
             .sort({ firstName: 1, lastName: 1 })
             .lean();
@@ -184,15 +274,63 @@ router.get('/export', authenticateToken, async (req, res) => {
             role = '',
             isActive = '',
             sortBy = 'createdAt',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            createdAfter,
+            createdBefore,
+            createdBy = '',
+            userTimezoneParam = 'Asia/Beirut'
         } = req.query;
 
         // Build query based on permissions
         let query = {};
 
-        // If user has view_own permission but not view permission, only export users they created
-        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
-            query.createdBy = req.user._id;
+        // Exclude the currently logged-in user from the results
+        query._id = { $ne: req.user._id };
+
+        // Handle created by filter with permission checking
+        if (createdBy) {
+            // Split comma-separated values
+            const createdByValues = createdBy.split(',').map(val => val.trim()).filter(val => val);
+            
+            if (createdByValues.length === 0) {
+                // No valid values, apply permission-based filtering
+                if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                    query.createdBy = req.user._id;
+                }
+            } else {
+                // Handle multiple values
+                const orConditions = [];
+                const userIds = [];
+                for (const value of createdByValues) {
+                    if (value === 'system') {
+                        orConditions.push({ createdBy: { $exists: false } });
+                    } else if (value === 'me') {
+                        orConditions.push({ createdBy: req.user._id });
+                    } else {
+                        // For specific user IDs, validate that the current user has permission
+                        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                            if (value !== req.user._id.toString()) {
+                                return res.status(403).json({
+                                    success: false,
+                                    message: 'Access denied. You can only filter by users you created.'
+                                });
+                            }
+                        }
+                        userIds.push(value);
+                    }
+                }
+                if (userIds.length > 0) {
+                    orConditions.push({ createdBy: { $in: userIds } });
+                }
+                if (orConditions.length > 0) {
+                    query.$or = orConditions;
+                }
+            }
+        } else {
+            // If no createdBy filter is specified, apply permission-based filtering
+            if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                query.createdBy = req.user._id;
+            }
         }
 
         // Add search filter
@@ -216,9 +354,45 @@ router.get('/export', authenticateToken, async (req, res) => {
             query.isActive = isActive === 'true';
         }
 
-        // Build sort object
+        // Add date range filter with timezone handling
+        if (createdAfter || createdBefore) {
+            query.createdAt = {};
+            
+            if (createdAfter) {
+                // createdAfter is already in UTC from client
+                query.createdAt.$gte = new Date(createdAfter);
+            }
+            
+            if (createdBefore) {
+                // createdBefore is already in UTC from client
+                query.createdAt.$lte = new Date(createdBefore);
+            }
+        }
+
+        // Build sort object with timezone-aware sorting
         const sortObject = {};
-        sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        
+        // Handle special cases for date fields with null values and timezone consistency
+        if (sortBy === 'lastLogin') {
+            // For lastLogin, handle null values by sorting them last
+            // Always sort by UTC timestamp for consistency with filtering
+            if (sortOrder === 'desc') {
+                sortObject.lastLogin = -1;
+                // Add secondary sort to ensure consistent ordering
+                sortObject.createdAt = -1;
+            } else {
+                sortObject.lastLogin = 1;
+                // Add secondary sort to ensure consistent ordering
+                sortObject.createdAt = 1;
+            }
+        } else if (sortBy === 'createdAt') {
+            // For createdAt, use normal sorting (already in UTC)
+            // This ensures consistency with the timezone-aware filtering
+            sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        } else {
+            // For other fields, use normal sorting
+            sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        }
 
         // Get all users matching the query (no pagination for export)
         const users = await User.find(query)
@@ -244,7 +418,7 @@ router.get('/export', authenticateToken, async (req, res) => {
         ];
 
         // Get user's timezone and date format preferences
-        const userTimezone = req.user.userPreferences?.timezone || 'Asia/Beirut';
+        const userTimezone = req.user.userPreferences?.timezone || userTimezoneParam;
         const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
 
         const csvRows = users.map(user => [
@@ -556,6 +730,110 @@ router.put('/:id', authenticateToken, requirePermission('users', 'edit'), async 
     }
 });
 
+// Bulk delete users
+router.delete('/bulk', authenticateToken, requirePermission('users', 'delete'), async (req, res) => {
+    try {
+        const { userIds } = req.body;
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'User IDs array is required and must not be empty'
+            });
+        }
+
+        // Validate that all IDs are valid ObjectIds
+        const validIds = userIds.filter(id => {
+            try {
+                return require('mongoose').Types.ObjectId.isValid(id);
+            } catch (error) {
+                return false;
+            }
+        });
+
+        if (validIds.length !== userIds.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'One or more user IDs are invalid'
+            });
+        }
+
+        // Get all users to be deleted
+        const usersToDelete = await User.find({ _id: { $in: validIds } });
+
+        if (usersToDelete.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No valid users found to delete'
+            });
+        }
+
+        // Check permissions and validation rules
+        const hasViewOwnPermission = req.user.hasPermission('users', 'view_own');
+        const hasViewPermission = req.user.hasPermission('users', 'view');
+        
+        const errors = [];
+        const usersToDeleteIds = [];
+
+        for (const user of usersToDelete) {
+            // Prevent deleting the admin user
+            if (user.isAdmin && user.username === 'admin') {
+                errors.push(`Cannot delete the main admin user (${user.username})`);
+                continue;
+            }
+
+            // Prevent deleting yourself
+            if (user._id.toString() === req.user._id.toString()) {
+                errors.push('Cannot delete your own account');
+                continue;
+            }
+
+            // Check if user has view_own permission and is trying to delete a user they didn't create
+            if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+                if (user.createdBy.toString() !== req.user._id.toString()) {
+                    errors.push(`Access denied. You can only delete users you created (${user.username})`);
+                    continue;
+                }
+            }
+
+            usersToDeleteIds.push(user._id);
+        }
+
+        // If there are any errors, return them
+        if (errors.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Some users could not be deleted',
+                errors: errors
+            });
+        }
+
+        // If no users can be deleted, return error
+        if (usersToDeleteIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No users can be deleted based on your permissions'
+            });
+        }
+
+        // Delete the users
+        const deleteResult = await User.deleteMany({ _id: { $in: usersToDeleteIds } });
+
+        res.json({
+            success: true,
+            message: `${deleteResult.deletedCount} user(s) deleted successfully`,
+            deletedCount: deleteResult.deletedCount
+        });
+
+    } catch (error) {
+        console.error('Bulk delete users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete users'
+        });
+    }
+});
+
 // Delete user
 router.delete('/:id', authenticateToken, requirePermission('users', 'delete'), async (req, res) => {
     try {
@@ -582,6 +860,19 @@ router.delete('/:id', authenticateToken, requirePermission('users', 'delete'), a
                 success: false,
                 message: 'Cannot delete your own account'
             });
+        }
+
+        // Check if user has view_own permission and is trying to delete a user they didn't create
+        const hasViewOwnPermission = req.user.hasPermission('users', 'view_own');
+        const hasViewPermission = req.user.hasPermission('users', 'view');
+        
+        if (hasViewOwnPermission && !hasViewPermission && !req.user.isAdmin) {
+            if (user.createdBy.toString() !== req.user._id.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied. You can only delete users you created.'
+                });
+            }
         }
 
         await User.findByIdAndDelete(req.params.id);
@@ -646,7 +937,7 @@ router.put('/:id/permissions', authenticateToken, requirePermission('users', 'ed
 router.get('/permissions/available', authenticateToken, requirePermission('users', 'view'), (req, res) => {
     const availablePages = [
         'users',
-        'audit_logs'
+        'audit-logs'
     ];
 
     const availableActions = ['view', 'view_own', 'add', 'edit', 'delete', 'export'];
@@ -760,4 +1051,5 @@ router.get('/:id/preferences', authenticateToken, async (req, res) => {
     }
 });
 
+module.exports = router; 
 module.exports = router; 

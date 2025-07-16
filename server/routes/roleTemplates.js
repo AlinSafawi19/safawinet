@@ -402,7 +402,7 @@ router.get('/permissions/available', authenticateToken, requirePermission('users
                 ]
             },
             {
-                page: 'audit_logs',
+                page: 'audit-logs',
                 name: 'Audit Logs',
                 description: 'View and manage system audit logs',
                 actions: [

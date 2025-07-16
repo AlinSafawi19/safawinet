@@ -32,6 +32,7 @@ class UserService {
             if (params.isActive !== undefined && params.isActive !== '') {
                 queryParams.append('isActive', params.isActive);
             }
+            if (params.createdBy) queryParams.append('createdBy', params.createdBy);
             
             // Add sorting parameters
             if (params.sortBy) queryParams.append('sortBy', params.sortBy);
@@ -167,6 +168,28 @@ class UserService {
             return data;
         } catch (error) {
             console.error('Delete user error:', error);
+            throw error;
+        }
+    }
+
+    // Bulk delete users
+    async bulkDeleteUsers(userIds) {
+        try {
+            const response = await fetch(`${this.baseURL}/users/bulk`, {
+                method: 'DELETE',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ userIds })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to delete users');
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Bulk delete users error:', error);
             throw error;
         }
     }

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending } from 'react-icons/hi';
+import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil } from 'react-icons/hi';
 import { FiDownload, FiCalendar, FiClock, FiXCircle } from 'react-icons/fi';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import moment from 'moment-timezone';
+import Swal from 'sweetalert2';
 import userService from '../services/userService';
 import authService from '../services/authService';
 import roleTemplateService from '../services/roleTemplateService';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 import 'react-datepicker/dist/react-datepicker.css';
+import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 
 const Users = () => {
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ const Users = () => {
     search: '',
     status: '',
     role: '',
-    createdBy: '',
+    createdBy: [], // Changed to array for multi-select
     createdDateRange: null
   });
   const [sorting, setSorting] = useState({
@@ -44,6 +46,11 @@ const Users = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
+  // Delete functionality state
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
   const hasPermission = (page, action) => {
     if (!currentUser) return false;
     return authService.hasPermission(page, action);
@@ -52,6 +59,8 @@ const Users = () => {
   const canViewUsers = hasPermission('users', 'view');
   const canViewOwnUsers = hasPermission('users', 'view_own');
   const canCreateUsers = hasPermission('users', 'add');
+  const canEditUsers = hasPermission('users', 'edit');
+  const canDeleteUsers = hasPermission('users', 'delete');
   const canExportUsers = hasPermission('users', 'export');
 
   useEffect(() => {
@@ -105,7 +114,7 @@ const Users = () => {
         const options = [
           { value: '', label: 'All Roles' },
           ...templates.map(template => ({
-            value: template.name,
+            value: template.name.toLowerCase(),
             label: template.name
           }))
         ];
@@ -148,23 +157,16 @@ const Users = () => {
   const fetchCreatedByOptions = async () => {
     try {
       setLoadingCreatedBy(true);
-      const response = await userService.getUsers({
-        page: 1,
-        limit: 1000, // Get all users
-        sortField: 'firstName',
-        sortOrder: 'asc'
-      });
+      const response = await userService.getFilterOptions();
 
-      console.log('Users API response for Created By options:', response);
+      console.log('Filter options API response:', response);
 
-      if (response.data && response.data.users) {
+      if (response.success && response.data && response.data.users) {
         const options = [
           { value: '', label: 'All Creators' },
           { value: 'system', label: 'System' },
-          ...response.data.users.map(user => ({
-            value: user._id,
-            label: `${user.firstName} ${user.lastName} (${user.username || user.email})`
-          }))
+          { value: 'me', label: 'Me' },
+          ...response.data.users
         ];
         console.log('Created By options created:', options);
         setCreatedByOptions(options);
@@ -172,7 +174,8 @@ const Users = () => {
         console.log('No users found, using fallback options');
         setCreatedByOptions([
           { value: '', label: 'All Creators' },
-          { value: 'system', label: 'System' }
+          { value: 'system', label: 'System' },
+          { value: 'me', label: 'Me' }
         ]);
       }
     } catch (error) {
@@ -180,7 +183,8 @@ const Users = () => {
       // Fallback to basic options if API fails
       setCreatedByOptions([
         { value: '', label: 'All Creators' },
-        { value: 'system', label: 'System' }
+        { value: 'system', label: 'System' },
+        { value: 'me', label: 'Me' }
       ]);
     } finally {
       setLoadingCreatedBy(false);
@@ -201,21 +205,42 @@ const Users = () => {
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        sortField: sorting.field,
+        sortBy: sorting.field,
         sortOrder: sorting.order,
-        ...filters
+        search: filters.search,
+        role: filters.role,
+        isActive: filters.status,
+        createdBy: filters.createdBy
       };
+
+      // Handle multiple createdBy values
+      if (filters.createdBy && Array.isArray(filters.createdBy) && filters.createdBy.length > 0) {
+        // Join multiple values with commas for backend
+        params.createdBy = filters.createdBy.join(',');
+      }
 
       // Convert date range to separate parameters for API
       if (filters.createdDateRange) {
+        const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
+
         if (filters.createdDateRange.start) {
-          params.createdAfter = filters.createdDateRange.start;
+          // Convert user's local date to UTC for database query
+          // Start of day in user's timezone converted to UTC
+          const startDate = moment.tz(filters.createdDateRange.start, userTimezone).startOf('day').utc().toISOString();
+          params.createdAfter = startDate;
         }
         if (filters.createdDateRange.end) {
-          params.createdBefore = filters.createdDateRange.end;
+          // Convert user's local date to UTC for database query
+          // End of day in user's timezone converted to UTC
+          const endDate = moment.tz(filters.createdDateRange.end, userTimezone).endOf('day').utc().toISOString();
+          params.createdBefore = endDate;
         }
         delete params.createdDateRange; // Remove the object from params
       }
+
+      // Add user's timezone to the request for server-side processing
+      const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
+      params.userTimezone = userTimezone;
 
       const response = await userService.getUsers(params);
 
@@ -255,7 +280,7 @@ const Users = () => {
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: value
+      [filterType]: filterType === 'createdBy' ? (Array.isArray(value) ? value : []) : value
     }));
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
@@ -273,7 +298,7 @@ const Users = () => {
   };
 
   // Handle sorting changes
-  const handleSortChange = (field) => {
+  const handleSortChange = (field, order) => {
     setSorting(prev => ({
       field,
       order: prev.field === field && prev.order === 'asc' ? 'desc' : 'asc'
@@ -287,7 +312,7 @@ const Users = () => {
       search: '',
       status: '',
       role: '',
-      createdBy: '',
+      createdBy: [], // Changed to empty array
       createdDateRange: null
     });
     setSorting({
@@ -297,6 +322,109 @@ const Users = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  // Delete functionality
+  const handleDeleteUser = async (userId) => {
+    try {
+      setDeleteLoading(true);
+      setError('');
+
+      const response = await userService.deleteUser(userId);
+
+      if (response.success) {
+        // Remove the deleted user from the list
+        setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
+
+        // Update total count
+        setPagination(prev => ({
+          ...prev,
+          total: prev.total - 1
+        }));
+
+        // Show success message
+        showSuccessToast('User deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError(error.message || 'Failed to delete user');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    if (selectedUsers.length === 0) {
+      setError('No users selected for deletion');
+      return;
+    }
+
+    try {
+      setBulkDeleteLoading(true);
+      setError('');
+
+      const userIds = selectedUsers.map(user => user._id);
+      const response = await userService.bulkDeleteUsers(userIds);
+
+      if (response.success) {
+        // Remove deleted users from the list
+        setUsers(prevUsers => prevUsers.filter(user => !selectedUsers.includes(user)));
+
+        // Update total count
+        setPagination(prev => ({
+          ...prev,
+          total: prev.total - response.deletedCount
+        }));
+
+        // Clear selection
+        setSelectedUsers([]);
+
+        // Show success message
+        showSuccessToast(`${response.deletedCount} user(s) deleted successfully`);
+      }
+    } catch (error) {
+      console.error('Error bulk deleting users:', error);
+      setError(error.message || 'Failed to delete users');
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
+  const handleUserSelection = (user, isSelected) => {
+    if (isSelected) {
+      setSelectedUsers(prev => [...prev, user]);
+    } else {
+      setSelectedUsers(prev => prev.filter(u => u._id !== user._id));
+    }
+  };
+
+  const handleSelectAll = (isSelected) => {
+    if (isSelected) {
+      setSelectedUsers([...users]);
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const confirmDeleteUser = async (user) => {
+    const result = await Swal.fire({
+      title: 'Delete User',
+      text: `Are you sure you want to delete user ${user.firstName} ${user.lastName} (${user.username || user.email})?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete user',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      customClass: {
+        confirmButton: 'swal2-confirm-danger',
+        cancelButton: 'swal2-cancel'
+      }
+    });
+
+    if (result.isConfirmed) {
+      handleDeleteUser(user._id);
+    }
+  };
 
 
   // Export users to CSV
@@ -316,6 +444,34 @@ const Users = () => {
         sortField: sorting.field,
         sortOrder: sorting.order
       };
+
+      // Handle multiple createdBy values for export
+      if (filters.createdBy && Array.isArray(filters.createdBy) && filters.createdBy.length > 0) {
+        exportParams.createdBy = filters.createdBy.join(',');
+      }
+
+      // Convert date range to separate parameters for API
+      if (filters.createdDateRange) {
+        const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
+
+        if (filters.createdDateRange.start) {
+          // Convert user's local date to UTC for database query
+          // Start of day in user's timezone converted to UTC
+          const startDate = moment.tz(filters.createdDateRange.start, userTimezone).startOf('day').utc().toISOString();
+          exportParams.createdAfter = startDate;
+        }
+        if (filters.createdDateRange.end) {
+          // Convert user's local date to UTC for database query
+          // End of day in user's timezone converted to UTC
+          const endDate = moment.tz(filters.createdDateRange.end, userTimezone).endOf('day').utc().toISOString();
+          exportParams.createdBefore = endDate;
+        }
+        delete exportParams.createdDateRange; // Remove the object from params
+      }
+
+      // Add user's timezone to the request for server-side processing
+      const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
+      exportParams.userTimezone = userTimezone;
 
       const blob = await userService.exportUsers(exportParams);
 
@@ -388,8 +544,8 @@ const Users = () => {
   // Filter options
   const statusOptions = [
     { value: '', label: 'All Status' },
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' }
+    { value: 'true', label: 'Active' },
+    { value: 'false', label: 'Inactive' }
   ];
 
   const sortOptions = [
@@ -556,16 +712,61 @@ const Users = () => {
               Export CSV
             </button>
           )}
-          {canCreateUsers && (
-            <button
-              className="create-user-btn"
-              onClick={() => navigate('/users/create')}
-            >
-              <HiUserAdd />
-              Create User
-            </button>
-          )}
         </div>
+      </div>
+
+      {/* Bulk Actions and Create User - Moved to right side */}
+      <div className="action-buttons-container">
+        {/* Selected Count Display */}
+        {canDeleteUsers && selectedUsers.length > 0 && (
+          <span className="selected-count-display">
+            {selectedUsers.length} user(s) selected
+          </span>
+        )}
+
+        {/* Bulk Delete Button */}
+        {canDeleteUsers && selectedUsers.length > 0 && (
+          <button
+            className="bulk-delete-btn"
+            onClick={async () => {
+              const result = await Swal.fire({
+                title: 'Delete Multiple Users',
+                text: `Are you sure you want to delete ${selectedUsers.length} selected user(s)?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: `Yes, delete ${selectedUsers.length} user(s)`,
+                cancelButtonText: 'Cancel',
+                reverseButtons: true,
+                customClass: {
+                  confirmButton: 'swal2-confirm-danger',
+                  cancelButton: 'swal2-cancel'
+                }
+              });
+
+              if (result.isConfirmed) {
+                handleBulkDeleteUsers();
+              }
+            }}
+            disabled={bulkDeleteLoading}
+            title="Delete selected users"
+          >
+            <HiTrash />
+            {bulkDeleteLoading ? 'Deleting...' : `Delete ${selectedUsers.length}`}
+          </button>
+        )}
+
+        {/* Create User Button */}
+        {canCreateUsers && (
+          <button
+            className="create-user-btn"
+            onClick={() => navigate('/users/create')}
+          >
+            <HiUserAdd />
+            Create User
+          </button>
+        )}
       </div>
 
       {/* Search and Filters Row */}
@@ -606,8 +807,8 @@ const Users = () => {
                   setFilters(prev => ({
                     ...prev,
                     createdDateRange: {
-                      start: start.toISOString().split('T')[0],
-                      end: end.toISOString().split('T')[0]
+                      start: start.toISOString().split('T')[0], // Keep as YYYY-MM-DD for display
+                      end: end.toISOString().split('T')[0]      // Keep as YYYY-MM-DD for display
                     }
                   }));
                   setPagination(prev => ({ ...prev, page: 1 }));
@@ -658,14 +859,19 @@ const Users = () => {
               <div className="filter-group">
                 <h4>Created By</h4>
                 <Select
-                  value={createdByOptions.find(option => option.value === filters.createdBy)}
-                  onChange={(selectedOption) => handleFilterChange('createdBy', selectedOption ? selectedOption.value : '')}
+                  value={Array.isArray(filters.createdBy) ? filters.createdBy.map(value => createdByOptions.find(option => option.value === value)).filter(Boolean) : []}
+                  onChange={(selectedOptions) => {
+                    const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                    handleFilterChange('createdBy', selectedValues);
+                  }}
                   options={createdByOptions}
                   styles={customStyles}
-                  placeholder={loadingCreatedBy ? "Loading creators..." : "Select creator..."}
+                  placeholder={loadingCreatedBy ? "Loading creators..." : "Select creators..."}
+                  isMulti
                   isClearable
                   isSearchable
                   isLoading={loadingCreatedBy}
+                  closeMenuOnSelect={false}
                 />
               </div>
             )}
@@ -678,38 +884,41 @@ const Users = () => {
                 options={sortOptions}
                 styles={customStyles}
                 placeholder="Select sort field..."
-                isClearable={false}
+                isClearable
                 isSearchable
               />
             </div>
 
             <div className="sort-order-group">
-              <h4>Order</h4>
+              <h4>Sort Order</h4>
               <div className="sort-order-buttons">
                 <button
                   className={`sort-order-btn ${sorting.order === 'asc' ? 'active' : ''}`}
-                  onClick={() => setSorting(prev => ({ ...prev, order: 'asc' }))}
-                  title="Ascending"
+                  onClick={() => handleSortChange(sorting.field, 'asc')}
+                  title="Sort ascending"
                 >
                   <HiSortAscending />
                 </button>
                 <button
                   className={`sort-order-btn ${sorting.order === 'desc' ? 'active' : ''}`}
-                  onClick={() => setSorting(prev => ({ ...prev, order: 'desc' }))}
-                  title="Descending"
+                  onClick={() => handleSortChange(sorting.field, 'desc')}
+                  title="Sort descending"
                 >
                   <HiSortDescending />
                 </button>
               </div>
             </div>
-            <div className="filter-actions">
-              <button
-                className="clear-filters-btn"
-                onClick={handleClearFilters}
-              >
-                Clear All Filters
-              </button>
-            </div>
+          </div>
+
+          {/* Filter Actions */}
+          <div className="filter-actions">
+            <button
+              className="clear-filters-btn"
+              onClick={handleClearFilters}
+              title="Clear all filters"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
       </div>
@@ -736,6 +945,16 @@ const Users = () => {
               <table className="users-table">
                 <thead>
                   <tr>
+                    {canDeleteUsers && (
+                      <th className="checkbox-column">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.length === users.length && users.length > 0}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          title="Select all users"
+                        />
+                      </th>
+                    )}
                     <th>Name</th>
                     <th>Username</th>
                     <th>Email</th>
@@ -745,11 +964,24 @@ const Users = () => {
                     <th>Last Login</th>
                     <th>Created</th>
                     <th>Created By</th>
+                    {(canEditUsers || canDeleteUsers) && (
+                      <th className="actions-column">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {users.map(user => (
                     <tr key={user._id}>
+                      {canDeleteUsers && (
+                        <td className="checkbox-column">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.some(u => u._id === user._id)}
+                            onChange={(e) => handleUserSelection(user, e.target.checked)}
+                            title={`Select ${user.firstName} ${user.lastName}`}
+                          />
+                        </td>
+                      )}
                       <td>
                         <div className="user-info">
                           <div
@@ -829,6 +1061,38 @@ const Users = () => {
                           <span className="created-by">System</span>
                         )}
                       </td>
+                      {(canEditUsers || canDeleteUsers) && (
+                        <td className="actions-column">
+                          <div className="action-buttons">
+                            <button
+                              className="action-btn view-btn"
+                              onClick={() => navigate(`/users/${user._id}`)}
+                              title="View user details"
+                            >
+                              <HiEye />
+                            </button>
+                            {canEditUsers && (
+                              <button
+                                className="action-btn edit-btn"
+                                onClick={() => navigate(`/users/${user._id}/edit`)}
+                                title="Edit user"
+                              >
+                                <HiPencil />
+                              </button>
+                            )}
+                            {canDeleteUsers && (
+                              <button
+                                className="action-btn delete-btn"
+                                onClick={() => confirmDeleteUser(user)}
+                                title="Delete user"
+                                disabled={deleteLoading}
+                              >
+                                <HiTrash />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -966,6 +1230,8 @@ const Users = () => {
           </>
         )}
       </div>
+
+
     </div>
   );
 };

@@ -2131,21 +2131,64 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit) || 25)); // Max 1000, min 1, default 25
 
-        // Use user's timezone for cutoff calculation
-        const userTimezone = req.query.timezone || 'Asia/Beirut';
+        // Get user's timezone preference
+        const userTimezone = req.user.userPreferences?.timezone || req.query.timezone || 'Asia/Beirut';
+        
+        // Handle timezone-aware date filtering
         let cutoff;
         if (req.query.cutoff) {
-            // Interpret cutoff in user's timezone, then convert to UTC for MongoDB
-            cutoff = moment.tz(req.query.cutoff, userTimezone).utc().toDate();
+            // Frontend sends UTC timestamps, so we can use them directly
+            cutoff = new Date(req.query.cutoff);
         } else {
-            // Default to 24 hours ago in user's timezone
-            cutoff = moment.tz(userTimezone).subtract(24, 'hours').utc().toDate();
+            // Calculate cutoff in user's timezone, then convert to UTC for database query
+            const now = moment.tz(userTimezone);
+            let cutoffInUserTz;
+            
+            // Determine the date range based on query parameters or default to 24h
+            const dateRange = req.query.dateRange || '24h';
+            switch (dateRange) {
+                case '1h':
+                    cutoffInUserTz = now.clone().subtract(1, 'hour');
+                    break;
+                case '24h':
+                    cutoffInUserTz = now.clone().subtract(24, 'hours');
+                    break;
+                case '7d':
+                    cutoffInUserTz = now.clone().subtract(7, 'days');
+                    break;
+                case '30d':
+                    cutoffInUserTz = now.clone().subtract(30, 'days');
+                    break;
+                default:
+                    cutoffInUserTz = now.clone().subtract(24, 'hours');
+            }
+            
+            // Convert to UTC for database query
+            cutoff = cutoffInUserTz.utc().toDate();
+        }
+
+        // Handle custom date range filtering if provided
+        let customDateRange = {};
+        if (req.query.startDate && req.query.endDate) {
+            // Convert user timezone dates to UTC for database query
+            const startDate = moment.tz(req.query.startDate, userTimezone).utc().toDate();
+            const endDate = moment.tz(req.query.endDate, userTimezone).utc().toDate();
+            
+            customDateRange = {
+                $gte: startDate,
+                $lte: endDate
+            };
         }
 
         // Build query with enhanced filtering
-        const query = {
-            timestamp: { $gte: cutoff }
-        };
+        const query = {};
+
+        // Apply date filtering
+        if (Object.keys(customDateRange).length > 0) {
+            query.timestamp = customDateRange;
+        } else {
+            query.timestamp = { $gte: cutoff };
+        }
 
         // Apply permission-based filtering
         let filterUserId = null;
@@ -2205,7 +2248,9 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
             action: req.query.action && req.query.action.trim() ? req.query.action.trim() : null,
             riskLevel: req.query.riskLevel && req.query.riskLevel.trim() ? req.query.riskLevel.trim() : null,
             success: req.query.success !== undefined && req.query.success !== '' ? req.query.success === 'true' : null,
-            filterUserId: req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission) ? req.query.userId.trim() : null
+            filterUserId: req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission) ? req.query.userId.trim() : null,
+            sortBy: req.query.sortBy || 'timestamp',
+            sortOrder: req.query.sortOrder || 'desc'
         };
 
         // Add debugging logs to verify server-side filtering
@@ -2216,6 +2261,7 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
             riskLevel: filterParams.riskLevel,
             success: filterParams.success,
             cutoff: filterParams.cutoff,
+            userTimezone: userTimezone,
             isAdmin: req.user.isAdmin,
             hasViewPermission,
             hasViewOwnPermission,
@@ -2282,7 +2328,8 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
                 summary: {
                     highRiskCount,
                     failedLoginsCount
-                }
+                },
+                timezone: userTimezone // Send back the timezone used for reference
             }
         });
     } catch (error) {
@@ -2326,8 +2373,10 @@ router.get('/audit-logs/export', authenticateToken, async (req, res) => {
         
         let cutoff;
         if (req.query.cutoff) {
-            cutoff = moment.tz(req.query.cutoff, userTimezone).utc().toDate();
+            // Frontend now sends UTC timestamps, so we can use them directly
+            cutoff = new Date(req.query.cutoff);
         } else {
+            // Default to 24 hours ago in user's timezone, converted to UTC
             cutoff = moment.tz(userTimezone).subtract(24, 'hours').utc().toDate();
         }
 

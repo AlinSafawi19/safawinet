@@ -50,7 +50,9 @@ const AuditLogs = () => {
     riskLevel: '',
     success: '',
     dateRange: '24h',
-    userId: '' // Changed to array for multi-select
+    userId: '', // Changed to array for multi-select
+    sortBy: 'timestamp',
+    sortOrder: 'desc'
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -110,24 +112,24 @@ const AuditLogs = () => {
     try {
       const api = createApiInstance();
 
-      // Calculate date range in user's timezone
+      // Calculate date range in user's timezone, then convert to UTC for backend
       let cutoff;
       const now = moment.tz(userTimezone);
       switch (filters.dateRange) {
         case '1h':
-          cutoff = now.clone().subtract(1, 'hour');
+          cutoff = now.clone().subtract(1, 'hour').utc();
           break;
         case '24h':
-          cutoff = now.clone().subtract(24, 'hours');
+          cutoff = now.clone().subtract(24, 'hours').utc();
           break;
         case '7d':
-          cutoff = now.clone().subtract(7, 'days');
+          cutoff = now.clone().subtract(7, 'days').utc();
           break;
         case '30d':
-          cutoff = now.clone().subtract(30, 'days');
+          cutoff = now.clone().subtract(30, 'days').utc();
           break;
         default:
-          cutoff = now.clone().subtract(24, 'hours');
+          cutoff = now.clone().subtract(24, 'hours').utc();
       }
 
       // Build query parameters
@@ -135,7 +137,9 @@ const AuditLogs = () => {
         page: pagination.page,
         limit: pagination.limit,
         cutoff: cutoff.toISOString(),
-        timezone: userTimezone // Send user's timezone to backend
+        timezone: userTimezone, // Send user's timezone to backend for display purposes
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder
       };
 
       if (filters.action) params.action = filters.action;
@@ -256,30 +260,32 @@ const AuditLogs = () => {
       setLoading(true);
       const api = createApiInstance();
 
-      // Calculate date range in user's timezone
+      // Calculate date range in user's timezone, then convert to UTC for backend
       let cutoff;
       const now = moment.tz(userTimezone);
       switch (filters.dateRange) {
         case '1h':
-          cutoff = now.clone().subtract(1, 'hour');
+          cutoff = now.clone().subtract(1, 'hour').utc();
           break;
         case '24h':
-          cutoff = now.clone().subtract(24, 'hours');
+          cutoff = now.clone().subtract(24, 'hours').utc();
           break;
         case '7d':
-          cutoff = now.clone().subtract(7, 'days');
+          cutoff = now.clone().subtract(7, 'days').utc();
           break;
         case '30d':
-          cutoff = now.clone().subtract(30, 'days');
+          cutoff = now.clone().subtract(30, 'days').utc();
           break;
         default:
-          cutoff = now.clone().subtract(24, 'hours');
+          cutoff = now.clone().subtract(24, 'hours').utc();
       }
 
       // Build query parameters for export
       const params = {
         cutoff: cutoff.toISOString(),
-        timezone: userTimezone
+        timezone: userTimezone,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder
       };
 
       if (filters.action) params.action = filters.action;
@@ -326,7 +332,9 @@ const AuditLogs = () => {
       riskLevel: '',
       success: '',
       dateRange: '24h',
-      userId: [] // Changed to empty array
+      userId: [], // Changed to empty array
+      sortBy: 'timestamp',
+      sortOrder: 'desc'
     });
     setPagination(prev => ({ ...prev, page: 1 }));
   };
@@ -340,7 +348,9 @@ const AuditLogs = () => {
           riskLevel: '',
           success: 'false',
           dateRange: '24h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'high_risk':
@@ -349,7 +359,9 @@ const AuditLogs = () => {
           riskLevel: 'high',
           success: '',
           dateRange: '24h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'critical_events':
@@ -358,7 +370,9 @@ const AuditLogs = () => {
           riskLevel: 'critical',
           success: '',
           dateRange: '24h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'successful_logins':
@@ -367,7 +381,9 @@ const AuditLogs = () => {
           riskLevel: '',
           success: 'true',
           dateRange: '24h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'two_factor':
@@ -376,7 +392,9 @@ const AuditLogs = () => {
           riskLevel: '',
           success: '',
           dateRange: '24h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'security_alerts':
@@ -385,7 +403,9 @@ const AuditLogs = () => {
           riskLevel: '',
           success: '',
           dateRange: '24h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'recent_hour':
@@ -394,7 +414,9 @@ const AuditLogs = () => {
           riskLevel: '',
           success: '',
           dateRange: '1h',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       case 'last_week':
@@ -403,7 +425,9 @@ const AuditLogs = () => {
           riskLevel: '',
           success: '',
           dateRange: '7d',
-          userId: []
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
         });
         break;
       default:
@@ -477,6 +501,29 @@ const AuditLogs = () => {
     { value: 100, label: '100 rows' },
     { value: 500, label: '500 rows' },
     { value: 1000, label: '1000 rows' }
+  ];
+
+  // Handle sort changes
+  const handleSortChange = (sortType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [sortType]: value
+    }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+  };
+
+  // Sort options
+  const sortByOptions = [
+    { value: 'timestamp', label: 'Timestamp' },
+    { value: 'action', label: 'Action' },
+    { value: 'riskLevel', label: 'Risk Level' },
+    { value: 'success', label: 'Status' },
+    { value: 'ip', label: 'IP Address' }
+  ];
+
+  const sortOrderOptions = [
+    { value: 'desc', label: 'Newest First' },
+    { value: 'asc', label: 'Oldest First' }
   ];
 
   // Custom styles for React Select
@@ -724,6 +771,30 @@ const AuditLogs = () => {
               />
             </div>
           )}
+          <div className="filter-group">
+            <h4>Sort By</h4>
+            <Select
+              value={sortByOptions.find(option => option.value === filters.sortBy)}
+              onChange={(selectedOption) => handleSortChange('sortBy', selectedOption ? selectedOption.value : 'timestamp')}
+              options={sortByOptions}
+              styles={customStyles}
+              placeholder="Select sort field..."
+              isClearable
+              isSearchable
+            />
+          </div>
+          <div className="filter-group">
+            <h4>Sort Order</h4>
+            <Select
+              value={sortOrderOptions.find(option => option.value === filters.sortOrder)}
+              onChange={(selectedOption) => handleSortChange('sortOrder', selectedOption ? selectedOption.value : 'desc')}
+              options={sortOrderOptions}
+              styles={customStyles}
+              placeholder="Select sort order..."
+              isClearable
+              isSearchable
+            />
+          </div>
           <div className="filter-actions">
             <button
               className="clear-filters-btn"

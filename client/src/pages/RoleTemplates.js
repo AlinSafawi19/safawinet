@@ -193,7 +193,7 @@ const RoleTemplates = () => {
             ]
         },
         {
-            page: 'audit_logs',
+            page: 'audit-logs',
             name: 'Audit Logs',
             description: 'View and manage system audit logs',
             actions: [
@@ -516,7 +516,7 @@ const RoleTemplates = () => {
                 }
             }
             // Audit logs logic
-            if (page === 'audit_logs') {
+            if (page === 'audit-logs') {
                 if (checked && action === 'view' && willHave.includes('view_own')) {
                     showWarningToast('Invalid Permission', 'Cannot select both "View Audit Logs" and "View Own Logs".');
                     return prev;
@@ -569,7 +569,7 @@ const RoleTemplates = () => {
                     return { ...permission, actions };
                 }
                 
-                if (permission.page === 'audit_logs') {
+                if (permission.page === 'audit-logs') {
                     const actions = [...permission.actions];
                     
                     // Mutually exclusive view/view_own
@@ -888,7 +888,7 @@ const RoleTemplates = () => {
                 case 'users':
                     icons.push('👥');
                     break;
-                case 'audit_logs':
+                case 'audit-logs':
                     icons.push('📋');
                     break;
                 case 'settings':
