@@ -83,8 +83,26 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
     // Add Users menu item if user has permission
     const currentUser = authService.getCurrentUser();
     const canViewUsers = currentUser && (currentUser.isAdmin || authService.hasPermission('users', 'view') || authService.hasPermission('users', 'view_own'));
+    const canAddUsers = currentUser && (currentUser.isAdmin || authService.hasPermission('users', 'add'));
 
     if (canViewUsers) {
+        // Build submenu items based on permissions
+        const submenuItems = [
+            { id: 'users', label: 'View All Users', path: '/users' }
+        ];
+
+        // Only show Create User if user has add permission
+        if (canAddUsers) {
+            submenuItems.push({ id: 'create-user', label: 'Create User', path: '/users/create' });
+        }
+
+        // Only show Role Templates if user has add permission (for creating templates)
+        if (canAddUsers) {
+            submenuItems.push({ id: 'role-templates', label: 'Role Templates', path: '/users/role-templates' });
+        }
+
+        submenuItems.push({ id: 'user-reports', label: 'User Reports', path: '/users/reports' });
+
         menuSections.push({
             name: 'Administration',
             items: [
@@ -92,12 +110,7 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
                     id: 'users',
                     label: 'Users',
                     icon: <HiOutlineUserGroup />,
-                    submenu: [
-                        { id: 'users', label: 'View All Users', path: '/users' },
-                        { id: 'create-user', label: 'Create User', path: '/users/create' },
-                        { id: 'role-templates', label: 'Role Templates', path: '/users/role-templates' },
-                        { id: 'user-reports', label: 'User Reports', path: '/users/reports' },
-                    ],
+                    submenu: submenuItems,
                 }
             ]
         });

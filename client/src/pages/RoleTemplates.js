@@ -22,16 +22,37 @@ import {
     FiLock,
     FiUnlock,
     FiAlertCircle,
-    FiCheckCircle,
     FiToggleLeft,
     FiToggleRight,
     FiMoreVertical,
     FiSearch
 } from 'react-icons/fi';
 import roleTemplateService from '../services/roleTemplateService';
+import { useNavigate } from 'react-router-dom';
 
 const RoleTemplates = () => {
     const user = authService.getCurrentUser();
+    const navigate = useNavigate();
+
+    // Check permissions
+    const hasPermission = (page, action) => {
+        if (!user) return false;
+        if (user.isAdmin) return true;
+
+        const permission = user.permissions?.find(p => p.page === page);
+        return permission?.actions?.includes(action) || false;
+    };
+
+    const canAddUsers = user && (user.isAdmin || hasPermission('users', 'add'));
+
+    // Redirect if user doesn't have permission to add users
+    useEffect(() => {
+        if (!canAddUsers) {
+            showErrorToast('Access Denied', 'You do not have permission to access role templates.');
+            navigate('/dashboard');
+            return;
+        }
+    }, [canAddUsers, navigate]);
 
     // Apply user theme preference
     useEffect(() => {
@@ -88,14 +109,6 @@ const RoleTemplates = () => {
         permissions: ''
     });
 
-    const [fieldTouched, setFieldTouched] = useState({
-        name: false,
-        description: false,
-        icon: false,
-        color: false,
-        permissions: false
-    });
-
     // Add state for open menu
     const [openMenuId, setOpenMenuId] = useState(null);
 
@@ -122,7 +135,7 @@ const RoleTemplates = () => {
             return;
         }
 
-        const tooltipContent = permissions.map(p => 
+        const tooltipContent = permissions.map(p =>
             `<strong>${p.page.replace(/_/g, ' ')}:</strong> ${p.actions.map(action => action.replace(/_/g, ' ')).join(', ')}`
         ).join('<br>');
 
@@ -343,7 +356,6 @@ const RoleTemplates = () => {
 
     // Real-time field validation
     const handleFieldBlur = (fieldName) => {
-        setFieldTouched(prev => ({ ...prev, [fieldName]: true }));
         const error = validateField(fieldName, formData[fieldName]);
         setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
     };
@@ -360,13 +372,6 @@ const RoleTemplates = () => {
         });
 
         setFieldErrors(newErrors);
-        setFieldTouched({
-            name: true,
-            description: true,
-            icon: true,
-            color: true,
-            permissions: true
-        });
 
         return !hasErrors;
     };
@@ -552,7 +557,7 @@ const RoleTemplates = () => {
             const updatedPermissions = newPermissions.map(permission => {
                 if (permission.page === 'users') {
                     const actions = [...permission.actions];
-                    
+
                     // Mutually exclusive view/view_own
                     if (actions.includes('view_own') && actions.includes('view')) {
                         actions.splice(actions.indexOf('view'), 1);
@@ -560,18 +565,18 @@ const RoleTemplates = () => {
                     if (actions.includes('view') && actions.includes('view_own')) {
                         actions.splice(actions.indexOf('view_own'), 1);
                     }
-                    
+
                     // Remove edit/delete/export if neither view nor view_own
                     if (!actions.includes('view') && !actions.includes('view_own')) {
                         return { ...permission, actions: actions.filter(a => ['view', 'view_own'].includes(a)) };
                     }
-                    
+
                     return { ...permission, actions };
                 }
-                
+
                 if (permission.page === 'audit-logs') {
                     const actions = [...permission.actions];
-                    
+
                     // Mutually exclusive view/view_own
                     if (actions.includes('view_own') && actions.includes('view')) {
                         actions.splice(actions.indexOf('view'), 1);
@@ -579,15 +584,15 @@ const RoleTemplates = () => {
                     if (actions.includes('view') && actions.includes('view_own')) {
                         actions.splice(actions.indexOf('view_own'), 1);
                     }
-                    
+
                     // Remove export if neither view nor view_own
                     if (!actions.includes('view') && !actions.includes('view_own')) {
                         return { ...permission, actions: actions.filter(a => ['view', 'view_own'].includes(a)) };
                     }
-                    
+
                     return { ...permission, actions };
                 }
-                
+
                 return permission;
             });
 
@@ -661,13 +666,6 @@ const RoleTemplates = () => {
             icon: '',
             color: '',
             permissions: ''
-        });
-        setFieldTouched({
-            name: false,
-            description: false,
-            icon: false,
-            color: false,
-            permissions: false
         });
         setInputFocus({
             name: false,
@@ -815,13 +813,6 @@ const RoleTemplates = () => {
             color: '',
             permissions: ''
         });
-        setFieldTouched({
-            name: false,
-            description: false,
-            icon: false,
-            color: false,
-            permissions: false
-        });
         setInputFocus({
             name: false,
             description: false
@@ -861,10 +852,10 @@ const RoleTemplates = () => {
     // Helper function to get permission summary
     const getPermissionSummary = (permissions) => {
         if (!permissions || permissions.length === 0) return { count: 0, summary: 'No permissions' };
-        
+
         const totalActions = permissions.reduce((sum, perm) => sum + perm.actions.length, 0);
         const pages = permissions.map(p => p.page.replace(/_/g, ' ')).join(', ');
-        
+
         return {
             count: totalActions,
             summary: `${pages} (${totalActions} actions)`
@@ -904,31 +895,31 @@ const RoleTemplates = () => {
     // Helper function to get permission dots
     const getPermissionDots = (permissions) => {
         if (!permissions || permissions.length === 0) return [];
-        
+
         const dots = [];
         permissions.forEach(permission => {
             const actionCount = permission.actions.length;
-            const color = actionCount <= 2 ? '#10b981' : 
-                         actionCount <= 4 ? '#3b82f6' : 
-                         actionCount <= 6 ? '#f59e0b' : '#ef4444';
-            
+            const color = actionCount <= 2 ? '#10b981' :
+                actionCount <= 4 ? '#3b82f6' :
+                    actionCount <= 6 ? '#f59e0b' : '#ef4444';
+
             dots.push({
                 color,
                 count: actionCount,
                 page: permission.page
             });
         });
-        
+
         return dots.slice(0, 4); // Limit to 4 dots
     };
 
     // Helper function to get compact permission text
     const getCompactPermissionText = (permissions) => {
         if (!permissions || permissions.length === 0) return '';
-        
+
         const totalActions = permissions.reduce((sum, perm) => sum + perm.actions.length, 0);
         const pages = permissions.map(p => p.page.replace(/_/g, ' ')).slice(0, 2);
-        
+
         if (pages.length === 1) {
             return `${pages[0]} (${totalActions})`;
         } else if (pages.length === 2) {
@@ -942,7 +933,7 @@ const RoleTemplates = () => {
         <div className="role-templates-page">
             {/* Custom Tooltip */}
             {tooltip.show && (
-                <div 
+                <div
                     className="custom-tooltip"
                     style={{
                         left: tooltip.x,
@@ -992,11 +983,11 @@ const RoleTemplates = () => {
                             className="search-input"
                         />
                     </div>
-                    
+
                     {/* Permission Display Mode Toggle */}
-                    <div className="permission-display-toggle" style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                    <div className="permission-display-toggle" style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: '8px',
                         marginTop: '12px'
                     }}>
@@ -1199,19 +1190,19 @@ const RoleTemplates = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            
+
                                             {/* Permission display based on mode */}
                                             {(() => {
                                                 const permissionSummary = getPermissionSummary(template.permissions);
                                                 const permissionIcons = getPermissionIcons(template.permissions);
                                                 const permissionDots = getPermissionDots(template.permissions);
                                                 const compactPermissionText = getCompactPermissionText(template.permissions);
-                                                
+
                                                 return (
                                                     <>
                                                         {permissionDisplayMode === 'badge' && (
                                                             <div className="permission-badge-container">
-                                                                <div 
+                                                                <div
                                                                     className={`permission-badge ${getPermissionBadgeColor(permissionSummary.count)}`}
                                                                     onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
                                                                     onMouseLeave={handleMouseLeave}
@@ -1224,10 +1215,10 @@ const RoleTemplates = () => {
                                                                         fontSize: '11px',
                                                                         fontWeight: '600',
                                                                         color: 'white',
-                                                                        backgroundColor: permissionSummary.count === 0 ? '#9ca3af' : 
-                                                                                       permissionSummary.count <= 3 ? '#10b981' :
-                                                                                       permissionSummary.count <= 6 ? '#3b82f6' :
-                                                                                       permissionSummary.count <= 9 ? '#f59e0b' : '#ef4444',
+                                                                        backgroundColor: permissionSummary.count === 0 ? '#9ca3af' :
+                                                                            permissionSummary.count <= 3 ? '#10b981' :
+                                                                                permissionSummary.count <= 6 ? '#3b82f6' :
+                                                                                    permissionSummary.count <= 9 ? '#f59e0b' : '#ef4444',
                                                                         cursor: 'help'
                                                                     }}
                                                                 >
@@ -1235,7 +1226,7 @@ const RoleTemplates = () => {
                                                                     <span>{permissionSummary.count}</span>
                                                                 </div>
                                                                 {permissionSummary.count > 0 && (
-                                                                    <span 
+                                                                    <span
                                                                         className="permission-hint"
                                                                         style={{
                                                                             fontSize: '10px',
@@ -1244,11 +1235,11 @@ const RoleTemplates = () => {
                                                                         }}
                                                                     >
                                                                         {permissionSummary.summary}
-                                                        </span>
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         )}
-                                                        
+
                                                         {permissionDisplayMode === 'dots' && (
                                                             <div className="permission-dots-container" style={{ marginTop: '4px' }}>
                                                                 {permissionDots.map((dot, index) => (
@@ -1272,12 +1263,12 @@ const RoleTemplates = () => {
                                                                 {permissionDots.length === 0 && (
                                                                     <span style={{ fontSize: '10px', color: '#9ca3af' }}>No permissions</span>
                                                                 )}
-                                                </div>
+                                                            </div>
                                                         )}
-                                                        
+
                                                         {permissionDisplayMode === 'compact' && (
                                                             <div className="permission-compact-container" style={{ marginTop: '4px' }}>
-                                                                <span 
+                                                                <span
                                                                     className="permission-compact-text"
                                                                     onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
                                                                     onMouseLeave={handleMouseLeave}
@@ -1295,7 +1286,7 @@ const RoleTemplates = () => {
                                                                 >
                                                                     {compactPermissionText || 'No permissions'}
                                                                 </span>
-                                            </div>
+                                                            </div>
                                                         )}
                                                     </>
                                                 );
