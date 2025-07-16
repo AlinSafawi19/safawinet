@@ -20,7 +20,7 @@ const AVAILABLE_PAGES = [
     'support'
 ];
 
-const AVAILABLE_ACTIONS = ['view', 'add', 'edit', 'delete'];
+const AVAILABLE_ACTIONS = ['view', 'view_own', 'add', 'edit', 'delete', 'export'];
 
 // Role Templates with clear permissions
 const ROLE_TEMPLATES = {

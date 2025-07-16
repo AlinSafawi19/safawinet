@@ -199,7 +199,7 @@ const userSchema = new mongoose.Schema({
     },
     actions: [{
       type: String,
-      enum: ['view', 'add', 'edit', 'delete']
+      enum: ['view', 'view_own', 'add', 'edit', 'delete', 'export']
     }]
   }],
   lastLogin: {

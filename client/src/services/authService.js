@@ -230,7 +230,7 @@ class AuthService {
     // Get user permissions for a page
     getPagePermissions(page) {
         if (!this.user) return [];
-        if (this.user.isAdmin) return ['view', 'add', 'edit', 'delete'];
+        if (this.user.isAdmin) return ['view', 'view_own', 'add', 'edit', 'delete', 'export'];
         
         const permission = this.user.permissions?.find(p => p.page === page);
         return permission?.actions || [];

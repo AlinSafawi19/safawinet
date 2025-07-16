@@ -13,7 +13,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: true,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit', 'delete'] }
+            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'delete', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     },
     {
@@ -24,7 +25,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view_own', 'export'] }
         ]
     },
     {
@@ -35,7 +37,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     },
     {
@@ -46,7 +49,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view'] }
+            { page: 'users', actions: ['view_own'] },
+            { page: 'audit_logs', actions: ['view_own'] }
         ]
     },
     {
@@ -57,7 +61,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: true,
         permissions: [
-            { page: 'users', actions: ['view', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view_own', 'export'] }
         ]
     },
     {
@@ -68,7 +73,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     },
     {
@@ -79,7 +85,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view'] }
+            { page: 'users', actions: ['view', 'view_own', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     },
     {
@@ -90,7 +97,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     },
     {
@@ -101,7 +109,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view'] }
+            { page: 'users', actions: ['view', 'view_own', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     },
     {
@@ -112,7 +121,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view_own', 'export'] }
         ]
     },
     {
@@ -123,7 +133,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view'] }
+            { page: 'users', actions: ['view_own'] },
+            { page: 'audit_logs', actions: ['view_own'] }
         ]
     },
     {
@@ -134,7 +145,8 @@ const DEFAULT_ROLE_TEMPLATES = [
         isAdmin: false,
         isDefault: false,
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit'] }
+            { page: 'users', actions: ['view', 'view_own', 'add', 'edit', 'export'] },
+            { page: 'audit_logs', actions: ['view', 'view_own', 'export'] }
         ]
     }
 ];

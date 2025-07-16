@@ -1,7 +1,5 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const User = require('../models/User');
@@ -9,11 +7,9 @@ const AuditLog = require('../models/AuditLog');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { validateInput, sanitizeInput } = require('../middleware/validation');
 const emailService = require('../services/emailService');
-const smsService = require('../services/smsService');
 const geolocationService = require('../services/geolocationService');
 const securityConfig = require('../config/security');
 const passwordStrengthAnalyzer = require('../utils/passwordStrength');
-const rateLimit = require('express-rate-limit');
 const { uploadProfilePicture, handleUploadError, deleteOldProfilePicture, getProfilePictureUrl } = require('../middleware/upload');
 const moment = require('moment-timezone');
 

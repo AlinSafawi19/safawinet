@@ -4,39 +4,7 @@ const { authenticateToken, requireAdmin, requirePermission } = require('../middl
 
 const router = express.Router();
 
-// Helper function to check if permissions are identical
-const arePermissionsIdentical = (permissions1, permissions2) => {
-    if (!permissions1 || !permissions2) return false;
-    if (permissions1.length !== permissions2.length) return false;
 
-    // Sort both permission arrays for comparison
-    const sortPermissions = (perms) => {
-        return perms.map(p => ({
-            page: p.page,
-            actions: p.actions ? [...p.actions].sort() : []
-        })).sort((a, b) => a.page.localeCompare(b.page));
-    };
-
-    const sorted1 = sortPermissions(permissions1);
-    const sorted2 = sortPermissions(permissions2);
-
-    return JSON.stringify(sorted1) === JSON.stringify(sorted2);
-};
-
-// Helper function to find template with identical permissions
-const findTemplateWithIdenticalPermissions = async (permissions, excludeId = null) => {
-    const allTemplates = await RoleTemplate.find({ isActive: true });
-
-    for (const template of allTemplates) {
-        if (excludeId && template._id.toString() === excludeId) continue;
-
-        if (arePermissionsIdentical(template.permissions, permissions)) {
-            return template;
-        }
-    }
-
-    return null;
-};
 
 // Helper function to generate creative error message
 const generateDuplicatePermissionsMessage = (existingTemplate) => {
@@ -101,20 +69,22 @@ router.get('/', authenticateToken, requirePermission('users', 'view'), async (re
             });
         }
 
-        // Get paginated templates
-        const templates = await RoleTemplate.getPaginatedTemplates({
+        // Get paginated templates with user-specific filtering
+        const templates = await RoleTemplate.getPaginatedTemplatesForUser({
             page: pageNum,
             limit: limitNum,
             status,
             search,
             sortBy,
-            sortOrder
+            sortOrder,
+            userId: req.user._id
         });
 
-        // Get total count for pagination
-        const totalCount = await RoleTemplate.getTemplatesCount({
+        // Get total count for pagination with user-specific filtering
+        const totalCount = await RoleTemplate.getTemplatesCountForUser({
             status,
-            search
+            search,
+            userId: req.user._id
         });
 
         // Add canBeDeleted property to each template
@@ -208,11 +178,8 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
             });
         }
 
-        // Check if template name already exists
-        const existingTemplate = await RoleTemplate.findOne({
-            name: name.trim(),
-            isActive: true
-        });
+        // Check if template name already exists within user scope
+        const existingTemplate = await RoleTemplate.checkDuplicateNameInUserScope(name, req.user._id);
 
         if (existingTemplate) {
             return res.status(400).json({
@@ -221,8 +188,8 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
             });
         }
 
-        // Check for identical permissions
-        const identicalTemplate = await findTemplateWithIdenticalPermissions(permissions);
+        // Check for identical permissions within user scope
+        const identicalTemplate = await RoleTemplate.checkDuplicatePermissionsInUserScope(permissions, req.user._id);
         if (identicalTemplate) {
             // Populate creator info for the existing template
             await identicalTemplate.populate('createdBy', 'username firstName lastName');
@@ -296,13 +263,9 @@ router.put('/:id', authenticateToken, requirePermission('users', 'edit'), async 
             });
         }
 
-        // Check if name already exists (if name is being changed)
+        // Check if name already exists within user scope (if name is being changed)
         if (name && name.trim() !== template.name) {
-            const existingTemplate = await RoleTemplate.findOne({
-                name: name.trim(),
-                isActive: true,
-                _id: { $ne: req.params.id }
-            });
+            const existingTemplate = await RoleTemplate.checkDuplicateNameInUserScope(name, req.user._id, req.params.id);
 
             if (existingTemplate) {
                 return res.status(400).json({
@@ -312,9 +275,9 @@ router.put('/:id', authenticateToken, requirePermission('users', 'edit'), async 
             }
         }
 
-        // Check for identical permissions
+        // Check for identical permissions within user scope
         if (permissions && permissions.length > 0) {
-            const identicalTemplate = await findTemplateWithIdenticalPermissions(permissions, req.params.id);
+            const identicalTemplate = await RoleTemplate.checkDuplicatePermissionsInUserScope(permissions, req.user._id, req.params.id);
             if (identicalTemplate) {
                 // Populate creator info for the existing template
                 await identicalTemplate.populate('createdBy', 'username firstName lastName');
@@ -431,9 +394,21 @@ router.get('/permissions/available', authenticateToken, requirePermission('users
                 description: 'Manage system users and their permissions',
                 actions: [
                     { id: 'view', name: 'View Users', description: 'View user list and details' },
+                    { id: 'view_own', name: 'View Own Users', description: 'View only own user details' },
                     { id: 'add', name: 'Create Users', description: 'Create new user accounts' },
                     { id: 'edit', name: 'Edit Users', description: 'Modify existing user accounts' },
-                    { id: 'delete', name: 'Delete Users', description: 'Remove user accounts' }
+                    { id: 'delete', name: 'Delete Users', description: 'Remove user accounts' },
+                    { id: 'export', name: 'Export Users', description: 'Export user data' }
+                ]
+            },
+            {
+                page: 'audit_logs',
+                name: 'Audit Logs',
+                description: 'View and manage system audit logs',
+                actions: [
+                    { id: 'view', name: 'View Audit Logs', description: 'View all audit logs' },
+                    { id: 'view_own', name: 'View Own Audit Logs', description: 'View only own audit logs' },
+                    { id: 'export', name: 'Export Audit Logs', description: 'Export audit log data' }
                 ]
             }
         ];
@@ -460,13 +435,27 @@ router.get('/active/for-user-creation', authenticateToken, requirePermission('us
         const search = req.query.search || '';
         const skip = (page - 1) * limit;
 
-        // Build query with search
-        let query = { isActive: true };
+        // Build query with user-specific filtering and search
+        let query = {
+            isActive: true,
+            $or: [
+                { isDefault: true }, // Show default templates
+                { createdBy: req.user._id } // Show templates created by the user
+            ]
+        };
+        
         if (search && search.trim()) {
-            query.$or = [
-                { name: { $regex: search.trim(), $options: 'i' } },
-                { description: { $regex: search.trim(), $options: 'i' } }
-            ];
+            const searchQuery = {
+                $or: [
+                    { name: { $regex: search.trim(), $options: 'i' } },
+                    { description: { $regex: search.trim(), $options: 'i' } }
+                ]
+            };
+            
+            // Combine with existing query
+            query = {
+                $and: [query, searchQuery]
+            };
         }
 
         // Get total count for pagination

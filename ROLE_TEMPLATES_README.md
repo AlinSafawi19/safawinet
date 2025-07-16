@@ -96,47 +96,51 @@ The system comes with pre-configured default templates:
 - **Description**: Full access to user management
 - **Icon**: FiAward
 - **Color**: Purple gradient
-- **Permissions**: Users (view, add, edit, delete)
+- **Permissions**: Users (view, view_own, add, edit, delete, export), Audit Logs (view, view_own, export), Role Templates (view_own)
 - **Admin Role**: Yes
 
 ### 2. Manager
 - **Description**: User management and operational oversight
 - **Icon**: FiBriefcase
 - **Color**: Blue gradient
-- **Permissions**: Users (view, add, edit)
+- **Permissions**: Users (view, view_own, add, edit, export), Audit Logs (view_own, export), Role Templates (view_own)
 - **Admin Role**: No
 
 ### 3. Supervisor
 - **Description**: Team oversight and user management
 - **Icon**: FiUsers
 - **Color**: Indigo gradient
-- **Permissions**: Users (view, add, edit)
+- **Permissions**: Users (view, view_own, add, edit, export), Audit Logs (view, view_own, export), Role Templates (view_own)
 - **Admin Role**: No
 
 ### 4. Viewer
 - **Description**: Read-only access to user management
 - **Icon**: FiEye
 - **Color**: Green gradient
-- **Permissions**: Users (view only)
+- **Permissions**: Users (view_own), Audit Logs (view_own), Role Templates (view_own)
 - **Admin Role**: No
 
 ### 5. Support Agent
 - **Description**: Customer support and user assistance
 - **Icon**: FiUserCheck
 - **Color**: Teal gradient
-- **Permissions**: Users (view, edit)
+- **Permissions**: Users (view, view_own, edit, export), Audit Logs (view_own, export), Role Templates (view_own)
 - **Admin Role**: No
 
 ## Available Permissions
 
 ### Pages
 - `users` - User management
+- `audit_logs` - Audit logs management
+- `role_templates` - Role templates management
 
 ### Actions
-- `view` - View data
+- `view` - View all data
+- `view_own` - View own data only
 - `add` - Create new records
 - `edit` - Modify existing records
 - `delete` - Remove records
+- `export` - Export data
 
 ## Frontend Integration
 

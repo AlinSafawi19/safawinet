@@ -29,11 +29,11 @@ const roleTemplateSchema = new mongoose.Schema({
     page: {
       type: String,
       required: true,
-      enum: ['users']
+      enum: ['users', 'audit_logs']
     },
     actions: [{
       type: String,
-      enum: ['view', 'add', 'edit', 'delete']
+      enum: ['view', 'view_own', 'add', 'edit', 'delete', 'export']
     }]
   }],
   isDefault: {
@@ -163,6 +163,172 @@ roleTemplateSchema.statics.getTemplatesCount = function(options = {}) {
   }
 
   return this.countDocuments(query);
+};
+
+// Static method for paginated templates with user-specific filtering
+roleTemplateSchema.statics.getPaginatedTemplatesForUser = function(options = {}) {
+  const {
+    page = 1,
+    limit = 10,
+    status = 'all', // 'all', 'active', 'inactive', 'default'
+    search = '',
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    userId
+  } = options;
+
+  // Build query with user-specific filtering
+  let query = {
+    $or: [
+      { isDefault: true }, // Show default templates
+      { createdBy: userId } // Show templates created by the user
+    ]
+  };
+
+  // Status filter
+  if (status === 'active') {
+    query.isActive = true;
+  } else if (status === 'inactive') {
+    query.isActive = false;
+  } else if (status === 'default') {
+    query = {
+      isDefault: true,
+      isActive: true
+    };
+  }
+
+  // Search filter
+  if (search) {
+    const searchQuery = {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ]
+    };
+    
+    // Combine with existing query
+    query = {
+      $and: [query, searchQuery]
+    };
+  }
+
+  // Build sort object
+  const sort = {};
+  sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  // Calculate skip value
+  const skip = (page - 1) * limit;
+
+  return this.find(query)
+    .populate('createdBy', 'username firstName lastName')
+    .sort(sort)
+    .skip(skip)
+    .limit(limit);
+};
+
+// Static method to get total count for pagination with user-specific filtering
+roleTemplateSchema.statics.getTemplatesCountForUser = function(options = {}) {
+  const {
+    status = 'all',
+    search = '',
+    userId
+  } = options;
+
+  // Build query with user-specific filtering (same as getPaginatedTemplatesForUser)
+  let query = {
+    $or: [
+      { isDefault: true }, // Show default templates
+      { createdBy: userId } // Show templates created by the user
+    ]
+  };
+
+  if (status === 'active') {
+    query.isActive = true;
+  } else if (status === 'inactive') {
+    query.isActive = false;
+  } else if (status === 'default') {
+    query = {
+      isDefault: true,
+      isActive: true
+    };
+  }
+
+  if (search) {
+    const searchQuery = {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ]
+    };
+    
+    // Combine with existing query
+    query = {
+      $and: [query, searchQuery]
+    };
+  }
+
+  return this.countDocuments(query);
+};
+
+// Static method to check for duplicate name within user scope
+roleTemplateSchema.statics.checkDuplicateNameInUserScope = function(name, userId, excludeId = null) {
+  let query = {
+    name: name.trim(),
+    isActive: true,
+    $or: [
+      { isDefault: true }, // Check against default templates
+      { createdBy: userId } // Check against user's own templates
+    ]
+  };
+
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+
+  return this.findOne(query);
+};
+
+// Static method to check for duplicate permissions within user scope
+roleTemplateSchema.statics.checkDuplicatePermissionsInUserScope = function(permissions, userId, excludeId = null) {
+  let query = {
+    isActive: true,
+    $or: [
+      { isDefault: true }, // Include default templates
+      { createdBy: userId } // Include user's own templates
+    ]
+  };
+
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+
+  return this.find(query).then(templates => {
+    for (const template of templates) {
+      if (arePermissionsIdentical(template.permissions, permissions)) {
+        return template;
+      }
+    }
+    return null;
+  });
+};
+
+// Helper function to check if permissions are identical (moved from routes)
+const arePermissionsIdentical = (permissions1, permissions2) => {
+  if (!permissions1 || !permissions2) return false;
+  if (permissions1.length !== permissions2.length) return false;
+
+  // Sort both permission arrays for comparison
+  const sortPermissions = (perms) => {
+    return perms.map(p => ({
+      page: p.page,
+      actions: p.actions ? [...p.actions].sort() : []
+    })).sort((a, b) => a.page.localeCompare(b.page));
+  };
+
+  const sorted1 = sortPermissions(permissions1);
+  const sorted2 = sortPermissions(permissions2);
+
+  return JSON.stringify(sorted1) === JSON.stringify(sorted2);
 };
 
 module.exports = mongoose.model('RoleTemplate', roleTemplateSchema); 

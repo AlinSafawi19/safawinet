@@ -82,7 +82,7 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
 
     // Add Users menu item if user has permission
     const currentUser = authService.getCurrentUser();
-    const canViewUsers = currentUser && (currentUser.isAdmin || authService.hasPermission('users', 'view'));
+    const canViewUsers = currentUser && (currentUser.isAdmin || authService.hasPermission('users', 'view') || authService.hasPermission('users', 'view_own'));
 
     if (canViewUsers) {
         menuSections.push({

@@ -143,7 +143,7 @@ The system uses a granular permission system where:
 1. **Admin users** have full access to all pages and actions
 2. **Regular users** have specific permissions assigned by admins
 3. **Permissions** are page-specific and action-specific
-4. **Actions** include: view, add, edit, delete
+4. **Actions** include: view, view_own, add, edit, delete, export
 
 ### Example Permission Structure
 
@@ -151,7 +151,11 @@ The system uses a granular permission system where:
 permissions: [
   {
     page: 'users',
-    actions: ['view', 'add', 'edit', 'delete']
+    actions: ['view', 'view_own', 'add', 'edit', 'delete', 'export']
+  },
+  {
+    page: 'audit_logs',
+    actions: ['view', 'view_own', 'export']
   }
 ]
 ```

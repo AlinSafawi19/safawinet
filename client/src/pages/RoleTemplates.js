@@ -3,7 +3,7 @@ import authService from '../services/authService';
 import axios from 'axios';
 import Select from 'react-select';
 import { applyUserTheme } from '../utils/themeUtils';
-import { showSuccessToast, showErrorToast, showConfirmationDialog } from '../utils/sweetAlertConfig';
+import { showSuccessToast, showErrorToast, showConfirmationDialog, showWarningToast } from '../utils/sweetAlertConfig';
 import {
     FiPlus,
     FiEdit,
@@ -42,6 +42,7 @@ const RoleTemplates = () => {
 
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [formSubmitting, setFormSubmitting] = useState(false);
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -98,6 +99,45 @@ const RoleTemplates = () => {
     // Add state for open menu
     const [openMenuId, setOpenMenuId] = useState(null);
 
+    // Permission display mode state
+    const [permissionDisplayMode, setPermissionDisplayMode] = useState('badge'); // 'badge', 'dots', 'compact'
+
+    // Tooltip state
+    const [tooltip, setTooltip] = useState({
+        show: false,
+        content: '',
+        x: 0,
+        y: 0
+    });
+
+    // Tooltip handlers
+    const handleMouseEnter = (e, permissions) => {
+        if (!permissions || permissions.length === 0) {
+            setTooltip({
+                show: true,
+                content: 'No permissions assigned',
+                x: e.clientX + 10,
+                y: e.clientY - 10
+            });
+            return;
+        }
+
+        const tooltipContent = permissions.map(p => 
+            `<strong>${p.page.replace(/_/g, ' ')}:</strong> ${p.actions.map(action => action.replace(/_/g, ' ')).join(', ')}`
+        ).join('<br>');
+
+        setTooltip({
+            show: true,
+            content: tooltipContent,
+            x: e.clientX + 10,
+            y: e.clientY - 10
+        });
+    };
+
+    const handleMouseLeave = () => {
+        setTooltip({ show: false, content: '', x: 0, y: 0 });
+    };
+
     // Close menu on outside click
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -137,7 +177,7 @@ const RoleTemplates = () => {
         { value: 'bg-gradient-to-r from-teal-500 to-cyan-500', label: 'Teal', preview: 'bg-gradient-to-r from-teal-500 to-cyan-500' }
     ];
 
-    // Available permissions - only users page
+    // Available permissions - users and audit logs
     const availablePermissions = [
         {
             page: 'users',
@@ -145,9 +185,21 @@ const RoleTemplates = () => {
             description: 'Manage system users and their permissions',
             actions: [
                 { id: 'view', name: 'View Users', description: 'View user list and details' },
+                { id: 'view_own', name: 'View Own Users', description: 'View only own user details' },
                 { id: 'add', name: 'Create Users', description: 'Create new user accounts' },
                 { id: 'edit', name: 'Edit Users', description: 'Modify existing user accounts' },
-                { id: 'delete', name: 'Delete Users', description: 'Remove user accounts' }
+                { id: 'delete', name: 'Delete Users', description: 'Remove user accounts' },
+                { id: 'export', name: 'Export Users', description: 'Export user data to CSV/Excel' }
+            ]
+        },
+        {
+            page: 'audit_logs',
+            name: 'Audit Logs',
+            description: 'View and manage system audit logs',
+            actions: [
+                { id: 'view', name: 'View Audit Logs', description: 'View all audit logs' },
+                { id: 'view_own', name: 'View Own Logs', description: 'View only own audit logs' },
+                { id: 'export', name: 'Export Logs', description: 'Export audit log data to CSV/Excel' }
             ]
         }
     ];
@@ -438,11 +490,46 @@ const RoleTemplates = () => {
         return [];
     };
 
-    // Handle permission changes
+    // Handle permission changes with logical validation and warnings
     const handlePermissionChange = (page, action, checked) => {
         setFormData(prev => {
             const newPermissions = [...prev.permissions];
             const existingPermission = newPermissions.find(p => p.page === page);
+
+            // Find current actions for this page
+            let currentActions = existingPermission ? [...existingPermission.actions] : [];
+            let willHave = checked ? [...currentActions, action] : currentActions.filter(a => a !== action);
+
+            // Users page logic
+            if (page === 'users') {
+                if (checked && action === 'view' && willHave.includes('view_own')) {
+                    showWarningToast('Invalid Permission', 'Cannot select both "View Users" and "View Own Users".');
+                    return prev;
+                }
+                if (checked && action === 'view_own' && willHave.includes('view')) {
+                    showWarningToast('Invalid Permission', 'Cannot select both "View Users" and "View Own Users".');
+                    return prev;
+                }
+                if (checked && ['edit', 'delete', 'export'].includes(action) && !willHave.includes('view') && !willHave.includes('view_own')) {
+                    showWarningToast('Invalid Permission', 'You must select either "View Users" or "View Own Users" before assigning other permissions.');
+                    return prev;
+                }
+            }
+            // Audit logs logic
+            if (page === 'audit_logs') {
+                if (checked && action === 'view' && willHave.includes('view_own')) {
+                    showWarningToast('Invalid Permission', 'Cannot select both "View Audit Logs" and "View Own Logs".');
+                    return prev;
+                }
+                if (checked && action === 'view_own' && willHave.includes('view')) {
+                    showWarningToast('Invalid Permission', 'Cannot select both "View Audit Logs" and "View Own Logs".');
+                    return prev;
+                }
+                if (checked && action === 'export' && !willHave.includes('view') && !willHave.includes('view_own')) {
+                    showWarningToast('Invalid Permission', 'You must select either "View Audit Logs" or "View Own Logs" before assigning export.');
+                    return prev;
+                }
+            }
 
             if (checked) {
                 if (existingPermission) {
@@ -461,7 +548,50 @@ const RoleTemplates = () => {
                 }
             }
 
-            return { ...prev, permissions: newPermissions };
+            // Apply logical constraints
+            const updatedPermissions = newPermissions.map(permission => {
+                if (permission.page === 'users') {
+                    const actions = [...permission.actions];
+                    
+                    // Mutually exclusive view/view_own
+                    if (actions.includes('view_own') && actions.includes('view')) {
+                        actions.splice(actions.indexOf('view'), 1);
+                    }
+                    if (actions.includes('view') && actions.includes('view_own')) {
+                        actions.splice(actions.indexOf('view_own'), 1);
+                    }
+                    
+                    // Remove edit/delete/export if neither view nor view_own
+                    if (!actions.includes('view') && !actions.includes('view_own')) {
+                        return { ...permission, actions: actions.filter(a => ['view', 'view_own'].includes(a)) };
+                    }
+                    
+                    return { ...permission, actions };
+                }
+                
+                if (permission.page === 'audit_logs') {
+                    const actions = [...permission.actions];
+                    
+                    // Mutually exclusive view/view_own
+                    if (actions.includes('view_own') && actions.includes('view')) {
+                        actions.splice(actions.indexOf('view'), 1);
+                    }
+                    if (actions.includes('view') && actions.includes('view_own')) {
+                        actions.splice(actions.indexOf('view_own'), 1);
+                    }
+                    
+                    // Remove export if neither view nor view_own
+                    if (!actions.includes('view') && !actions.includes('view_own')) {
+                        return { ...permission, actions: actions.filter(a => ['view', 'view_own'].includes(a)) };
+                    }
+                    
+                    return { ...permission, actions };
+                }
+                
+                return permission;
+            });
+
+            return { ...prev, permissions: updatedPermissions };
         });
 
         // Clear permission error when user makes changes
@@ -489,16 +619,16 @@ const RoleTemplates = () => {
         let cls = 'form-group floating-label';
         if (inputFocus[field]) cls += ' focused';
         if (formData[field]) cls += ' filled';
-        if (fieldTouched[field] && fieldErrors[field]) cls += ' error';
-        if (fieldTouched[field] && !fieldErrors[field] && formData[field]) cls += ' valid';
+        // Only show error class when form is submitted (formSubmitting state indicates submission attempt)
+        if (formSubmitting && fieldErrors[field]) cls += ' error';
         return cls;
     };
 
     // Helper to get input class
     const getInputClass = (field) => {
         let cls = 'form-input';
-        if (fieldTouched[field] && fieldErrors[field]) cls += ' error';
-        if (fieldTouched[field] && !fieldErrors[field] && formData[field]) cls += ' valid';
+        // Only show error class when form is submitted (formSubmitting state indicates submission attempt)
+        if (formSubmitting && fieldErrors[field]) cls += ' error';
         return cls;
     };
 
@@ -543,11 +673,14 @@ const RoleTemplates = () => {
             name: false,
             description: false
         });
+        setFormSubmitting(false);
     };
 
     // Handle create template
     const handleCreateTemplate = async (e) => {
         e.preventDefault();
+
+        setFormSubmitting(true);
 
         if (!validateForm()) {
             showErrorToast('Validation Errors', 'Please fix the highlighted errors before creating the template.');
@@ -570,12 +703,16 @@ const RoleTemplates = () => {
             console.error('Error creating template:', error);
             const errorMessage = error.response?.data?.message || 'Failed to create template';
             showErrorToast('Error', errorMessage);
+        } finally {
+            setFormSubmitting(false);
         }
     };
 
     // Handle update template
     const handleUpdateTemplate = async (e) => {
         e.preventDefault();
+
+        setFormSubmitting(true);
 
         if (!validateForm()) {
             showErrorToast('Validation Errors', 'Please fix the highlighted errors before updating the template.');
@@ -599,6 +736,8 @@ const RoleTemplates = () => {
             console.error('Error updating template:', error);
             const errorMessage = error.response?.data?.message || 'Failed to update template';
             showErrorToast('Error', errorMessage);
+        } finally {
+            setFormSubmitting(false);
         }
     };
 
@@ -719,34 +858,100 @@ const RoleTemplates = () => {
         return iconMap[iconName] || <FiSettings />;
     };
 
-    // Check if user has permission
-    const hasPermission = (page, action) => {
-        if (!user) return false;
-        return authService.hasPermission(page, action);
+    // Helper function to get permission summary
+    const getPermissionSummary = (permissions) => {
+        if (!permissions || permissions.length === 0) return { count: 0, summary: 'No permissions' };
+        
+        const totalActions = permissions.reduce((sum, perm) => sum + perm.actions.length, 0);
+        const pages = permissions.map(p => p.page.replace(/_/g, ' ')).join(', ');
+        
+        return {
+            count: totalActions,
+            summary: `${pages} (${totalActions} actions)`
+        };
     };
 
-    const canViewTemplates = hasPermission('users', 'view');
-    const canCreateTemplates = hasPermission('users', 'add');
-    const canEditTemplates = hasPermission('users', 'edit');
-    const canDeleteTemplates = hasPermission('users', 'delete');
+    // Helper function to get permission badge color
+    const getPermissionBadgeColor = (permissionCount) => {
+        if (permissionCount === 0) return 'bg-gray-400';
+        if (permissionCount <= 3) return 'bg-green-500';
+        if (permissionCount <= 6) return 'bg-blue-500';
+        if (permissionCount <= 9) return 'bg-orange-500';
+        return 'bg-red-500';
+    };
 
-    if (!canViewTemplates) {
-        return (
-            <div className="role-templates-page">
-                <div className="role-templates-header">
-                    <h1>Role Templates</h1>
-                </div>
-                <div className="access-denied">
-                    <FiShield />
-                    <h2>Access Denied</h2>
-                    <p>You don't have permission to view role templates.</p>
-                </div>
-            </div>
-        );
-    }
+    // Helper function to get permission icons
+    const getPermissionIcons = (permissions) => {
+        const icons = [];
+        permissions.forEach(permission => {
+            switch (permission.page) {
+                case 'users':
+                    icons.push('👥');
+                    break;
+                case 'audit_logs':
+                    icons.push('📋');
+                    break;
+                case 'settings':
+                    icons.push('⚙️');
+                    break;
+                default:
+                    icons.push('🔑');
+            }
+        });
+        return icons.slice(0, 3); // Limit to 3 icons
+    };
+
+    // Helper function to get permission dots
+    const getPermissionDots = (permissions) => {
+        if (!permissions || permissions.length === 0) return [];
+        
+        const dots = [];
+        permissions.forEach(permission => {
+            const actionCount = permission.actions.length;
+            const color = actionCount <= 2 ? '#10b981' : 
+                         actionCount <= 4 ? '#3b82f6' : 
+                         actionCount <= 6 ? '#f59e0b' : '#ef4444';
+            
+            dots.push({
+                color,
+                count: actionCount,
+                page: permission.page
+            });
+        });
+        
+        return dots.slice(0, 4); // Limit to 4 dots
+    };
+
+    // Helper function to get compact permission text
+    const getCompactPermissionText = (permissions) => {
+        if (!permissions || permissions.length === 0) return '';
+        
+        const totalActions = permissions.reduce((sum, perm) => sum + perm.actions.length, 0);
+        const pages = permissions.map(p => p.page.replace(/_/g, ' ')).slice(0, 2);
+        
+        if (pages.length === 1) {
+            return `${pages[0]} (${totalActions})`;
+        } else if (pages.length === 2) {
+            return `${pages[0]}, ${pages[1]} (${totalActions})`;
+        } else {
+            return `${pages[0]}, +${pages.length - 1} more (${totalActions})`;
+        }
+    };
 
     return (
         <div className="role-templates-page">
+            {/* Custom Tooltip */}
+            {tooltip.show && (
+                <div 
+                    className="custom-tooltip"
+                    style={{
+                        left: tooltip.x,
+                        top: tooltip.y
+                    }}
+                    dangerouslySetInnerHTML={{ __html: tooltip.content }}
+                />
+            )}
+
             {/* Header */}
             <div className="role-templates-header">
                 <div className="header-content">
@@ -760,19 +965,17 @@ const RoleTemplates = () => {
                     </div>
                 </div>
                 <div className="header-actions">
-                    {canCreateTemplates && (
-                        <button
-                            className="btn btn-primary"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleCreateNew();
-                            }}
-                        >
-                            <FiPlus />
-                            Create Template
-                        </button>
-                    )}
+                    <button
+                        className="btn btn-primary"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCreateNew();
+                        }}
+                    >
+                        <FiPlus />
+                        Create Template
+                    </button>
                 </div>
             </div>
 
@@ -788,6 +991,47 @@ const RoleTemplates = () => {
                             onChange={(e) => handleSearch(e.target.value)}
                             className="search-input"
                         />
+                    </div>
+                    
+                    {/* Permission Display Mode Toggle */}
+                    <div className="permission-display-toggle" style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        marginTop: '12px'
+                    }}>
+                        <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
+                            Permission Display:
+                        </span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            {[
+                                { mode: 'badge', label: 'Badge', icon: '🔑' },
+                                { mode: 'dots', label: 'Dots', icon: '●' },
+                                { mode: 'compact', label: 'Text', icon: '📝' }
+                            ].map(({ mode, label, icon }) => (
+                                <button
+                                    key={mode}
+                                    onClick={() => setPermissionDisplayMode(mode)}
+                                    style={{
+                                        padding: '4px 8px',
+                                        fontSize: '11px',
+                                        borderRadius: '6px',
+                                        border: `1px solid ${permissionDisplayMode === mode ? '#1f3bb3' : '#e5e7eb'}`,
+                                        backgroundColor: permissionDisplayMode === mode ? '#eaf0fb' : '#fff',
+                                        color: permissionDisplayMode === mode ? '#1f3bb3' : '#6b7280',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}
+                                    title={label}
+                                >
+                                    <span>{icon}</span>
+                                    <span>{label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                     <div className="filter-controls-right">
                         <Select
@@ -904,7 +1148,7 @@ const RoleTemplates = () => {
                                                         >
                                                             <FiEye /> View Details
                                                         </button>
-                                                        {canEditTemplates && !template.isDefault && (
+                                                        {!template.isDefault && (
                                                             <button
                                                                 className="menu-item"
                                                                 onClick={() => {
@@ -915,7 +1159,7 @@ const RoleTemplates = () => {
                                                                 <FiEdit /> Edit Template
                                                             </button>
                                                         )}
-                                                        {canEditTemplates && !template.isDefault && (
+                                                        {!template.isDefault && (
                                                             <button
                                                                 className="menu-item"
                                                                 onClick={() => {
@@ -926,7 +1170,7 @@ const RoleTemplates = () => {
                                                                 {template.isActive ? <FiToggleRight /> : <FiToggleLeft />} {template.isActive ? 'Deactivate' : 'Activate'}
                                                             </button>
                                                         )}
-                                                        {canDeleteTemplates && template.canBeDeleted && (
+                                                        {template.canBeDeleted && (
                                                             <button
                                                                 className="menu-item danger"
                                                                 onClick={() => {
@@ -955,16 +1199,107 @@ const RoleTemplates = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="template-permissions">
-                                                <h4>Permissions:</h4>
-                                                <div className="permission-tags">
-                                                    {template.permissions.map((permission, index) => (
-                                                        <span key={index} className="permission-tag">
-                                                            {permission.page}: {permission.actions.join(', ')}
+                                            
+                                            {/* Permission display based on mode */}
+                                            {(() => {
+                                                const permissionSummary = getPermissionSummary(template.permissions);
+                                                const permissionIcons = getPermissionIcons(template.permissions);
+                                                const permissionDots = getPermissionDots(template.permissions);
+                                                const compactPermissionText = getCompactPermissionText(template.permissions);
+                                                
+                                                return (
+                                                    <>
+                                                        {permissionDisplayMode === 'badge' && (
+                                                            <div className="permission-badge-container">
+                                                                <div 
+                                                                    className={`permission-badge ${getPermissionBadgeColor(permissionSummary.count)}`}
+                                                                    onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
+                                                                    onMouseLeave={handleMouseLeave}
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px',
+                                                                        padding: '2px 8px',
+                                                                        borderRadius: '12px',
+                                                                        fontSize: '11px',
+                                                                        fontWeight: '600',
+                                                                        color: 'white',
+                                                                        backgroundColor: permissionSummary.count === 0 ? '#9ca3af' : 
+                                                                                       permissionSummary.count <= 3 ? '#10b981' :
+                                                                                       permissionSummary.count <= 6 ? '#3b82f6' :
+                                                                                       permissionSummary.count <= 9 ? '#f59e0b' : '#ef4444',
+                                                                        cursor: 'help'
+                                                                    }}
+                                                                >
+                                                                    <span>🔑</span>
+                                                                    <span>{permissionSummary.count}</span>
+                                                                </div>
+                                                                {permissionSummary.count > 0 && (
+                                                                    <span 
+                                                                        className="permission-hint"
+                                                                        style={{
+                                                                            fontSize: '10px',
+                                                                            color: '#6b7280',
+                                                                            marginLeft: '4px'
+                                                                        }}
+                                                                    >
+                                                                        {permissionSummary.summary}
                                                         </span>
-                                                    ))}
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {permissionDisplayMode === 'dots' && (
+                                                            <div className="permission-dots-container" style={{ marginTop: '4px' }}>
+                                                                {permissionDots.map((dot, index) => (
+                                                                    <div
+                                                                        key={index}
+                                                                        className="permission-dot"
+                                                                        onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
+                                                                        onMouseLeave={handleMouseLeave}
+                                                                        style={{
+                                                                            width: '8px',
+                                                                            height: '8px',
+                                                                            borderRadius: '50%',
+                                                                            backgroundColor: dot.color,
+                                                                            display: 'inline-block',
+                                                                            marginRight: '4px',
+                                                                            cursor: 'help',
+                                                                            transition: 'transform 0.2s ease'
+                                                                        }}
+                                                                    />
+                                                                ))}
+                                                                {permissionDots.length === 0 && (
+                                                                    <span style={{ fontSize: '10px', color: '#9ca3af' }}>No permissions</span>
+                                                                )}
                                                 </div>
+                                                        )}
+                                                        
+                                                        {permissionDisplayMode === 'compact' && (
+                                                            <div className="permission-compact-container" style={{ marginTop: '4px' }}>
+                                                                <span 
+                                                                    className="permission-compact-text"
+                                                                    onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
+                                                                    onMouseLeave={handleMouseLeave}
+                                                                    style={{
+                                                                        fontSize: '10px',
+                                                                        color: permissionSummary.count === 0 ? '#9ca3af' : '#1f3bb3',
+                                                                        fontWeight: '500',
+                                                                        cursor: 'help',
+                                                                        display: 'inline-block',
+                                                                        padding: '2px 6px',
+                                                                        backgroundColor: permissionSummary.count === 0 ? '#f3f4f6' : '#eaf0fb',
+                                                                        borderRadius: '4px',
+                                                                        border: `1px solid ${permissionSummary.count === 0 ? '#e5e7eb' : '#bee5eb'}`
+                                                                    }}
+                                                                >
+                                                                    {compactPermissionText || 'No permissions'}
+                                                                </span>
                                             </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 ))}
@@ -995,7 +1330,7 @@ const RoleTemplates = () => {
                                             const indicators = [];
                                             const totalPages = pagination.totalPages;
                                             const currentPage = pagination.currentPage;
-                                            
+
                                             if (totalPages <= 7) {
                                                 // Show all pages if 7 or fewer
                                                 for (let i = 1; i <= totalPages; i++) {
@@ -1022,7 +1357,7 @@ const RoleTemplates = () => {
                                                         <span className="indicator-number">1</span>
                                                     </button>
                                                 );
-                                                
+
                                                 // Add ellipsis if needed after first page
                                                 if (currentPage > 4) {
                                                     indicators.push(
@@ -1031,26 +1366,26 @@ const RoleTemplates = () => {
                                                         </span>
                                                     );
                                                 }
-                                                
+
                                                 // Show pages around current page
                                                 const start = Math.max(2, currentPage - 1);
                                                 const end = Math.min(totalPages - 1, currentPage + 1);
-                                                
+
                                                 for (let i = start; i <= end; i++) {
                                                     if (i !== 1 && i !== totalPages) {
                                                         indicators.push(
-                                                <button
+                                                            <button
                                                                 key={i}
                                                                 className={`page-indicator ${i === currentPage ? 'active' : ''}`}
                                                                 onClick={() => handlePageChange(i)}
                                                                 title={`Page ${i}`}
                                                             >
                                                                 <span className="indicator-number">{i}</span>
-                                                </button>
-                                            );
+                                                            </button>
+                                                        );
                                                     }
                                                 }
-                                                
+
                                                 // Add ellipsis if needed before last page
                                                 if (currentPage < totalPages - 3) {
                                                     indicators.push(
@@ -1059,7 +1394,7 @@ const RoleTemplates = () => {
                                                         </span>
                                                     );
                                                 }
-                                                
+
                                                 // Show last page
                                                 if (totalPages > 1) {
                                                     indicators.push(
@@ -1074,7 +1409,7 @@ const RoleTemplates = () => {
                                                     );
                                                 }
                                             }
-                                            
+
                                             return indicators;
                                         })()}
                                     </div>
@@ -1144,16 +1479,10 @@ const RoleTemplates = () => {
                                         placeholder=""
                                     />
                                     <label htmlFor="templateName" className="form-label">Template Name</label>
-                                    {fieldTouched.name && fieldErrors.name && (
+                                    {formSubmitting && fieldErrors.name && (
                                         <div className="field-error">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.name}</span>
-                                        </div>
-                                    )}
-                                    {fieldTouched.name && !fieldErrors.name && formData.name && (
-                                        <div className="field-success">
-                                            <FiCheckCircle />
-                                            <span>Valid</span>
                                         </div>
                                     )}
                                 </div>
@@ -1174,16 +1503,10 @@ const RoleTemplates = () => {
                                         rows="3"
                                     />
                                     <label htmlFor="templateDescription" className="form-label">Description</label>
-                                    {fieldTouched.description && fieldErrors.description && (
+                                    {formSubmitting && fieldErrors.description && (
                                         <div className="field-error">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.description}</span>
-                                        </div>
-                                    )}
-                                    {fieldTouched.description && !fieldErrors.description && formData.description && (
-                                        <div className="field-success">
-                                            <FiCheckCircle />
-                                            <span>Valid</span>
                                         </div>
                                     )}
                                 </div>
@@ -1194,7 +1517,7 @@ const RoleTemplates = () => {
                                         {availableIcons.map((icon) => (
                                             <div
                                                 key={icon.value}
-                                                className={`icon-option ${formData.icon === icon.value ? 'selected' : ''} ${fieldTouched.icon && fieldErrors.icon ? 'error' : ''}`}
+                                                className={`icon-option ${formData.icon === icon.value ? 'selected' : ''} ${formSubmitting && fieldErrors.icon ? 'error' : ''}`}
                                                 onClick={() => handleSelectChange('icon', icon)}
                                             >
                                                 <div className="icon-display">
@@ -1204,7 +1527,7 @@ const RoleTemplates = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    {fieldTouched.icon && fieldErrors.icon && (
+                                    {formSubmitting && fieldErrors.icon && (
                                         <div className="icon-error-message">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.icon}</span>
@@ -1218,7 +1541,7 @@ const RoleTemplates = () => {
                                         {availableColors.map((color) => (
                                             <div
                                                 key={color.value}
-                                                className={`color-option ${formData.color === color.value ? 'selected' : ''} ${fieldTouched.color && fieldErrors.color ? 'error' : ''}`}
+                                                className={`color-option ${formData.color === color.value ? 'selected' : ''} ${formSubmitting && fieldErrors.color ? 'error' : ''}`}
                                                 onClick={() => handleSelectChange('color', color)}
                                             >
                                                 <div className={`color-preview ${color.value}`}></div>
@@ -1226,7 +1549,7 @@ const RoleTemplates = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    {fieldTouched.color && fieldErrors.color && (
+                                    {formSubmitting && fieldErrors.color && (
                                         <div className="color-error-message">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.color}</span>
@@ -1258,7 +1581,7 @@ const RoleTemplates = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    {fieldTouched.permissions && fieldErrors.permissions && (
+                                    {formSubmitting && fieldErrors.permissions && (
                                         <div className="icon-error-message">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.permissions}</span>
@@ -1268,7 +1591,7 @@ const RoleTemplates = () => {
 
                                 <div className="form-group">
                                     <div className="template-status-toggle">
-                                    <p className="form-description">
+                                        <p className="form-description">
                                             Active templates can be used when creating new users. Inactive templates are hidden from the user creation process.
                                         </p>
                                         <label className="toggle-label">
@@ -1345,16 +1668,10 @@ const RoleTemplates = () => {
                                         required
                                     />
                                     <label htmlFor="editTemplateName" className="form-label">Template Name</label>
-                                    {fieldTouched.name && fieldErrors.name && (
+                                    {formSubmitting && fieldErrors.name && (
                                         <div className="field-error">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.name}</span>
-                                        </div>
-                                    )}
-                                    {fieldTouched.name && !fieldErrors.name && formData.name && (
-                                        <div className="field-success">
-                                            <FiCheckCircle />
-                                            <span>Valid</span>
                                         </div>
                                     )}
                                 </div>
@@ -1376,16 +1693,10 @@ const RoleTemplates = () => {
                                         required
                                     />
                                     <label htmlFor="editTemplateDescription" className="form-label">Description</label>
-                                    {fieldTouched.description && fieldErrors.description && (
+                                    {formSubmitting && fieldErrors.description && (
                                         <div className="field-error">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.description}</span>
-                                        </div>
-                                    )}
-                                    {fieldTouched.description && !fieldErrors.description && formData.description && (
-                                        <div className="field-success">
-                                            <FiCheckCircle />
-                                            <span>Valid</span>
                                         </div>
                                     )}
                                 </div>
@@ -1406,7 +1717,7 @@ const RoleTemplates = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    {fieldTouched.icon && fieldErrors.icon && (
+                                    {formSubmitting && fieldErrors.icon && (
                                         <div className="icon-error-message">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.icon}</span>
@@ -1428,7 +1739,7 @@ const RoleTemplates = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    {fieldTouched.color && fieldErrors.color && (
+                                    {formSubmitting && fieldErrors.color && (
                                         <div className="color-error-message">
                                             <FiAlertCircle />
                                             <span>{fieldErrors.color}</span>
@@ -1460,7 +1771,7 @@ const RoleTemplates = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    {fieldTouched.permissions && fieldErrors.permissions && (
+                                    {formSubmitting && fieldErrors.permissions && (
                                         <div className="error-message">{fieldErrors.permissions}</div>
                                     )}
                                 </div>
@@ -1611,7 +1922,7 @@ const RoleTemplates = () => {
                             >
                                 Close
                             </button>
-                            {canEditTemplates && !selectedTemplate.isDefault && (
+                            {!selectedTemplate.isDefault && (
                                 <button
                                     type="button"
                                     onClick={() => {
