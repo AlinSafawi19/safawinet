@@ -3,6 +3,9 @@ const moment = require('moment-timezone');
 const User = require('../models/User');
 const { authenticateToken, requireAdmin, requirePermission } = require('../middleware/auth');
 const emailService = require('../services/emailService');
+const { deleteOldProfilePicture } = require('../middleware/upload');
+const RoleTemplate = require('../models/RoleTemplate');
+const AuditLog = require('../models/AuditLog');
 
 const router = express.Router();
 
@@ -816,6 +819,22 @@ router.delete('/bulk', authenticateToken, requirePermission('users', 'delete'), 
             });
         }
 
+        // Delete profile picture files for all users being deleted
+        for (const user of usersToDelete) {
+            if (usersToDeleteIds.includes(user._id)) {
+                await deleteOldProfilePicture(user);
+            }
+        }
+
+        // Delete role templates created by these users (only non-default templates)
+        await RoleTemplate.deleteMany({ 
+            createdBy: { $in: usersToDeleteIds },
+            isDefault: false 
+        });
+
+        // Delete audit logs for these users
+        await AuditLog.deleteMany({ userId: { $in: usersToDeleteIds } });
+
         // Delete the users
         const deleteResult = await User.deleteMany({ _id: { $in: usersToDeleteIds } });
 
@@ -874,6 +893,18 @@ router.delete('/:id', authenticateToken, requirePermission('users', 'delete'), a
                 });
             }
         }
+
+        // Delete user's profile picture file if it exists
+        await deleteOldProfilePicture(user);
+
+        // Delete role templates created by this user (only non-default templates)
+        await RoleTemplate.deleteMany({ 
+            createdBy: user._id,
+            isDefault: false 
+        });
+
+        // Delete audit logs for this user
+        await AuditLog.deleteMany({ userId: user._id });
 
         await User.findByIdAndDelete(req.params.id);
 
