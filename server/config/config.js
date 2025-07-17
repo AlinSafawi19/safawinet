@@ -5,7 +5,7 @@ const config = {
       url: 'http://localhost:5000'
     },
     client: {
-      url: 'http://localhost:3002'
+      url: 'http://localhost:3000'
     },
     database: {
       uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/safawinet'

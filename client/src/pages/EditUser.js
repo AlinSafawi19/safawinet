@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import authService from '../services/authService';
 import roleTemplateService from '../services/roleTemplateService';
 import axios from 'axios';
@@ -7,7 +7,6 @@ import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/sweetAlertConfig';
 import {
     FiEye,
-    FiEyeOff,
     FiArrowRight,
     FiCheck,
     FiShield,
@@ -26,8 +25,9 @@ import {
     FiSearch
 } from 'react-icons/fi';
 
-const CreateUser = () => {
+const EditUser = () => {
     const navigate = useNavigate();
+    const { id: userId } = useParams();
     const user = authService.getCurrentUser();
 
     // Apply user theme preference
@@ -123,12 +123,10 @@ const CreateUser = () => {
     const [loading, setLoading] = useState(false);
     const [validating, setValidating] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
         email: '',
         phone: '',
-        password: '',
         firstName: '',
         lastName: '',
         isAdmin: false,
@@ -142,7 +140,6 @@ const CreateUser = () => {
         username: false,
         email: false,
         phone: false,
-        password: false,
         templateName: false,
         templateDescription: false
     });
@@ -153,13 +150,68 @@ const CreateUser = () => {
         lastName: '',
         username: '',
         email: '',
-        phone: '',
-        password: ''
+        phone: ''
     });
 
     // User creation templates - will be loaded from API
     const [userTemplates, setUserTemplates] = useState([]);
     const [templatesLoading, setTemplatesLoading] = useState(true);
+
+    // Load user data for editing
+    useEffect(() => {
+        if (!userId || !userTemplates.length) return;
+        const fetchUser = async () => {
+            setLoading(true);
+            try {
+                const api = axios.create({
+                    baseURL: '/api',
+                    withCredentials: true,
+                    timeout: 10000
+                });
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                }
+                const response = await api.get(`/users/${userId}`);
+                if (response.data && response.data.success && response.data.data) {
+                    const userData = response.data.data;
+                    // Try to match a template by permissions
+                    let matchedTemplate = null;
+                    for (const template of userTemplates) {
+                        if (template.id === 'custom') continue;
+                        if (JSON.stringify(template.permissions) === JSON.stringify(userData.permissions)) {
+                            matchedTemplate = template;
+                            break;
+                        }
+                    }
+                    if (matchedTemplate) {
+                        setSelectedTemplateForStep1(matchedTemplate);
+                        setSelectedTemplate(matchedTemplate);
+                    } else {
+                        // Custom role
+                        const customTemplate = userTemplates.find(t => t.id === 'custom');
+                        setSelectedTemplateForStep1(customTemplate);
+                        setSelectedTemplate(customTemplate);
+                    }
+                    setFormData(prev => ({
+                        ...prev,
+                        username: userData.username || '',
+                        email: userData.email || '',
+                        phone: userData.phone || '',
+                        firstName: userData.firstName || '',
+                        lastName: userData.lastName || '',
+                        isAdmin: userData.isAdmin || false,
+                        permissions: userData.permissions || []
+                    }));
+                }
+            } catch (err) {
+                showErrorToast('Failed to load user', err.message || 'Error loading user data');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUser();
+    }, [userId, userTemplates]);
 
     // Pagination state for templates
     const [templatePagination, setTemplatePagination] = useState({
@@ -284,8 +336,8 @@ const CreateUser = () => {
     const [templateNameError, setTemplateNameError] = useState('');
     const [templateDescriptionError, setTemplateDescriptionError] = useState('');
 
-    // Create API instance
-    const createApiInstance = useCallback(() => {
+    // Update API instance
+    const updateApiInstance = useCallback(() => {
         const api = axios.create({
             baseURL: '/api',
             withCredentials: true,
@@ -347,22 +399,6 @@ const CreateUser = () => {
                 }
                 return '';
 
-            case 'password':
-                if (!value) {
-                    return 'Password is required';
-                } else if (value.length < 8) {
-                    return 'Password must be at least 8 characters long';
-                } else if (!/(?=.*[a-z])/.test(value)) {
-                    return 'Password must contain at least one lowercase letter';
-                } else if (!/(?=.*[A-Z])/.test(value)) {
-                    return 'Password must contain at least one uppercase letter';
-                } else if (!/(?=.*\d)/.test(value)) {
-                    return 'Password must contain at least one number';
-                } else if (!/(?=.*[!@#$%^&*])/.test(value)) {
-                    return 'Password must contain at least one special character (!@#$%^&*)';
-                }
-                return '';
-
             default:
                 return '';
         }
@@ -418,7 +454,7 @@ const CreateUser = () => {
             // Check for duplicate template name only if name is valid
             if (templateName.trim() && templateName.trim().length >= 2) {
                 try {
-                    const api = createApiInstance();
+                    const api = updateApiInstance();
                     const response = await api.get('/role-templates');
                     if (response.data.success) {
                         const existingTemplate = response.data.data.find(template =>
@@ -450,7 +486,7 @@ const CreateUser = () => {
         let hasErrors = false;
 
         Object.keys(formData).forEach(field => {
-            if (['firstName', 'lastName', 'username', 'email', 'phone', 'password'].includes(field)) {
+            if (['firstName', 'lastName', 'username', 'email', 'phone'].includes(field)) {
                 const error = validateField(field, formData[field]);
                 newErrors[field] = error;
                 if (error) hasErrors = true;
@@ -458,7 +494,7 @@ const CreateUser = () => {
         });
 
         setFieldErrors(newErrors);
-        
+
         if (hasErrors) {
             showErrorToast('Validation Errors', 'Please fix the highlighted errors before continuing.');
             return false;
@@ -557,46 +593,46 @@ const CreateUser = () => {
             const updatedPermissions = newPermissions.map(permission => {
                 if (permission.page === 'users') {
                     const actions = [...permission.actions];
-                    
+
                     // If user has view_own, they can't have view (mutually exclusive)
                     if (actions.includes('view_own') && actions.includes('view')) {
                         actions.splice(actions.indexOf('view'), 1);
                     }
-                    
+
                     // If user has view, they can't have view_own (mutually exclusive)
                     if (actions.includes('view') && actions.includes('view_own')) {
                         actions.splice(actions.indexOf('view_own'), 1);
                     }
-                    
+
                     // If user has no view or view_own, remove other permissions
                     if (!actions.includes('view') && !actions.includes('view_own')) {
                         return { ...permission, actions: actions.filter(a => ['view', 'view_own'].includes(a)) };
                     }
-                    
+
                     return { ...permission, actions };
                 }
-                
+
                 if (permission.page === 'audit-logs') {
                     const actions = [...permission.actions];
-                    
+
                     // If user has view_own, they can't have view (mutually exclusive)
                     if (actions.includes('view_own') && actions.includes('view')) {
                         actions.splice(actions.indexOf('view'), 1);
                     }
-                    
+
                     // If user has view, they can't have view_own (mutually exclusive)
                     if (actions.includes('view') && actions.includes('view_own')) {
                         actions.splice(actions.indexOf('view_own'), 1);
                     }
-                    
+
                     // If user has no view or view_own, remove export
                     if (!actions.includes('view') && !actions.includes('view_own')) {
                         return { ...permission, actions: actions.filter(a => ['view', 'view_own'].includes(a)) };
                     }
-                    
+
                     return { ...permission, actions };
                 }
-                
+
                 return permission;
             });
 
@@ -733,19 +769,18 @@ const CreateUser = () => {
                 }
             }
 
-            const api = createApiInstance();
+            const api = updateApiInstance();
             const userData = {
                 username: formData.username.trim(),
                 email: formData.email.trim(),
                 phone: formData.phone.trim(),
-                password: formData.password,
                 firstName: formData.firstName.trim(),
                 lastName: formData.lastName.trim(),
                 isAdmin: formData.isAdmin,
                 permissions: formData.permissions
             };
 
-            const response = await api.post('/users', userData);
+            const response = await api.put(`/users/${userId}`, userData);
 
             if (response.data.success) {
                 // Increment template usage count if not custom
@@ -758,35 +793,35 @@ const CreateUser = () => {
                 }
 
                 showSuccessToast(
-                    'User Created Successfully!',
-                    `User "${formData.firstName} ${formData.lastName}" has been created with ${selectedTemplate?.name} role.`
+                    'User Updated Successfully!',
+                    `User "${formData.firstName} ${formData.lastName}" has been updated with ${selectedTemplate?.name} role.`
                 );
                 navigate('/users');
             } else {
-                showErrorToast('Creation Failed', response.data.message || 'An error occurred while creating the user.');
+                showErrorToast('Update Failed', response.data.message || 'An error occurred while updating the user.');
             }
         } catch (error) {
-            console.error('Error creating user:', error);
-            const errorMessage = error.response?.data?.message || error.message || 'An error occurred while creating the user.';
-            showErrorToast('Creation Failed', errorMessage);
+            console.error('Error updating user:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'An error occurred while updating the user.';
+            showErrorToast('Update Failed', errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     // Check if user has permission to create users
-    const canCreateUsers = user && authService.hasPermission('users', 'add');
+    const canEditUsers = user && authService.hasPermission('users', 'edit');
 
-    if (!canCreateUsers) {
+    if (!canEditUsers) {
         return (
             <div className="create-user-page">
                 <div className="create-user-header">
-                    <h1>Create User</h1>
+                    <h1>Edit User</h1>
                 </div>
                 <div className="access-denied">
                     <FiShield />
                     <h2>Access Denied</h2>
-                    <p>You don't have permission to create users.</p>
+                    <p>You don't have permission to edit users.</p>
                 </div>
             </div>
         );
@@ -954,10 +989,10 @@ const CreateUser = () => {
                 <div className="header-content">
                     <div className="header-info">
                         <h1 className="page-title">
-                            <FiUserPlus /> Create New User
+                            <FiUserPlus /> Edit User
                         </h1>
                         <p className="page-description">
-                            Add a new user to the system with appropriate permissions
+                            Edit user details and permissions
                         </p>
                     </div>
                 </div>
@@ -1588,7 +1623,7 @@ const CreateUser = () => {
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault();
-                                                        document.getElementById('password').focus();
+                                                        handleFormSubmit(e);
                                                     }
                                                 }}
                                                 className={getInputClass('phone')}
@@ -1599,44 +1634,6 @@ const CreateUser = () => {
                                                 <div className="field-error">
                                                     <FiAlertCircle />
                                                     <span>{fieldErrors.phone}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className={getFloatingLabelClass('password')}>
-                                            <div className="password-input">
-                                                <input
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    id="password"
-                                                    name="password"
-                                                    value={formData.password}
-                                                    onChange={handleInputChange}
-                                                    onFocus={() => setInputFocus(f => ({ ...f, password: true }))}
-                                                    onBlur={() => {
-                                                        setInputFocus(f => ({ ...f, password: false }));
-                                                        handleFieldBlur('password');
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            handleFormSubmit(e);
-                                                        }
-                                                    }}
-                                                    className={getInputClass('password')}
-                                                    autoComplete="new-password"
-                                                />
-                                                <label htmlFor="password" className="form-label">Password</label>
-                                                <button
-                                                    type="button"
-                                                    className="password-toggle"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                >
-                                                    {showPassword ? <FiEyeOff /> : <FiEye />}
-                                                </button>
-                                            </div>
-                                            {loading && fieldErrors.password && (
-                                                <div className="field-error">
-                                                    <FiAlertCircle />
-                                                    <span>{fieldErrors.password}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -1701,12 +1698,12 @@ const CreateUser = () => {
                                 {loading ? (
                                     <>
                                         <div className="spinner"></div>
-                                        Creating User...
+                                        Updating User...
                                     </>
                                 ) : (
                                     <>
                                         <FiSave />
-                                        Create User
+                                        Update User
                                     </>
                                 )}
                             </button>
@@ -1718,4 +1715,4 @@ const CreateUser = () => {
     );
 };
 
-export default CreateUser; 
+export default EditUser; 

@@ -10,6 +10,15 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
   const [showPasswordStrength, setShowPasswordStrength] = useState(false);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !user) return null;
 
   const formatDate = (dateString) => {

@@ -96,6 +96,9 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
             submenuItems.push({ id: 'create-user', label: 'Create User', path: '/users/create' });
         }
 
+        // Add Edit User submenu item (conditionally shown)
+        submenuItems.push({ id: 'edit-user', label: 'Edit User', path: '/users/edit', hidden: true });
+
         // Only show Role Templates if user has add permission (for creating templates)
         if (canAddUsers) {
             submenuItems.push({ id: 'role-templates', label: 'Role Templates', path: '/users/role-templates' });
@@ -138,6 +141,7 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
     // Update active section based on URL path
     useEffect(() => {
         const path = location.pathname;
+        const editUserMatch = path.match(/^\/users\/(.+)\/edit$/);
         if (path === '/dashboard') {
             setActiveSection('dashboard');
             setActiveSubmenuItem('');
@@ -157,6 +161,10 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
         } else if (path === '/users/create') {
             setActiveSection('users');
             setActiveSubmenuItem('create-user');
+            setExpandedMenus({ users: true });
+        } else if (editUserMatch) {
+            setActiveSection('users');
+            setActiveSubmenuItem('edit-user');
             setExpandedMenus({ users: true });
         } else if (path === '/users/role-templates') {
             setActiveSection('users');
@@ -321,7 +329,7 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
                                         >
                                             {item.submenu.length > 0 ? (
                                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                                    {item.submenu.map((sub, index) => (
+                                                    {item.submenu.filter(sub => !sub.hidden || activeSubmenuItem === sub.id).map((sub, index) => (
                                                         <li key={sub.id}>
                                                             <div
                                                                 className={`submenu-item ${activeSubmenuItem === sub.id ? 'active' : ''}`}
@@ -494,7 +502,7 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
                                                 >
                                                     {item.submenu.length > 0 ? (
                                                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                                            {item.submenu.map((sub, index) => (
+                                                            {item.submenu.filter(sub => !sub.hidden || activeSubmenuItem === sub.id).map((sub, index) => (
                                                                 <li key={sub.id}>
                                                                     <div
                                                                         className={`submenu-item ${activeSubmenuItem === sub.id ? 'active' : ''}`}

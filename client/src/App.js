@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import Users from './pages/Users';
 import CreateUser from './pages/CreateUser';
 import RoleTemplates from './pages/RoleTemplates';
+import EditUser from './pages/EditUser';
 import { applyUserTheme } from './utils/themeUtils';
 import { CalculatorProvider } from './contexts/CalculatorContext';
 import Calculator from './components/Calculator';
@@ -264,6 +265,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateUserPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <EditUser />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
