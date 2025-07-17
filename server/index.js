@@ -19,6 +19,7 @@ const AuditLog = require('./models/AuditLog');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const roleTemplateRoutes = require('./routes/roleTemplates');
+const todoRoutes = require('./routes/todos');
 
 const app = express();
 const server = http.createServer(app);
@@ -118,6 +119,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/role-templates', roleTemplateRoutes);
+app.use('/api/todos', todoRoutes);
 
 // Security monitoring routes (admin only)
 app.get('/api/security/report', async (req, res) => {

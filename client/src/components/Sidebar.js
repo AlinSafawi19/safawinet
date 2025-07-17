@@ -104,8 +104,6 @@ const Sidebar = ({ isMobileMenuOpen, onCloseMobileMenu, isMobile, isCollapsed })
             submenuItems.push({ id: 'role-templates', label: 'Role Templates', path: '/users/role-templates' });
         }
 
-        submenuItems.push({ id: 'user-reports', label: 'User Reports', path: '/users/reports' });
-
         menuSections.push({
             name: 'Administration',
             items: [

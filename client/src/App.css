@@ -4856,10 +4856,6 @@ textarea:focus {
     grid-column: 1 / 4;
 }
 
-.dashboard__card--todo {
-    grid-column: 4 / 5;
-}
-
 .dashboard__lower-row {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -5003,117 +4999,6 @@ textarea:focus {
     .dashboard__card-title {
         font-size: 1rem;
     }
-}
-
-/* Todo List Styles */
-.todo-list-card {
-    background: #fff;
-    border-radius: 8px;
-    padding: 1rem 1rem 0.5rem 1rem;
-    max-width: 300px;
-    margin: 0 auto;
-}
-
-.todo-list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.7rem;
-}
-
-.todo-list-title {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.todo-list-add-btn {
-    background: #f3f4f6;
-    border: none;
-    border-radius: 50%;
-    width: 1.8rem;
-    height: 1.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.todo-list-add-btn:hover {
-    background: #e0e7ff;
-}
-
-.todo-list-items {
-    width: 100%;
-}
-
-.todo-list-item {
-    padding: 0.3rem 0.3rem 0.3rem 0.3rem;
-    border-bottom: 1px solid #f3f4f6;
-}
-
-.todo-list-item-row {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-.todo-list-checkbox {
-    margin-right: 0.5rem;
-}
-
-.todo-list-text {
-    flex: 1;
-    font-size: 0.9rem;
-    color: #222;
-}
-
-.todo-list-flag {
-    font-size: 1em;
-    margin-left: 0.2em;
-}
-
-.todo-list-item-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.2rem;
-    margin-bottom: 0.1rem;
-}
-
-.todo-list-date {
-    font-size: 0.8em;
-    color: #888;
-}
-
-.todo-list-badge {
-    font-size: 0.8em;
-    padding: 0.15em 0.6em;
-    border-radius: 6px;
-    font-weight: 500;
-    margin-left: 0.2em;
-    display: inline-block;
-}
-
-.badge-warning {
-    background: #fde68a;
-    color: #b45309;
-}
-
-.badge-done {
-    background: #d1fae5;
-    color: #047857;
-}
-
-.badge-expired {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.todo-list-divider {
-    border: none;
-    border-top: 1px solid #f3f4f6;
-    margin: 0.5rem 0 0.1rem 0;
 }
 
 /* Security Status Card Styles */

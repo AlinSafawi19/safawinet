@@ -21,7 +21,6 @@ import {
     FiEye
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
-import TodoList from '../components/TodoList';
 
 // Fix for Leaflet marker icons in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -1918,12 +1917,6 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </div>
-
-                    <div className="dashboard__card dashboard__card--todo" style={{ gridColumn: '4 / 5' }}>
-                        <TodoList />
-                    </div>
-
-
                 </section>
             )}
 
