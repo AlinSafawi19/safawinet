@@ -10,6 +10,7 @@ import userService from '../services/userService';
 import authService from '../services/authService';
 import roleTemplateService from '../services/roleTemplateService';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
+import UserViewModal from '../components/UserViewModal';
 import 'react-datepicker/dist/react-datepicker.css';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 
@@ -50,6 +51,10 @@ const Users = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
+  // User view modal state
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   const hasPermission = (page, action) => {
     if (!currentUser) return false;
@@ -394,6 +399,16 @@ const Users = () => {
     } else {
       setSelectedUsers(prev => prev.filter(u => u._id !== user._id));
     }
+  };
+
+  const handleViewUser = (user) => {
+    setSelectedUser(user);
+    setIsUserModalOpen(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setIsUserModalOpen(false);
+    setSelectedUser(null);
   };
 
   const handleSelectAll = (isSelected) => {
@@ -1066,7 +1081,7 @@ const Users = () => {
                           <div className="action-buttons">
                             <button
                               className="action-btn view-btn"
-                              onClick={() => navigate(`/users/${user._id}`)}
+                              onClick={() => handleViewUser(user)}
                               title="View user details"
                             >
                               <HiEye />
@@ -1231,6 +1246,14 @@ const Users = () => {
         )}
       </div>
 
+      {/* User View Modal */}
+      <UserViewModal
+        user={selectedUser}
+        isOpen={isUserModalOpen}
+        onClose={handleCloseUserModal}
+        currentUser={currentUser}
+        onEditUser={(user) => navigate(`/users/${user._id}/edit`)}
+      />
 
     </div>
   );

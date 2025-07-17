@@ -1786,7 +1786,6 @@ textarea:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
 }
 
 .modal-title {
@@ -2086,7 +2085,6 @@ textarea:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
 }
 
 .two-factor-container .modal-title {
@@ -5763,7 +5761,6 @@ textarea:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
 }
 
 .modal-header h2 {
@@ -10367,7 +10364,7 @@ textarea:focus {
 
 .view-btn {
     background: #3b82f6;
-    color: white;
+    color: white !important;
 }
 
 .view-btn:hover {
@@ -10377,7 +10374,7 @@ textarea:focus {
 
 .edit-btn {
     background: #10b981;
-    color: white;
+    color: white !important;
 }
 
 .edit-btn:hover {
@@ -10387,7 +10384,7 @@ textarea:focus {
 
 .delete-btn {
     background: #ef4444;
-    color: white;
+    color: white !important;
 }
 
 .delete-btn:hover:not(:disabled) {
@@ -10411,7 +10408,6 @@ textarea:focus {
 .delete-confirm-modal .modal-header {
     border-bottom: 1px solid #e5e7eb;
     padding-bottom: 1rem;
-    margin-bottom: 1rem;
 }
 
 .delete-confirm-modal .modal-header h3 {
@@ -10587,4 +10583,1060 @@ textarea:focus {
         padding: 0.6rem 1.2rem;
         font-size: 0.8rem;
     }
+}
+
+/* User View Modal Styles */
+.user-view-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.user-view-modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.user-view-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-view-modal-overlay.show .user-view-modal {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.user-view-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e3e6ea;
+  background: #f8f9fa;
+}
+
+.user-view-modal .modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-view-modal .modal-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.user-view-modal .title-icon {
+  margin-right: 0.75rem;
+  color: #1f3bb3;
+}
+
+.user-view-modal .modal-close-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transform: scale(1);
+}
+
+.user-view-modal .modal-close-btn:hover {
+  background: #f8f9fa;
+  color: #1f3bb3;
+  transform: scale(1.1);
+}
+
+.user-view-modal .modal-close-btn:active {
+  transform: scale(0.95);
+}
+
+.user-view-modal .modal-edit-btn {
+  background: #1f3bb3;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transform: scale(1);
+}
+
+.user-view-modal .modal-edit-btn:hover {
+  background: #1a2f8f;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(31, 59, 179, 0.3);
+}
+
+.user-view-modal .modal-edit-btn:active {
+  transform: scale(0.95);
+}
+
+.user-view-modal .modal-edit-btn svg {
+  font-size: 1rem;
+}
+
+.user-view-modal .modal-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-view-modal .modal-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e3e6ea;
+  overflow-x: auto;
+}
+
+.user-view-modal .tab-button {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  position: relative;
+}
+
+.user-view-modal .tab-button:hover {
+  color: #1f3bb3;
+  background: #eaf0fb;
+}
+
+.user-view-modal .tab-button.active {
+  color: #1f3bb3;
+  border-bottom-color: #1f3bb3;
+  background: #fff;
+}
+
+.user-view-modal .tab-icon {
+  margin-right: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.user-view-modal .tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Overview Tab Styles */
+.user-overview-tab .profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e3e6ea;
+}
+
+.user-overview-tab .profile-avatar-section {
+  margin-right: 1.5rem;
+  text-align: center;
+}
+
+.user-overview-tab .profile-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.user-overview-tab .profile-image-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-overview-tab .profile-initials-large {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.user-overview-tab .profile-status {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.user-overview-tab .profile-info {
+  flex: 1;
+}
+
+.user-overview-tab .profile-name {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 0.25rem 0;
+}
+
+.user-overview-tab .profile-username {
+  color: #6c757d;
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+}
+
+.user-overview-tab .profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-overview-tab .profile-email,
+.user-overview-tab .profile-phone {
+  display: flex;
+  align-items: center;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.user-overview-tab .meta-icon {
+  margin-right: 0.5rem;
+  color: #1f3bb3;
+}
+
+/* Info Section Styles */
+.user-overview-tab .info-section {
+  margin-bottom: 2rem;
+}
+
+.user-overview-tab .section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 1rem 0;
+}
+
+.user-overview-tab .section-icon {
+  margin-right: 0.5rem;
+  color: #1f3bb3;
+}
+
+.user-overview-tab .info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.user-overview-tab .info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-overview-tab .info-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-overview-tab .info-item span {
+  font-size: 1rem;
+  color: #222;
+}
+
+/* Security Tab Styles */
+.user-security-tab .security-section {
+  margin-bottom: 2rem;
+}
+
+.user-security-tab .security-status,
+.user-security-tab .security-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.user-security-tab .security-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-security-tab .security-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-security-tab .security-item span {
+  font-size: 1rem;
+  color: #222;
+}
+
+/* Password Strength Styles */
+.user-security-tab .password-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-security-tab .password-strength-display {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.user-security-tab .strength-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.user-security-tab .strength-header label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-security-tab .toggle-password-strength {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.user-security-tab .toggle-password-strength:hover {
+  background: #e9ecef;
+  color: #222;
+}
+
+.user-security-tab .strength-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-security-tab .strength-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-security-tab .strength-score {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.user-security-tab .strength-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-security-tab .requirement {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+}
+
+.user-security-tab .requirement.met {
+  color: #28a745;
+}
+
+.user-security-tab .requirement.unmet {
+  color: #dc3545;
+}
+
+.user-security-tab .requirement-icon {
+  font-size: 0.75rem;
+}
+
+.user-security-tab .password-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.user-security-tab .password-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-security-tab .password-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-security-tab .password-item span {
+  font-size: 1rem;
+  color: #222;
+}
+
+/* Verification Styles */
+.user-security-tab .verification-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.user-security-tab .verification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-security-tab .verification-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Preferences Tab Styles */
+.user-preferences-tab .preferences-section {
+  margin-bottom: 2rem;
+}
+
+.user-preferences-tab .preferences-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.user-preferences-tab .preference-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-preferences-tab .preference-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-preferences-tab .preference-item span {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  color: #222;
+}
+
+.user-preferences-tab .preference-icon {
+  margin-right: 0.5rem;
+  color: #1f3bb3;
+}
+
+.user-preferences-tab .profile-picture-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.user-preferences-tab .picture-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-preferences-tab .picture-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-preferences-tab .picture-item span {
+  font-size: 1rem;
+  color: #222;
+}
+
+/* Permissions Tab Styles */
+.user-permissions-tab .permissions-section {
+  margin-bottom: 2rem;
+}
+
+.user-permissions-tab .permissions-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.user-permissions-tab .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.user-permissions-tab .summary-item label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-permissions-tab .summary-item span {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.user-permissions-tab .permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-permissions-tab .permission-group {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.user-permissions-tab .permission-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.user-permissions-tab .permission-page-icon {
+  margin-right: 0.5rem;
+  color: #1f3bb3;
+  font-size: 1.1rem;
+}
+
+.user-permissions-tab .permission-page {
+  font-weight: 600;
+  color: #222;
+  font-size: 0.9rem;
+}
+
+.user-permissions-tab .permission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.user-permissions-tab .permission-action {
+  display: flex;
+  align-items: center;
+  background: #eaf0fb;
+  color: #1f3bb3;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.user-permissions-tab .permission-action-icon {
+  margin-right: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.user-permissions-tab .no-permissions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #6c757d;
+  text-align: center;
+}
+
+.user-permissions-tab .no-permissions-icon {
+  margin-right: 0.5rem;
+  font-size: 1.5rem;
+}
+
+/* Activity Tab Styles */
+.user-activity-tab .activity-section {
+  margin-bottom: 2rem;
+}
+
+.user-activity-tab .activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.user-activity-tab .activity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-activity-tab .activity-item label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-activity-tab .activity-item span {
+  font-size: 1rem;
+  color: #222;
+}
+
+/* Sessions Tab Styles */
+.user-sessions-tab .sessions-section {
+  margin-bottom: 2rem;
+}
+
+.user-sessions-tab .sessions-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.user-sessions-tab .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.user-sessions-tab .summary-item label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-sessions-tab .summary-item span {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.user-sessions-tab .sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-sessions-tab .session-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.user-sessions-tab .session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.user-sessions-tab .session-device,
+.user-sessions-tab .session-ip {
+  display: flex;
+  align-items: center;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.user-sessions-tab .session-device svg,
+.user-sessions-tab .session-ip svg {
+  margin-right: 0.25rem;
+  color: #1f3bb3;
+}
+
+.user-sessions-tab .session-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.user-sessions-tab .session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-sessions-tab .session-info label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-sessions-tab .session-info span {
+  font-size: 0.9rem;
+  color: #222;
+}
+
+.user-sessions-tab .session-id {
+  font-family: 'Courier New', monospace;
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.user-sessions-tab .user-agent {
+  font-size: 0.8rem;
+  color: #6c757d;
+  word-break: break-all;
+}
+
+.user-sessions-tab .no-sessions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #6c757d;
+  text-align: center;
+}
+
+.user-sessions-tab .no-sessions-icon {
+  margin-right: 0.5rem;
+  font-size: 1.5rem;
+}
+
+/* Badge Styles */
+.verification-badge {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.verification-badge.verified {
+  background: #d4edda;
+  color: #155724;
+}
+
+.verification-badge.unverified {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.verification-icon {
+  margin-right: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.password-strength-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.enabled-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.disabled-badge {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.locked-badge {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.unlocked-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.warning-badge {
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.normal-badge {
+  background: #d1ecf1;
+  color: #0c5460;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sent-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.not-sent-badge {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.limit-reached-badge {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.limit-ok-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .user-view-modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .user-view-modal .modal-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .user-view-modal .modal-actions {
+    gap: 0.5rem;
+  }
+  
+  .user-view-modal .modal-edit-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .user-view-modal .modal-edit-btn svg {
+    font-size: 0.9rem;
+  }
+
+  .user-view-modal .tab-content {
+    padding: 1.5rem;
+  }
+
+  .user-overview-tab .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-overview-tab .profile-avatar-section {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+
+  .user-overview-tab .info-grid,
+  .user-security-tab .security-status,
+  .user-security-tab .security-grid,
+  .user-security-tab .verification-grid,
+  .user-preferences-tab .preferences-grid,
+  .user-preferences-tab .profile-picture-info,
+  .user-permissions-tab .permissions-summary,
+  .user-activity-tab .activity-grid,
+  .user-sessions-tab .sessions-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .user-view-modal .modal-tabs {
+    flex-wrap: wrap;
+  }
+
+  .user-view-modal .tab-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .user-sessions-tab .session-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .user-sessions-tab .session-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-view-modal-overlay {
+    padding: 0.5rem;
+  }
+  
+  .user-view-modal {
+    transform: scale(0.95) translateY(10px);
+  }
+  
+  .user-view-modal-overlay.show .user-view-modal {
+    transform: scale(1) translateY(0);
+  }
+
+  .user-view-modal .modal-header {
+    padding: 1rem;
+  }
+
+  .user-view-modal .tab-content {
+    padding: 1rem;
+  }
+
+  .user-view-modal .modal-title {
+    font-size: 1.1rem;
+  }
+
+  .user-overview-tab .profile-name {
+    font-size: 1.5rem;
+  }
+
+  .user-view-modal .tab-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .user-view-modal .tab-icon {
+    margin-right: 0.25rem;
+  }
 }
