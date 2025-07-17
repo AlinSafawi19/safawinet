@@ -40,7 +40,7 @@ const Profile = () => {
 
     // Extract user preferences with fallbacks
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
-    const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+    const userDateFormat = user?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
     // Remove isEditing and related logic
     // const [isEditing, setIsEditing] = useState(false);

@@ -2086,10 +2086,33 @@ router.get('/audit-logs/users', authenticateToken, async (req, res) => {
             });
         }
 
-        // Get all active users for the filter dropdown
-        const users = await User.find({ isActive: true })
+        const { search = '', page = 1, limit = 20 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+
+        // Build query
+        let query = { isActive: true };
+
+        // Add search filter
+        if (search && search.trim()) {
+            query.$or = [
+                { username: { $regex: search.trim(), $options: 'i' } },
+                { email: { $regex: search.trim(), $options: 'i' } },
+                { firstName: { $regex: search.trim(), $options: 'i' } },
+                { lastName: { $regex: search.trim(), $options: 'i' } }
+            ];
+        }
+
+        // Get total count for pagination
+        const totalCount = await User.countDocuments(query);
+        const totalPages = Math.ceil(totalCount / limitNum);
+
+        // Get paginated users
+        const users = await User.find(query)
             .select('_id firstName lastName username email')
             .sort({ firstName: 1, lastName: 1 })
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum)
             .lean();
 
         const userOptions = users.map(user => ({
@@ -2099,7 +2122,15 @@ router.get('/audit-logs/users', authenticateToken, async (req, res) => {
 
         res.json({
             success: true,
-            data: userOptions
+            data: userOptions,
+            pagination: {
+                currentPage: pageNum,
+                totalPages,
+                totalCount,
+                limit: limitNum,
+                hasNextPage: pageNum < totalPages,
+                hasPrevPage: pageNum > 1
+            }
         });
     } catch (error) {
         console.error('Error fetching users for audit logs filter:', error);
@@ -2241,14 +2272,14 @@ router.get('/audit-logs', authenticateToken, async (req, res) => {
 
         // Enhanced server-side filtering with debugging
         const filterParams = {
-            userId: filterUserId,
+            userId: filterUserId, // This is for permission-based filtering (null for admin/view, userId for view_own)
             page,
             limit,
             cutoff,
             action: req.query.action && req.query.action.trim() ? req.query.action.trim() : null,
             riskLevel: req.query.riskLevel && req.query.riskLevel.trim() ? req.query.riskLevel.trim() : null,
             success: req.query.success !== undefined && req.query.success !== '' ? req.query.success === 'true' : null,
-            filterUserId: req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission) ? req.query.userId.trim() : null,
+            filterUserId: req.query.userId && req.query.userId.trim() && (req.user.isAdmin || hasViewPermission) ? req.query.userId.trim() : null, // This is for frontend user filter
             sortBy: req.query.sortBy || 'timestamp',
             sortOrder: req.query.sortOrder || 'desc'
         };
@@ -2369,7 +2400,7 @@ router.get('/audit-logs/export', authenticateToken, async (req, res) => {
 
         // Use user's timezone and date format preferences
         const userTimezone = req.user.userPreferences?.timezone || req.query.timezone || 'Asia/Beirut';
-        const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+        const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
         
         let cutoff;
         if (req.query.cutoff) {
@@ -3284,6 +3315,37 @@ router.get('/performance-metrics', authenticateToken, async (req, res) => {
             success: false,
             message: 'Failed to fetch performance metrics'
         });
+    }
+});
+
+// DEBUG: Get raw audit log query and count for current user
+router.get('/audit-logs/debug', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const hasViewPermission = req.user.hasPermission('audit-logs', 'view');
+        const hasViewOwnPermission = req.user.hasPermission('audit-logs', 'view_own');
+        let filterUserId = null;
+        if (req.user.isAdmin) filterUserId = null;
+        else if (hasViewPermission) filterUserId = null;
+        else if (hasViewOwnPermission) filterUserId = userId;
+
+        // Build the same query as the main endpoint
+        const query = {};
+        // No date range: show everything
+        if (filterUserId) query.userId = filterUserId;
+
+        // Print the query
+        const count = await require('../models/AuditLog').countDocuments(query);
+        res.json({
+            query,
+            count,
+            isAdmin: req.user.isAdmin,
+            hasViewPermission,
+            hasViewOwnPermission,
+            userId: req.user._id
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

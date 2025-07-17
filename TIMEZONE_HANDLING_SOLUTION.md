@@ -19,7 +19,7 @@ The original implementation had a timezone mismatch issue:
 ```javascript
 // Extract user preferences with fallbacks
 const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
-const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+const userDateFormat = user?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 ```
 
 #### Date Range Calculation for Users
@@ -226,7 +226,7 @@ const formatDate = (dateString) => {
 
   // Get user's timezone and date format preferences
   const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
-  const userDateFormat = currentUser?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+  const userDateFormat = currentUser?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
   return moment(dateString).tz(userTimezone).format(userDateFormat);
 };
@@ -236,7 +236,7 @@ const formatDate = (dateString) => {
 ```javascript
 // Get user's timezone and date format preferences
 const userTimezone = req.user.userPreferences?.timezone || userTimezoneParam;
-const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
 const csvRows = users.map(user => [
   // ... other fields

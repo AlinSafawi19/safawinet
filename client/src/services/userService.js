@@ -59,9 +59,16 @@ class UserService {
     }
 
     // Get filter options for users
-    async getFilterOptions() {
+    async getFilterOptions(params = {}) {
         try {
-            const response = await fetch(`${this.baseURL}/users/filter-options`, {
+            const queryParams = new URLSearchParams();
+            
+            // Add pagination and search parameters
+            if (params.search) queryParams.append('search', params.search);
+            if (params.page) queryParams.append('page', params.page);
+            if (params.limit) queryParams.append('limit', params.limit);
+
+            const response = await fetch(`${this.baseURL}/users/filter-options?${queryParams}`, {
                 method: 'GET',
                 headers: this.getAuthHeaders()
             });

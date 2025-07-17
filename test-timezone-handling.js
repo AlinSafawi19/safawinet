@@ -5,7 +5,7 @@ console.log('=== Testing Users Timezone Handling ===\n');
 
 // Simulate user in different timezone
 const userTimezone = 'America/New_York';
-const userDateFormat = 'MMM dd, yyyy h:mm a';
+const userDateFormat = 'MMM DD, YYYY h:mm a';
 
 // Test date range conversion
 const testDateRange = {
@@ -45,7 +45,7 @@ timezones.forEach(tz => {
   console.log(`${tz}:`);
   console.log(`  Start: ${localStart}`);
   console.log(`  End: ${localEnd}`);
-  console.log(`  Sample display: ${moment(sampleCreatedAt).tz(tz).format('MMM dd, yyyy h:mm a')}`);
+  console.log(`  Sample display: ${moment(sampleCreatedAt).tz(tz).format('MMM DD, YYYY h:mm a')}`);
   console.log('');
 });
 
@@ -99,12 +99,12 @@ sampleDates.forEach(date => console.log(`  ${date}`));
 
 console.log('\nSorted in UTC (desc):');
 sampleDates.sort((a, b) => new Date(b) - new Date(a)).forEach(date => {
-  console.log(`  ${date} -> ${moment(date).tz(auditUserTimezone).format('MMM dd, yyyy h:mm a')}`);
+  console.log(`  ${date} -> ${moment(date).tz(auditUserTimezone).format('MMM DD, YYYY h:mm a')}`);
 });
 
 console.log('\nSorted in UTC (asc):');
 sampleDates.sort((a, b) => new Date(a) - new Date(b)).forEach(date => {
-  console.log(`  ${date} -> ${moment(date).tz(auditUserTimezone).format('MMM dd, yyyy h:mm a')}`);
+  console.log(`  ${date} -> ${moment(date).tz(auditUserTimezone).format('MMM DD, YYYY h:mm a')}`);
 });
 
 console.log('\n=== Timezone Handling Test Complete ===');

@@ -216,13 +216,36 @@ router.get('/filter-options', authenticateToken, async (req, res) => {
             });
         }
 
-        // Get all active users for the filter dropdown (excluding current user)
-        const users = await User.find({ 
+        const { search = '', page = 1, limit = 20 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+
+        // Build query
+        let query = { 
             isActive: true,
             _id: { $ne: req.user._id }
-        })
+        };
+
+        // Add search filter
+        if (search && search.trim()) {
+            query.$or = [
+                { username: { $regex: search.trim(), $options: 'i' } },
+                { email: { $regex: search.trim(), $options: 'i' } },
+                { firstName: { $regex: search.trim(), $options: 'i' } },
+                { lastName: { $regex: search.trim(), $options: 'i' } }
+            ];
+        }
+
+        // Get total count for pagination
+        const totalCount = await User.countDocuments(query);
+        const totalPages = Math.ceil(totalCount / limitNum);
+
+        // Get paginated users
+        const users = await User.find(query)
             .select('_id firstName lastName username email')
             .sort({ firstName: 1, lastName: 1 })
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum)
             .lean();
 
         const userOptions = users.map(user => ({
@@ -234,6 +257,14 @@ router.get('/filter-options', authenticateToken, async (req, res) => {
             success: true,
             data: {
                 users: userOptions,
+                pagination: {
+                    currentPage: pageNum,
+                    totalPages,
+                    totalCount,
+                    limit: limitNum,
+                    hasNextPage: pageNum < totalPages,
+                    hasPrevPage: pageNum > 1
+                },
                 roles: ['admin', 'manager', 'viewer', 'custom'],
                 statuses: [
                     { value: 'true', label: 'Active' },
@@ -422,7 +453,7 @@ router.get('/export', authenticateToken, async (req, res) => {
 
         // Get user's timezone and date format preferences
         const userTimezone = req.user.userPreferences?.timezone || userTimezoneParam;
-        const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+        const userDateFormat = req.user.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
         const csvRows = users.map(user => [
             user._id,
@@ -571,7 +602,7 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a',
+                dateFormat: 'MMM DD, YYYY h:mm a',
                 autoLogoutTime: 30
             }
         });
@@ -1082,5 +1113,4 @@ router.get('/:id/preferences', authenticateToken, async (req, res) => {
     }
 });
 
-module.exports = router; 
 module.exports = router; 

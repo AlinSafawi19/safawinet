@@ -4,6 +4,7 @@ import axios from 'axios';
 import moment from 'moment';
 import 'moment-timezone';
 import Select from 'react-select';
+import DatePicker from 'react-datepicker';
 import { applyUserTheme } from '../utils/themeUtils';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 import {
@@ -17,13 +18,33 @@ import {
   FiRefreshCw,
   FiCalendar,
   FiMapPin,
-  FiDownload
+  FiDownload,
+  FiXCircle
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
+import 'react-datepicker/dist/react-datepicker.css';
+
+// Debounce utility function
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const AuditLogs = () => {
   const user = authService.getCurrentUser();
   // Remove sidebarRef, filtersVisible, and sidebar toggling logic
+  console.log(user);
 
   // Apply user theme preference
   useEffect(() => {
@@ -34,7 +55,7 @@ const AuditLogs = () => {
 
   // Extract user preferences with fallbacks
   const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
-  const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+  const userDateFormat = user?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
   // Check user permissions for audit logs
   const hasViewPermission = user ? authService.hasPermission('audit-logs', 'view') : false;
@@ -49,7 +70,8 @@ const AuditLogs = () => {
     action: '',
     riskLevel: '',
     success: '',
-    dateRange: '24h',
+    dateRange: '24h', // Default to last 24 hours
+    customDateRange: null, // New field for custom date range
     userId: '', // Changed to array for multi-select
     sortBy: 'timestamp',
     sortOrder: 'desc'
@@ -69,6 +91,21 @@ const AuditLogs = () => {
   const [userOptions, setUserOptions] = useState([]);
   // Remove sidebarRef, filtersVisible, and sidebar toggling logic
 
+  // Search term for user filter
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const debouncedUserSearch = useDebounce(userSearchTerm, 300);
+
+  // Pagination state for user filter
+  const [userPagination, setUserPagination] = useState({
+    page: 1,
+    hasNextPage: false,
+    loading: false
+  });
+
+  // Date range state for the date picker
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+
   // Create a single axios instance for all API calls
   const createApiInstance = useCallback(() => {
     const api = axios.create({
@@ -86,19 +123,44 @@ const AuditLogs = () => {
   }, []);
 
   // Fetch user options for filter (only for admin and view permission users)
-  const fetchUserOptions = useCallback(async () => {
+  const fetchUserOptions = useCallback(async (search = '', page = 1, append = false) => {
     if (!authService.isUserAuthenticated()) return;
     if (!hasViewPermission && !authService.isAdmin()) return;
 
     try {
+      setUserPagination(prev => ({ ...prev, loading: true }));
       const api = createApiInstance();
-      const response = await api.get('/auth/audit-logs/users');
+      const params = new URLSearchParams();
+      
+      if (search) params.append('search', search);
+      if (page) params.append('page', page);
+      params.append('limit', '20'); // Load 20 users at a time
+      
+      const response = await api.get(`/auth/audit-logs/users?${params}`);
 
       if (response.data.success) {
-        setUserOptions(response.data.data);
+        const newOptions = response.data.data;
+        const pagination = response.data.pagination || { hasNextPage: false };
+
+        if (append) {
+          // Append to existing options
+          setUserOptions(prev => [...prev, ...newOptions]);
+        } else {
+          // Replace options
+          setUserOptions(newOptions);
+        }
+
+        // Update pagination state
+        setUserPagination(prev => ({
+          ...prev,
+          page,
+          hasNextPage: pagination.hasNextPage || false,
+          loading: false
+        }));
       }
     } catch (error) {
       console.error('Error fetching user options:', error);
+      setUserPagination(prev => ({ ...prev, loading: false }));
     }
   }, [createApiInstance, hasViewPermission]);
 
@@ -115,21 +177,33 @@ const AuditLogs = () => {
       // Calculate date range in user's timezone, then convert to UTC for backend
       let cutoff;
       const now = moment.tz(userTimezone);
-      switch (filters.dateRange) {
-        case '1h':
-          cutoff = now.clone().subtract(1, 'hour').utc();
-          break;
-        case '24h':
-          cutoff = now.clone().subtract(24, 'hours').utc();
-          break;
-        case '7d':
-          cutoff = now.clone().subtract(7, 'days').utc();
-          break;
-        case '30d':
-          cutoff = now.clone().subtract(30, 'days').utc();
-          break;
-        default:
-          cutoff = now.clone().subtract(24, 'hours').utc();
+      
+      // Check if custom date range is set
+      if (filters.customDateRange && filters.customDateRange.start && filters.customDateRange.end) {
+        // Use custom date range
+        const startDate = moment.tz(filters.customDateRange.start, userTimezone).startOf('day').utc();
+        const endDate = moment.tz(filters.customDateRange.end, userTimezone).endOf('day').utc();
+        
+        // Set cutoff to start date for backward compatibility
+        cutoff = startDate;
+      } else {
+        // Use predefined date ranges
+        switch (filters.dateRange) {
+          case '1h':
+            cutoff = now.clone().subtract(1, 'hour').utc();
+            break;
+          case '24h':
+            cutoff = now.clone().subtract(24, 'hours').utc();
+            break;
+          case '7d':
+            cutoff = now.clone().subtract(7, 'days').utc();
+            break;
+          case '30d':
+            cutoff = now.clone().subtract(30, 'days').utc();
+            break;
+          default:
+            cutoff = now.clone().subtract(24, 'hours').utc();
+        }
       }
 
       // Build query parameters
@@ -141,6 +215,14 @@ const AuditLogs = () => {
         sortBy: filters.sortBy,
         sortOrder: filters.sortOrder
       };
+
+      // Add custom date range parameters if set
+      if (filters.customDateRange && filters.customDateRange.start && filters.customDateRange.end) {
+        const startDate = moment.tz(filters.customDateRange.start, userTimezone).startOf('day').utc();
+        const endDate = moment.tz(filters.customDateRange.end, userTimezone).endOf('day').utc();
+        params.startDate = startDate.toISOString();
+        params.endDate = endDate.toISOString();
+      }
 
       if (filters.action) params.action = filters.action;
       if (filters.riskLevel) params.riskLevel = filters.riskLevel;
@@ -193,6 +275,21 @@ const AuditLogs = () => {
     fetchUserOptions();
   }, [fetchUserOptions]);
 
+  // Trigger user search when debounced search term changes
+  useEffect(() => {
+    if (hasViewPermission || authService.isAdmin()) {
+      fetchUserOptions(debouncedUserSearch, 1);
+    }
+  }, [debouncedUserSearch, hasViewPermission]);
+
+  // Load more function for user filter
+  const loadMoreUsers = async () => {
+    if (userPagination.hasNextPage && !userPagination.loading) {
+      const nextPage = userPagination.page + 1;
+      await fetchUserOptions(debouncedUserSearch, nextPage, true);
+    }
+  };
+
   // Format date for display with user's timezone and date format
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -230,6 +327,18 @@ const AuditLogs = () => {
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
 
+  // Handle date range changes
+  const handleDateRangeChange = (rangeType, date) => {
+    setFilters(prev => ({
+      ...prev,
+      customDateRange: {
+        ...prev.customDateRange,
+        [rangeType]: date
+      }
+    }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+  };
+
   // Handle pagination
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
@@ -263,21 +372,33 @@ const AuditLogs = () => {
       // Calculate date range in user's timezone, then convert to UTC for backend
       let cutoff;
       const now = moment.tz(userTimezone);
-      switch (filters.dateRange) {
-        case '1h':
-          cutoff = now.clone().subtract(1, 'hour').utc();
-          break;
-        case '24h':
-          cutoff = now.clone().subtract(24, 'hours').utc();
-          break;
-        case '7d':
-          cutoff = now.clone().subtract(7, 'days').utc();
-          break;
-        case '30d':
-          cutoff = now.clone().subtract(30, 'days').utc();
-          break;
-        default:
-          cutoff = now.clone().subtract(24, 'hours').utc();
+      
+      // Check if custom date range is set
+      if (filters.customDateRange && filters.customDateRange.start && filters.customDateRange.end) {
+        // Use custom date range
+        const startDate = moment.tz(filters.customDateRange.start, userTimezone).startOf('day').utc();
+        const endDate = moment.tz(filters.customDateRange.end, userTimezone).endOf('day').utc();
+        
+        // Set cutoff to start date for backward compatibility
+        cutoff = startDate;
+      } else {
+        // Use predefined date ranges
+        switch (filters.dateRange) {
+          case '1h':
+            cutoff = now.clone().subtract(1, 'hour').utc();
+            break;
+          case '24h':
+            cutoff = now.clone().subtract(24, 'hours').utc();
+            break;
+          case '7d':
+            cutoff = now.clone().subtract(7, 'days').utc();
+            break;
+          case '30d':
+            cutoff = now.clone().subtract(30, 'days').utc();
+            break;
+          default:
+            cutoff = now.clone().subtract(24, 'hours').utc();
+        }
       }
 
       // Build query parameters for export
@@ -287,6 +408,14 @@ const AuditLogs = () => {
         sortBy: filters.sortBy,
         sortOrder: filters.sortOrder
       };
+
+      // Add custom date range parameters if set
+      if (filters.customDateRange && filters.customDateRange.start && filters.customDateRange.end) {
+        const startDate = moment.tz(filters.customDateRange.start, userTimezone).startOf('day').utc();
+        const endDate = moment.tz(filters.customDateRange.end, userTimezone).endOf('day').utc();
+        params.startDate = startDate.toISOString();
+        params.endDate = endDate.toISOString();
+      }
 
       if (filters.action) params.action = filters.action;
       if (filters.riskLevel) params.riskLevel = filters.riskLevel;
@@ -332,10 +461,13 @@ const AuditLogs = () => {
       riskLevel: '',
       success: '',
       dateRange: '24h',
+      customDateRange: null,
       userId: [], // Changed to empty array
       sortBy: 'timestamp',
       sortOrder: 'desc'
     });
+    setStartDate(null);
+    setEndDate(null);
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
@@ -348,6 +480,7 @@ const AuditLogs = () => {
           riskLevel: '',
           success: 'false',
           dateRange: '24h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
@@ -359,6 +492,7 @@ const AuditLogs = () => {
           riskLevel: 'high',
           success: '',
           dateRange: '24h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
@@ -370,6 +504,7 @@ const AuditLogs = () => {
           riskLevel: 'critical',
           success: '',
           dateRange: '24h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
@@ -381,6 +516,7 @@ const AuditLogs = () => {
           riskLevel: '',
           success: 'true',
           dateRange: '24h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
@@ -392,6 +528,7 @@ const AuditLogs = () => {
           riskLevel: '',
           success: '',
           dateRange: '24h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
@@ -403,40 +540,56 @@ const AuditLogs = () => {
           riskLevel: '',
           success: '',
           dateRange: '24h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
         });
         break;
-      case 'recent_hour':
+      case 'last_24_hours':
+        setFilters({
+          action: '',
+          riskLevel: '',
+          success: '',
+          dateRange: '24h',
+          customDateRange: null,
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
+        });
+        break;
+      case 'last_30_days':
+        setFilters({
+          action: '',
+          riskLevel: '',
+          success: '',
+          dateRange: '30d',
+          customDateRange: null,
+          userId: [],
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
+        });
+        break;
+      case 'last_hour':
         setFilters({
           action: '',
           riskLevel: '',
           success: '',
           dateRange: '1h',
+          customDateRange: null,
           userId: [],
           sortBy: 'timestamp',
           sortOrder: 'desc'
         });
         break;
-      case 'last_week':
-        setFilters({
-          action: '',
-          riskLevel: '',
-          success: '',
-          dateRange: '7d',
-          userId: [],
-          sortBy: 'timestamp',
-          sortOrder: 'desc'
-        });
-        break;
+
       default:
         break;
     }
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
 
-  // Check if a quick filter is currently active
+    // Check if a quick filter is currently active
   const isQuickFilterActive = (filterType) => {
     switch (filterType) {
       case 'failed_logins':
@@ -451,10 +604,16 @@ const AuditLogs = () => {
         return filters.action === 'two_factor_enable';
       case 'security_alerts':
         return filters.action === 'security_alert';
-      case 'recent_hour':
-        return filters.dateRange === '1h';
-      case 'last_week':
-        return filters.dateRange === '7d';
+      case 'last_24_hours':
+        // Only active if dateRange is '24h' AND no custom date range is set
+        return filters.dateRange === '24h' && !filters.customDateRange;
+      case 'last_30_days':
+        // Only active if dateRange is '30d' AND no custom date range is set
+        return filters.dateRange === '30d' && !filters.customDateRange;
+      case 'last_hour':
+        // Only active if dateRange is '1h' AND no custom date range is set
+        return filters.dateRange === '1h' && !filters.customDateRange;
+ 
       default:
         return false;
     }
@@ -489,12 +648,7 @@ const AuditLogs = () => {
     { value: 'false', label: 'Failed' }
   ];
 
-  const timeRangeOptions = [
-    { value: '1h', label: 'Last Hour' },
-    { value: '24h', label: 'Last 24 Hours' },
-    { value: '7d', label: 'Last 7 Days' },
-    { value: '30d', label: 'Last 30 Days' }
-  ];
+
 
   const limitOptions = [
     { value: 25, label: '25 rows' },
@@ -616,6 +770,12 @@ const AuditLogs = () => {
       '&:hover': {
         color: '#1f3bb3'
       }
+    }),
+    loadingMessage: (provided) => ({
+      ...provided,
+      color: '#666',
+      fontSize: '0.875rem',
+      fontStyle: 'italic'
     })
   };
 
@@ -740,16 +900,42 @@ const AuditLogs = () => {
               isSearchable
             />
           </div>
+
           <div className="filter-group">
-            <h4>Time Range</h4>
-            <Select
-              value={timeRangeOptions.find(option => option.value === filters.dateRange)}
-              onChange={(selectedOption) => handleFilterChange('dateRange', selectedOption ? selectedOption.value : '24h')}
-              options={timeRangeOptions}
-              styles={customStyles}
-              placeholder="Select time range..."
-              isClearable={false}
-              isSearchable
+            <h4>Custom Date Range</h4>
+            <DatePicker
+              selectsRange={true}
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(update) => {
+                const [start, end] = update;
+                setStartDate(start);
+                setEndDate(end);
+                if (start && end) {
+                  setFilters(prev => ({
+                    ...prev,
+                    customDateRange: {
+                      start: start.toISOString().split('T')[0], // Keep as YYYY-MM-DD for display
+                      end: end.toISOString().split('T')[0]      // Keep as YYYY-MM-DD for display
+                    }
+                  }));
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                } else if (!start && !end) {
+                  // Clear custom date range when both dates are cleared
+                  setFilters(prev => ({
+                    ...prev,
+                    customDateRange: null
+                  }));
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }
+              }}
+              isClearable={true}
+              placeholderText="Select date range..."
+              className="date-range-input"
+              dateFormat="yyyy-MM-dd"
+              showMonthDropdown
+              showYearDropdown
+              dropdownMode="select"
             />
           </div>
           {(hasViewPermission || authService.isAdmin()) && (
@@ -761,6 +947,8 @@ const AuditLogs = () => {
                   const selectedUserIds = selectedOptions ? selectedOptions.map(option => option.value) : [];
                   handleFilterChange('userId', selectedUserIds);
                 }}
+                onInputChange={(newValue) => setUserSearchTerm(newValue)}
+                inputValue={userSearchTerm}
                 options={userOptions}
                 styles={customStyles}
                 placeholder="Select users..."
@@ -768,6 +956,10 @@ const AuditLogs = () => {
                 isClearable
                 isSearchable
                 closeMenuOnSelect={false}
+                filterOption={() => true} // Disable client-side filtering since we're doing server-side search
+                onMenuScrollToBottom={loadMoreUsers}
+                loadingMessage={() => "Loading more users..."}
+                noOptionsMessage={() => "No users found"}
               />
             </div>
           )}
@@ -875,19 +1067,27 @@ const AuditLogs = () => {
                 Security Alerts
               </button>
               <button
-                className={`quick-filter-btn${isQuickFilterActive('recent_hour') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('recent_hour')}
+                className={`quick-filter-btn${isQuickFilterActive('last_hour') ? ' active' : ''}`}
+                onClick={() => handleQuickFilter('last_hour')}
               >
                 <FiClock />
                 Last Hour
               </button>
               <button
-                className={`quick-filter-btn${isQuickFilterActive('last_week') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('last_week')}
+                className={`quick-filter-btn${isQuickFilterActive('last_24_hours') ? ' active' : ''}`}
+                onClick={() => handleQuickFilter('last_24_hours')}
+              >
+                <FiClock />
+                Last 24 Hours
+              </button>
+              <button
+                className={`quick-filter-btn${isQuickFilterActive('last_30_days') ? ' active' : ''}`}
+                onClick={() => handleQuickFilter('last_30_days')}
               >
                 <FiCalendar />
-                Last Week
+                Last 30 Days
               </button>
+
             </div>
           </div>
 

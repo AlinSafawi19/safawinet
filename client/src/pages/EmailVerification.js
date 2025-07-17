@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiMail } from 'react-icons/fi';
+import { FiMail, FiCheckCircle, FiXCircle, FiArrowLeft } from 'react-icons/fi';
 
 const EmailVerification = () => {
     const [searchParams] = useSearchParams();
@@ -9,6 +9,8 @@ const EmailVerification = () => {
     const [verificationStatus, setVerificationStatus] = useState('verifying');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const hasAttemptedVerification = useRef(false);
+    const currentToken = useRef('');
 
     useEffect(() => {
         const token = searchParams.get('token');
@@ -19,8 +21,13 @@ const EmailVerification = () => {
             return;
         }
 
-        verifyEmail(token);
-    }, [searchParams]);
+        // Only attempt verification if we haven't tried with this token before
+        if (!hasAttemptedVerification.current || currentToken.current !== token) {
+            currentToken.current = token;
+            hasAttemptedVerification.current = true;
+            verifyEmail(token);
+        }
+    }, []); // Remove searchParams dependency to prevent multiple calls
 
     const verifyEmail = async (token) => {
         try {
@@ -45,17 +52,22 @@ const EmailVerification = () => {
 
     const handleResendVerification = async () => {
         try {
+            setVerificationStatus('verifying');
+            setError('');
+            
             const response = await axios.post('/api/auth/send-email-verification', {}, {
                 withCredentials: true
             });
 
             if (response.data.success) {
-                setMessage('Verification email sent! Please check your inbox.');
-                setError('');
+                setVerificationStatus('success');
+                setMessage('Verification email sent! Please check your inbox and click the verification link.');
             } else {
+                setVerificationStatus('error');
                 setError('Failed to send verification email. Please try again.');
             }
         } catch (error) {
+            setVerificationStatus('error');
             setError('Failed to send verification email. Please try again.');
         }
     };
@@ -73,23 +85,34 @@ const EmailVerification = () => {
                 </div>
 
                 <div className="verification-content">
+                    {verificationStatus === 'verifying' && (
+                        <div className="verification-loading">
+                            <div className="loading-spinner"></div>
+                            <p className="loading-text">Verifying your email address...</p>
+                        </div>
+                    )}
+
                     {verificationStatus === 'success' && (
                         <div className="verification-success">
-                            <div className="success-icon">✅</div>
+                            <div className="success-icon">
+                                <FiCheckCircle />
+                            </div>
                             <h2 className="success-title">Email Verified Successfully!</h2>
                             <p className="success-message">{message}</p>
                             <button
                                 onClick={handleReturnToDashboard}
                                 className="btn btn-primary"
                             >
-                                Return to Dashboard
+                                <FiArrowLeft /> Return to Dashboard
                             </button>
                         </div>
                     )}
 
                     {verificationStatus === 'error' && (
                         <div className="verification-error">
-                            <div className="error-icon">❌</div>
+                            <div className="error-icon">
+                                <FiXCircle />
+                            </div>
                             <h2 className="error-title">Verification Failed</h2>
                             <p className="error-message">{error}</p>
 
@@ -98,13 +121,13 @@ const EmailVerification = () => {
                                     onClick={handleResendVerification}
                                     className="btn btn-secondary"
                                 >
-                                    Resend Verification Email
+                                    <FiMail /> Resend Verification Email
                                 </button>
                                 <button
                                     onClick={handleReturnToDashboard}
                                     className="btn btn-primary"
                                 >
-                                    Return to Dashboard
+                                    <FiArrowLeft /> Return to Dashboard
                                 </button>
                             </div>
                         </div>

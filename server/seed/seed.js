@@ -8,16 +8,16 @@ const AVAILABLE_PAGES = [
     'audit-logs'
 ];
 
-const AVAILABLE_ACTIONS = ['view', 'view_own', 'add', 'edit', 'delete', 'export'];
-
 // Role Templates with clear permissions
+// Note: view and view_own are mutually exclusive
+// If user doesn't have view or view_own, other actions are not allowed
 const ROLE_TEMPLATES = {
     admin: {
         name: 'Administrator',
         description: 'Full access to all features and system administration',
         permissions: AVAILABLE_PAGES.map(page => ({
             page,
-            actions: AVAILABLE_ACTIONS
+            actions: ['view', 'add', 'edit', 'delete', 'export'] // Only 'view', not 'view_own'
         }))
     },
     viewer: {
@@ -25,23 +25,23 @@ const ROLE_TEMPLATES = {
         description: 'Read-only access to all web app features',
         permissions: AVAILABLE_PAGES.map(page => ({
             page,
-            actions: ['view']
+            actions: ['view'] // Only 'view', not 'view_own'
         }))
     },
     manager: {
         name: 'Manager',
         description: 'User management and operational oversight',
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit'] },
-            { page: 'audit-logs', actions: ['view'] }
+            { page: 'users', actions: ['view', 'add', 'edit'] }, // Can view all users, add, edit
+            { page: 'audit-logs', actions: ['view_own'] } // Can only view their own audit logs
         ]
     },
     supervisor: {
         name: 'Supervisor',
         description: 'Team oversight and advanced reporting',
         permissions: [
-            { page: 'users', actions: ['view', 'add', 'edit'] },
-            { page: 'audit-logs', actions: ['view', 'export'] }
+            { page: 'users', actions: ['view', 'add', 'edit'] }, // Can view all users, add, edit
+            { page: 'audit-logs', actions: ['view_own', 'export'] } // Can view own logs and export
         ]
     }
 };
@@ -62,7 +62,7 @@ const adminUser = {
         timezone: 'Asia/Beirut',
         language: 'english',
         theme: 'light',
-        dateFormat: 'MMM dd, yyyy h:mm a',
+        dateFormat: 'MMM DD, YYYY h:mm a',
         autoLogoutTime: 30
     }
 };
@@ -124,7 +124,7 @@ const createSampleUsers = async (adminId) => {
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a',
+                dateFormat: 'MMM DD, YYYY h:mm a',
                 autoLogoutTime: 30
             }
         },
@@ -144,7 +144,7 @@ const createSampleUsers = async (adminId) => {
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a',
+                dateFormat: 'MMM DD, YYYY h:mm a',
                 autoLogoutTime: 30
             }
         },
@@ -164,7 +164,7 @@ const createSampleUsers = async (adminId) => {
                 timezone: 'Asia/Beirut',
                 language: 'english',
                 theme: 'light',
-                dateFormat: 'MMM dd, yyyy h:mm a',
+                dateFormat: 'MMM DD, YYYY h:mm a',
                 autoLogoutTime: 30
             }
         }

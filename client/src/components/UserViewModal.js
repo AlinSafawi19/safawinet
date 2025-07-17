@@ -24,7 +24,7 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'Never';
     const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
-    const userDateFormat = currentUser?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+    const userDateFormat = currentUser?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
     return moment(dateString).tz(userTimezone).format(userDateFormat);
   };
 
@@ -483,7 +483,7 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
             <label>Date Format</label>
             <span>
               <HiCalendar className="preference-icon" />
-              {user.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a'}
+              {user.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a'}
             </span>
           </div>
           <div className="preference-item">

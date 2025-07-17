@@ -90,18 +90,42 @@ const ResetPassword = () => {
         }
     };
 
-    // Handle input clicks
-    const handleNewPasswordClick = () => {
-        // Focus on confirm password field
-        if (confirmPasswordRef.current) {
-            confirmPasswordRef.current.focus();
-        }
-    };
+    // Handle Enter key navigation
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
 
-    const handleConfirmPasswordClick = () => {
-        // Trigger form submission
-        if (formData.newPassword && formData.confirmPassword) {
-            handleSubmit(new Event('submit'));
+            const { name } = e.target;
+
+            // Navigate to next field or submit form
+            switch (name) {
+                case 'newPassword':
+                    if (formData.newPassword.trim()) {
+                        document.getElementById('confirmPassword').focus();
+                    } else {
+                        // Stay on current field if empty
+                        return;
+                    }
+                    break;
+
+                case 'confirmPassword':
+                    // Check for empty fields and navigate to them
+                    if (!formData.newPassword.trim()) {
+                        document.getElementById('newPassword').focus();
+                        return;
+                    }
+                    if (!formData.confirmPassword.trim()) {
+                        // Stay on confirm field if empty
+                        return;
+                    }
+
+                    // All fields are filled, trigger form submission
+                    handleSubmit(e);
+                    break;
+
+                default:
+                    break;
+            }
         }
     };
 
@@ -177,7 +201,9 @@ const ResetPassword = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="auth-logo">
-                            <img src={logo} alt="SafawiNet Logo" className="logo-image" />
+                            <span className="text-logo">
+                                Safawi<span className="text-logo-blue">Net</span>
+                            </span>
                         </div>
                         <h2 className="auth-title">Invalid Reset Link</h2>
                     </div>
@@ -206,7 +232,9 @@ const ResetPassword = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="auth-logo">
-                            <img src={logo} alt="SafawiNet Logo" className="logo-image" />
+                            <span className="text-logo">
+                                Safawi<span className="text-logo-blue">Net</span>
+                            </span>
                         </div>
                         <h2 className="auth-title">Password Reset Successful</h2>
                     </div>
@@ -235,7 +263,9 @@ const ResetPassword = () => {
             <div className="auth-card">
                 <div className="auth-header">
                     <div className="auth-logo">
-                        <img src={logo} alt="SafawiNet Logo" className="logo-image" />
+                        <span className="text-logo">
+                            Safawi<span className="text-logo-blue">Net</span>
+                        </span>
                     </div>
                     <h2 className="auth-title">Reset Your Password</h2>
                     <p className="auth-subtitle">Enter your new password below</p>
@@ -252,7 +282,7 @@ const ResetPassword = () => {
                                 name="newPassword"
                                 value={formData.newPassword}
                                 onChange={handleChange}
-                                onClick={handleNewPasswordClick}
+                                onKeyPress={handleKeyPress}
                                 placeholder="Enter your new password"
                                 disabled={isLoading}
                                 autoComplete="new-password"
@@ -318,7 +348,7 @@ const ResetPassword = () => {
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
-                                onClick={handleConfirmPasswordClick}
+                                onKeyPress={handleKeyPress}
                                 placeholder="Confirm your new password"
                                 disabled={isLoading}
                                 autoComplete="new-password"

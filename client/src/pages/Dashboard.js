@@ -35,7 +35,7 @@ const Dashboard = () => {
     const user = authService.getCurrentUser();
     // Extract user preferences with fallbacks
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
-    const userDateFormat = user?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+    const userDateFormat = user?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);

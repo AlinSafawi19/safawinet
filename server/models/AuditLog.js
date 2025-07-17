@@ -197,9 +197,13 @@ auditLogSchema.statics.getPaginatedLogs = function(options) {
     query.timestamp = { $gte: cutoff };
   }
   
-  // User filtering
-  if (userId) query.userId = userId;
-  if (filterUserId) {
+  // Permission-based user filtering (userId parameter)
+  if (userId) {
+    query.userId = userId;
+  }
+  
+  // Frontend user filter (filterUserId parameter) - only apply if no permission-based filtering
+  if (filterUserId && !userId) {
     // Support both single user ID and multiple user IDs (comma-separated)
     const userIds = filterUserId.split(',').map(id => id.trim()).filter(id => id);
     if (userIds.length === 1) {

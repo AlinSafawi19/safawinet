@@ -230,7 +230,7 @@ const userSchema = new mongoose.Schema({
     },
     dateFormat: {
       type: String,
-      default: 'MMM dd, yyyy h:mm a' // Format: Jul 10, 2025 1:21 AM
+      default: 'MMM DD, YYYY h:mm a' // Format: Jul 10, 2025 1:21 AM
     },
     autoLogoutTime: {
       type: Number,

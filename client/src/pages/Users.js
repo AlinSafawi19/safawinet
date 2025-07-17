@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil } from 'react-icons/hi';
 import { FiDownload, FiCalendar, FiClock, FiXCircle } from 'react-icons/fi';
@@ -13,6 +13,23 @@ import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 import UserViewModal from '../components/UserViewModal';
 import 'react-datepicker/dist/react-datepicker.css';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+
+// Debounce utility function
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const Users = () => {
   const navigate = useNavigate();
@@ -47,6 +64,30 @@ const Users = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
+  // Search terms for filter dropdowns
+  const [roleSearchTerm, setRoleSearchTerm] = useState('');
+  const [createdBySearchTerm, setCreatedBySearchTerm] = useState('');
+  
+  // Debounced search terms
+  const debouncedRoleSearch = useDebounce(roleSearchTerm, 300);
+  const debouncedCreatedBySearch = useDebounce(createdBySearchTerm, 300);
+
+  // Cache for options to avoid unnecessary API calls
+  const [roleCache, setRoleCache] = useState(new Map());
+  const [createdByCache, setCreatedByCache] = useState(new Map());
+
+  // Pagination state for filter dropdowns
+  const [rolePagination, setRolePagination] = useState({
+    page: 1,
+    hasNextPage: false,
+    loading: false
+  });
+  const [createdByPagination, setCreatedByPagination] = useState({
+    page: 1,
+    hasNextPage: false,
+    loading: false
+  });
+
   // Delete functionality state
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -79,71 +120,126 @@ const Users = () => {
   }, [pagination.page, pagination.limit, filters, sorting]);
 
   // Fetch role templates for filter options
-  const fetchRoleOptions = async () => {
+  const fetchRoleOptions = async (search = '', page = 1, append = false) => {
+    // Define cacheKey at the beginning of the function
+    const cacheKey = `${search}-${page}`;
+    
     try {
       setLoadingRoles(true);
+      setRolePagination(prev => ({ ...prev, loading: true }));
 
-      // Try the active templates method first
+      // Check cache first for first page only
+      if (!append && roleCache.has(cacheKey)) {
+        setRoleOptions(roleCache.get(cacheKey));
+        setLoadingRoles(false);
+        setRolePagination(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      // Try the active templates method first with pagination
       let response;
       try {
         response = await roleTemplateService.getActiveTemplatesForUserCreation({
-          limit: 100
+          page,
+          limit: 50, // Load 50 templates at a time
+          search
         });
         console.log('Active templates API response:', response);
       } catch (error) {
         console.log('Active templates failed, trying regular templates');
         response = await roleTemplateService.getTemplates({
-          limit: 100,
-          status: 'all'
+          page,
+          limit: 50,
+          status: 'all',
+          search
         });
         console.log('Regular templates API response:', response);
       }
 
       // Handle different possible response structures
       let templates = [];
+      let pagination = { hasNextPage: false };
+      
       if (response.success && response.data && response.data.templates) {
         templates = response.data.templates;
+        pagination = response.data.pagination || { hasNextPage: false };
       } else if (response.success && response.data && Array.isArray(response.data)) {
         templates = response.data;
+        pagination = response.pagination || { hasNextPage: false };
       } else if (response.success && response.templates) {
         templates = response.templates;
+        pagination = response.pagination || { hasNextPage: false };
       } else if (Array.isArray(response)) {
         templates = response;
+        pagination = { hasNextPage: false };
       } else if (response.data && Array.isArray(response.data)) {
         templates = response.data;
+        pagination = response.pagination || { hasNextPage: false };
       }
 
       console.log('Templates extracted:', templates);
 
       if (templates && templates.length > 0) {
-        const options = [
-          { value: '', label: 'All Roles' },
-          ...templates.map(template => ({
-            value: template.name.toLowerCase(),
-            label: template.name
-          }))
-        ];
-        console.log('Role options created:', options);
-        setRoleOptions(options);
+        const newOptions = templates.map(template => ({
+          value: template.name.toLowerCase(),
+          label: template.name
+        }));
+
+        if (append) {
+          // Append to existing options
+          setRoleOptions(prev => {
+            const existingOptions = prev.filter(option => option.value !== ''); // Remove "All Roles"
+            const combinedOptions = [
+              { value: '', label: 'All Roles' },
+              ...existingOptions,
+              ...newOptions
+            ];
+            return combinedOptions;
+          });
+        } else {
+          // Replace options
+          const options = [
+            { value: '', label: 'All Roles' },
+            ...newOptions
+          ];
+          setRoleOptions(options);
+          
+          // Cache the results for first page only
+          setRoleCache(prev => new Map(prev).set(cacheKey, options));
+        }
+        
+        // Update pagination state
+        setRolePagination(prev => ({
+          ...prev,
+          page,
+          hasNextPage: pagination.hasNextPage || false,
+          loading: false
+        }));
       } else {
         console.log('No templates found, using fallback options');
         // Set fallback options
-        setRoleOptions([
+        const fallbackOptions = [
           { value: '', label: 'All Roles' },
           { value: 'admin', label: 'Admin' },
           { value: 'manager', label: 'Manager' },
           { value: 'viewer', label: 'Viewer' }
-        ]);
+        ];
+        setRoleOptions(fallbackOptions);
+        setRoleCache(prev => new Map(prev).set(cacheKey, fallbackOptions));
+        setRolePagination(prev => ({ ...prev, hasNextPage: false, loading: false }));
       }
     } catch (error) {
       console.error('Error fetching role templates:', error);
       // Fallback to basic options if API fails
-      setRoleOptions([
+      const fallbackOptions = [
         { value: '', label: 'All Roles' },
         { value: 'admin', label: 'Admin' },
         { value: 'manager', label: 'Manager' },
         { value: 'viewer', label: 'Viewer' }
-      ]);
+      ];
+      setRoleOptions(fallbackOptions);
+      setRoleCache(prev => new Map(prev).set(cacheKey, fallbackOptions));
+      setRolePagination(prev => ({ ...prev, hasNextPage: false, loading: false }));
     } finally {
       setLoadingRoles(false);
     }
@@ -159,38 +255,93 @@ const Users = () => {
   }, [roleOptions]);
 
   // Fetch all users for "Created By" filter options
-  const fetchCreatedByOptions = async () => {
+  const fetchCreatedByOptions = async (search = '', page = 1, append = false) => {
+    // Define cacheKey at the beginning of the function
+    const cacheKey = `${search}-${page}`;
+    
     try {
       setLoadingCreatedBy(true);
-      const response = await userService.getFilterOptions();
+      setCreatedByPagination(prev => ({ ...prev, loading: true }));
+
+      // Check cache first for first page only
+      if (!append && createdByCache.has(cacheKey)) {
+        setCreatedByOptions(createdByCache.get(cacheKey));
+        setLoadingCreatedBy(false);
+        setCreatedByPagination(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      const response = await userService.getFilterOptions({
+        search,
+        page,
+        limit: 20 // Load 20 users at a time
+      });
 
       console.log('Filter options API response:', response);
 
       if (response.success && response.data && response.data.users) {
-        const options = [
-          { value: '', label: 'All Creators' },
-          { value: 'system', label: 'System' },
-          { value: 'me', label: 'Me' },
-          ...response.data.users
-        ];
-        console.log('Created By options created:', options);
-        setCreatedByOptions(options);
+        const newOptions = response.data.users;
+
+        if (append) {
+          // Append to existing options
+          setCreatedByOptions(prev => {
+            const existingOptions = prev.filter(option => 
+              option.value !== '' && option.value !== 'system' && option.value !== 'me'
+            );
+            const combinedOptions = [
+              { value: '', label: 'All Creators' },
+              { value: 'system', label: 'System' },
+              { value: 'me', label: 'Me' },
+              ...existingOptions,
+              ...newOptions
+            ];
+            return combinedOptions;
+          });
+        } else {
+          // Replace options
+          const options = [
+            { value: '', label: 'All Creators' },
+            { value: 'system', label: 'System' },
+            { value: 'me', label: 'Me' },
+            ...newOptions
+          ];
+          console.log('Created By options created:', options);
+          setCreatedByOptions(options);
+          
+          // Cache the results for first page only
+          setCreatedByCache(prev => new Map(prev).set(cacheKey, options));
+        }
+
+        // Update pagination state
+        const pagination = response.data.pagination || { hasNextPage: false };
+        setCreatedByPagination(prev => ({
+          ...prev,
+          page,
+          hasNextPage: pagination.hasNextPage || false,
+          loading: false
+        }));
       } else {
         console.log('No users found, using fallback options');
-        setCreatedByOptions([
+        const fallbackOptions = [
           { value: '', label: 'All Creators' },
           { value: 'system', label: 'System' },
           { value: 'me', label: 'Me' }
-        ]);
+        ];
+        setCreatedByOptions(fallbackOptions);
+        setCreatedByCache(prev => new Map(prev).set(cacheKey, fallbackOptions));
+        setCreatedByPagination(prev => ({ ...prev, hasNextPage: false, loading: false }));
       }
     } catch (error) {
       console.error('Error fetching users for Created By options:', error);
       // Fallback to basic options if API fails
-      setCreatedByOptions([
+      const fallbackOptions = [
         { value: '', label: 'All Creators' },
         { value: 'system', label: 'System' },
         { value: 'me', label: 'Me' }
-      ]);
+      ];
+      setCreatedByOptions(fallbackOptions);
+      setCreatedByCache(prev => new Map(prev).set(cacheKey, fallbackOptions));
+      setCreatedByPagination(prev => ({ ...prev, hasNextPage: false, loading: false }));
     } finally {
       setLoadingCreatedBy(false);
     }
@@ -201,6 +352,33 @@ const Users = () => {
       fetchCreatedByOptions();
     }
   }, [canViewUsers]);
+
+  // Trigger role search when debounced search term changes
+  useEffect(() => {
+    fetchRoleOptions(debouncedRoleSearch, 1);
+  }, [debouncedRoleSearch]);
+
+  // Trigger created by search when debounced search term changes
+  useEffect(() => {
+    if (canViewUsers) {
+      fetchCreatedByOptions(debouncedCreatedBySearch, 1);
+    }
+  }, [debouncedCreatedBySearch, canViewUsers]);
+
+  // Load more functions for filter dropdowns
+  const loadMoreRoles = async () => {
+    if (rolePagination.hasNextPage && !rolePagination.loading) {
+      const nextPage = rolePagination.page + 1;
+      await fetchRoleOptions(debouncedRoleSearch, nextPage, true);
+    }
+  };
+
+  const loadMoreCreatedBy = async () => {
+    if (createdByPagination.hasNextPage && !createdByPagination.loading) {
+      const nextPage = createdByPagination.page + 1;
+      await fetchCreatedByOptions(debouncedCreatedBySearch, nextPage, true);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -648,7 +826,7 @@ const Users = () => {
 
     // Get user's timezone and date format preferences
     const userTimezone = currentUser?.userPreferences?.timezone || 'Asia/Beirut';
-    const userDateFormat = currentUser?.userPreferences?.dateFormat || 'MMM dd, yyyy h:mm a';
+    const userDateFormat = currentUser?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
     return moment(dateString).tz(userTimezone).format(userDateFormat);
   };
@@ -792,6 +970,12 @@ const Users = () => {
       '&:hover': {
         color: '#1f3bb3'
       }
+    }),
+    loadingMessage: (provided) => ({
+      ...provided,
+      color: '#666',
+      fontSize: '0.875rem',
+      fontStyle: 'italic'
     })
   };
 
@@ -981,12 +1165,19 @@ const Users = () => {
               <Select
                 value={roleOptions.find(option => option.value === filters.role)}
                 onChange={(selectedOption) => handleFilterChange('role', selectedOption ? selectedOption.value : '')}
+                onInputChange={(newValue) => setRoleSearchTerm(newValue)}
+                inputValue={roleSearchTerm}
                 options={roleOptions}
                 styles={customStyles}
                 placeholder={loadingRoles ? "Loading roles..." : "Select role..."}
                 isClearable
                 isSearchable
                 isLoading={loadingRoles}
+                filterOption={() => true} // Disable client-side filtering since we're doing server-side search
+                onMenuScrollToBottom={loadMoreRoles}
+                closeMenuOnSelect={false}
+                loadingMessage={() => "Loading more roles..."}
+                noOptionsMessage={() => "No roles found"}
               />
             </div>
 
@@ -999,14 +1190,20 @@ const Users = () => {
                     const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
                     handleFilterChange('createdBy', selectedValues);
                   }}
+                  onInputChange={(newValue) => setCreatedBySearchTerm(newValue)}
+                  inputValue={createdBySearchTerm}
                   options={createdByOptions}
                   styles={customStyles}
-                  placeholder={loadingCreatedBy ? "Loading creators..." : "Select creators..."}
+                  placeholder={loadingCreatedBy ? "Loading users..." : "Select users..."}
                   isMulti
                   isClearable
                   isSearchable
                   isLoading={loadingCreatedBy}
                   closeMenuOnSelect={false}
+                  filterOption={() => true} // Disable client-side filtering since we're doing server-side search
+                  onMenuScrollToBottom={loadMoreCreatedBy}
+                  loadingMessage={() => "Loading more users..."}
+                  noOptionsMessage={() => "No users found"}
                 />
               </div>
             )}
@@ -1058,8 +1255,8 @@ const Users = () => {
         </div>
       </div>
 
-   {/* Quick Filters Row */}
-   <div className="quick-filters-row" style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0', flexWrap: 'wrap' }}>
+      {/* Quick Filters Row */}
+      <div className="quick-filters-row" style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0', flexWrap: 'wrap' }}>
         <button
           className={`quick-filter-btn${isQuickFilterActive('active_users') ? ' active' : ''}`}
           onClick={() => handleQuickFilter('active_users')}
