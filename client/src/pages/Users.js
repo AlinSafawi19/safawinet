@@ -327,6 +327,126 @@ const Users = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  // Quick Filters
+  const handleQuickFilter = (filterType) => {
+    switch (filterType) {
+      case 'active_users':
+        setFilters(prev => ({
+          ...prev,
+          status: 'true',
+          role: '',
+          createdBy: [],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      case 'inactive_users':
+        setFilters(prev => ({
+          ...prev,
+          status: 'false',
+          role: '',
+          createdBy: [],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      case 'admin_users':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          role: 'admin',
+          createdBy: [],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      case 'manager_users':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          role: 'manager',
+          createdBy: [],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      case 'viewer_users':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          role: 'viewer',
+          createdBy: [],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      case 'recent_users':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          role: '',
+          createdBy: [],
+          createdDateRange: {
+            start: moment().subtract(7, 'days').toISOString().split('T')[0],
+            end: moment().toISOString().split('T')[0]
+          },
+          search: ''
+        }));
+        break;
+      case 'my_users':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          role: '',
+          createdBy: ['me'],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      case 'system_users':
+        setFilters(prev => ({
+          ...prev,
+          status: '',
+          role: '',
+          createdBy: ['system'],
+          createdDateRange: null,
+          search: ''
+        }));
+        break;
+      default:
+        break;
+    }
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const isQuickFilterActive = (filterType) => {
+    switch (filterType) {
+      case 'active_users':
+        return filters.status === 'true' && !filters.role && (!filters.createdBy || filters.createdBy.length === 0);
+      case 'inactive_users':
+        return filters.status === 'false' && !filters.role && (!filters.createdBy || filters.createdBy.length === 0);
+      case 'admin_users':
+        return filters.role === 'admin';
+      case 'manager_users':
+        return filters.role === 'manager';
+      case 'viewer_users':
+        return filters.role === 'viewer';
+      case 'recent_users':
+        if (!filters.createdDateRange) return false;
+        const start = filters.createdDateRange.start;
+        const end = filters.createdDateRange.end;
+        const expectedStart = moment().subtract(7, 'days').toISOString().split('T')[0];
+        const expectedEnd = moment().toISOString().split('T')[0];
+        return start === expectedStart && end === expectedEnd;
+      case 'my_users':
+        return Array.isArray(filters.createdBy) && filters.createdBy.includes('me');
+      case 'system_users':
+        return Array.isArray(filters.createdBy) && filters.createdBy.includes('system');
+      default:
+        return false;
+    }
+  };
+
   // Delete functionality
   const handleDeleteUser = async (userId) => {
     try {
@@ -938,7 +1058,57 @@ const Users = () => {
         </div>
       </div>
 
-
+   {/* Quick Filters Row */}
+   <div className="quick-filters-row" style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0', flexWrap: 'wrap' }}>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('active_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('active_users')}
+        >
+          Active Users
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('inactive_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('inactive_users')}
+        >
+          Inactive Users
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('admin_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('admin_users')}
+        >
+          Admins
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('manager_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('manager_users')}
+        >
+          Managers
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('viewer_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('viewer_users')}
+        >
+          Viewers
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('recent_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('recent_users')}
+        >
+          Recent (7 days)
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('my_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('my_users')}
+        >
+          My Users
+        </button>
+        <button
+          className={`quick-filter-btn${isQuickFilterActive('system_users') ? ' active' : ''}`}
+          onClick={() => handleQuickFilter('system_users')}
+        >
+          System Users
+        </button>
+      </div>
 
       {/* Users Table */}
       <div className="users-content">
