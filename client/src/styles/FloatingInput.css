@@ -1,0 +1,244 @@
+/* Floating Input Component Styles */
+.floating-input-container {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.floating-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.floating-input {
+    width: 100%;
+    padding: 1rem 1rem 0.5rem 1rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+    outline: none;
+    color: #333;
+}
+
+.floating-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.floating-input:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.floating-label {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    font-size: 1rem;
+    color: #6c757d;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    background-color: #ffffff;
+    padding: 0 0.25rem;
+    transform-origin: left top;
+}
+
+.floating-label.floating {
+    top: 0.25rem;
+    font-size: 0.75rem;
+    color: #007bff;
+    font-weight: 500;
+}
+
+.floating-input:focus + .floating-label {
+    color: #007bff;
+}
+
+.floating-input:disabled + .floating-label {
+    color: #6c757d;
+}
+
+/* Auto-fill styles - these handle browser auto-fill */
+.floating-input:-webkit-autofill,
+.floating-input:-webkit-autofill:hover,
+.floating-input:-webkit-autofill:focus,
+.floating-input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #333 !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* When input is auto-filled, make the label float */
+.floating-input:-webkit-autofill + .floating-label {
+    top: 0.25rem;
+    font-size: 0.75rem;
+    color: #007bff;
+    font-weight: 500;
+}
+
+/* For Firefox and other browsers that support autofill */
+.floating-input:autofill {
+    background-color: white !important;
+    color: #333 !important;
+}
+
+.floating-input:autofill + .floating-label {
+    top: 0.25rem;
+    font-size: 0.75rem;
+    color: #007bff;
+    font-weight: 500;
+}
+
+.required-asterisk {
+    color: #dc3545;
+    margin-left: 0.25rem;
+}
+
+.password-toggle-btn,
+.copy-toggle-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-toggle-btn:hover,
+.copy-toggle-btn:hover {
+    color: #007bff;
+}
+
+.password-toggle-btn:disabled,
+.copy-toggle-btn:disabled {
+    color: #adb5bd;
+    cursor: not-allowed;
+}
+
+/* When both password and copy buttons are present, adjust positioning */
+.floating-input-wrapper:has(.password-toggle-btn) .copy-toggle-btn {
+    right: 2.5rem;
+}
+
+.floating-input-wrapper.has-error .floating-input {
+    border-color: #dc3545;
+}
+
+.floating-input-wrapper.has-error .floating-input:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.floating-input-wrapper.has-error .floating-label {
+    color: #dc3545;
+}
+
+.floating-input-wrapper.has-error .floating-label.floating {
+    color: #dc3545;
+}
+
+.floating-input-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Input type specific styles */
+.floating-input[type="email"] {
+    text-transform: lowercase;
+}
+
+.floating-input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.floating-input[type="number"]::-webkit-outer-spin-button,
+.floating-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.floating-input[type="tel"] {
+    font-family: monospace;
+    letter-spacing: 0.1em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .floating-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .floating-label {
+        font-size: 16px;
+    }
+    
+    .floating-label.floating {
+        font-size: 12px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .floating-input {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .floating-input:focus {
+        border-color: #3182ce;
+        box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+    }
+    
+    .floating-label {
+        background-color: #2d3748;
+        color: #a0aec0;
+    }
+    
+    .floating-label.floating {
+        color: #3182ce;
+    }
+    
+    .floating-input:focus + .floating-label {
+        color: #3182ce;
+    }
+    
+    /* Dark mode auto-fill styles */
+    .floating-input:-webkit-autofill,
+    .floating-input:-webkit-autofill:hover,
+    .floating-input:-webkit-autofill:focus,
+    .floating-input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px #2d3748 inset !important;
+        -webkit-text-fill-color: #e2e8f0 !important;
+    }
+    
+    .floating-input:-webkit-autofill + .floating-label {
+        color: #3182ce;
+    }
+    
+    .floating-input:autofill {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+    
+    .floating-input:autofill + .floating-label {
+        color: #3182ce;
+    }
+} 

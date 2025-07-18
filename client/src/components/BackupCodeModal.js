@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiShield, FiAlertCircle } from 'react-icons/fi';
+import { FiX, FiShield } from 'react-icons/fi';
+import FloatingInput from './FloatingInput';
 
 const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
     const [backupCode, setBackupCode] = useState('');
@@ -21,11 +22,20 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
             return;
         }
 
-        // Return the backup code to parent component instead of making API call
-        if (onSuccess) {
-            onSuccess({ backupCode: backupCode.trim() });
+        setIsLoading(true);
+        setError('');
+
+        try {
+            // Return the backup code to parent component instead of making API call
+            if (onSuccess) {
+                await onSuccess({ backupCode: backupCode.trim() });
+            }
+            handleClose();
+        } catch (error) {
+            setError(error.message || 'Failed to verify backup code');
+        } finally {
+            setIsLoading(false);
         }
-        handleClose();
     };
 
     // Close modal
@@ -33,6 +43,7 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
         if (!isLoading) {
             setBackupCode('');
             setError('');
+            setIsLoading(false);
             onClose();
         }
     };
@@ -42,6 +53,7 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
         if (isOpen) {
             setBackupCode('');
             setError('');
+            setIsLoading(false);
         }
     }, [isOpen]);
 
@@ -71,14 +83,14 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
             <div className="modal-container" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2 className="modal-title">
-                        <FiShield />
+                        <span className="title-icon"><FiShield /></span>
                         Backup Code Verification
                     </h2>
                     <button
                         type="button"
                         onClick={handleClose}
                         disabled={isLoading}
-                        className="modal-close-btn"
+                        className="btn btn-danger btn-md"
                     >
                         <FiX />
                     </button>
@@ -91,33 +103,23 @@ const BackupCodeModal = ({ isOpen, onClose, onSuccess, onCancel }) => {
                             Each backup code can only be used once.
                         </p>
 
-                        <div className="security-notice">
-                            <FiAlertCircle />
-                            <span className="notice-text">
-                                If you've lost all your backup codes, you'll need to contact support to regain access.
-                            </span>
+                        <div className="info-text">
+                            If you've lost all your backup codes, you'll need to contact support to regain access.
                         </div>
                     </div>
 
                     <form onSubmit={handleSubmit} className="modal-form">
-                        <div className="form-group">
-                            <input
-                                type="text"
-                                id="backupCode"
-                                value={backupCode}
-                                onChange={(e) => setBackupCode(e.target.value)}
-                                placeholder=" "
-                                maxLength="8"
-                                className="form-input"
-                                autoComplete="off"
-                                autoFocus
-                            />
-                            <label htmlFor="backupCode" className="form-label">Backup Code</label>
-                        </div>
-
-                        {error && (
-                            <div className="form-error">{error}</div>
-                        )}
+                        <FloatingInput
+                            type="text"
+                            id="backupCode"
+                            value={backupCode}
+                            onChange={(e) => setBackupCode(e.target.value)}
+                            label="Backup Code"
+                            error={error}
+                            maxLength="8"
+                            autoComplete="off"
+                            autoFocus
+                        />
 
                         <div className="form-actions">
                             <button

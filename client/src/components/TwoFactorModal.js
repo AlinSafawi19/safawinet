@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FiX, FiShield, FiQrCode, FiKey, FiCheckCircle, FiAlertCircle, FiCopy, FiDownload, FiEyeOff, FiEye, FiRefreshCw } from 'react-icons/fi';
+import { FiX, FiShield, FiCheckCircle, FiAlertCircle, FiCopy, FiDownload } from 'react-icons/fi';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import googleAuthIcon from '../assets/images/google-authenticator-icon.png';
+import FloatingInput from './FloatingInput';
 
 const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
     const [step, setStep] = useState('setup'); // 'setup', 'qr-view', 'backup-view', 'verify', 'success'
@@ -12,9 +13,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
     const [secret, setSecret] = useState('');
     const [backupCodes, setBackupCodes] = useState([]);
     const [verificationCode, setVerificationCode] = useState('');
-    const [showSecret, setShowSecret] = useState(false);
-    const [showBackupCodes, setShowBackupCodes] = useState(false);
-    const [inputFocus, setInputFocus] = useState({ verificationCode: false });
 
     // Create API instance
     const createApiInstance = () => {
@@ -57,7 +55,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                 setError(response.data.message || 'Failed to setup 2FA');
             }
         } catch (error) {
-            console.error('2FA setup error:', error);
             setError(error.response?.data?.message || 'Failed to setup 2FA');
         } finally {
             setIsLoading(false);
@@ -91,7 +88,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                 setError(response.data.message || 'Invalid verification code');
             }
         } catch (error) {
-            console.error('2FA verification error:', error);
             setError(error.response?.data?.message || 'Failed to verify code');
         } finally {
             setIsLoading(false);
@@ -121,7 +117,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                 setError(response.data.message || 'Invalid verification code');
             }
         } catch (error) {
-            console.error('2FA disable error:', error);
             setError(error.response?.data?.message || 'Failed to disable 2FA');
         } finally {
             setIsLoading(false);
@@ -160,36 +155,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
         setStep('verify');
     };
 
-    // Regenerate backup codes
-    const regenerateBackupCodes = async () => {
-        if (!verificationCode.trim()) {
-            setError('Please enter the verification code first');
-            return;
-        }
-
-        setIsLoading(true);
-        setError('');
-
-        try {
-            const api = createApiInstance();
-            const response = await api.post('/auth/2fa/regenerate-backup-codes', {
-                code: verificationCode
-            });
-
-            if (response.data.success) {
-                setBackupCodes(response.data.data.backupCodes);
-                showSuccessToast('Backup Codes Regenerated!', response.data.message);
-            } else {
-                setError(response.data.message || 'Failed to regenerate backup codes');
-            }
-        } catch (error) {
-            console.error('Backup codes regeneration error:', error);
-            setError(error.response?.data?.message || 'Failed to regenerate backup codes');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     // Close modal
     const handleClose = () => {
         if (!isLoading) {
@@ -200,8 +165,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
             setQrCodeUrl('');
             setSecret('');
             setBackupCodes([]);
-            setShowSecret(false);
-            setShowBackupCodes(false);
             onClose();
         }
     };
@@ -216,8 +179,6 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
             setQrCodeUrl('');
             setSecret('');
             setBackupCodes([]);
-            setShowSecret(false);
-            setShowBackupCodes(false);
         }
     }, [isOpen, mode]);
 
@@ -243,18 +204,18 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="two-factor-modal" onClick={handleClose}>
-            <div className="two-factor-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={handleClose}>
+            <div className="modal-container" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2 className="modal-title">
-                        <FiShield />
+                        <span className="title-icon"><FiShield /></span>
                         {mode === 'enable' ? 'Enable Two-Factor Authentication' : 'Disable Two-Factor Authentication'}
                     </h2>
                     <button
                         type="button"
                         onClick={handleClose}
                         disabled={isLoading}
-                        className="modal-close-btn"
+                        className="btn btn-danger btn-md"
                     >
                         <FiX />
                     </button>
@@ -265,8 +226,11 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                         <div className="modal-description">
                             <p className="description-text">
                                 Two-factor authentication adds an extra layer of security to your account.
-                                You'll need to enter a code from your authenticator app when signing in.
                             </p>
+
+                            <div className="info-text">
+                                You'll need to enter a code from your authenticator app when signing in.
+                            </div>
 
                             <div className="authenticator-suggestions">
                                 <h4>Install Google Authenticator</h4>
@@ -294,25 +258,19 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                 </div>
                             </div>
 
-                            <div className="security-notice">
-                                <FiAlertCircle />
-                                <span className="notice-text">
-                                    Install Google Authenticator before starting the setup.
-                                </span>
+                            <div className="warning-text">
+                                Install Google Authenticator before starting the setup.
                             </div>
 
-                            <div className="important-notice">
-                                <FiAlertCircle />
-                                <div className="notice-content">
-                                    <h4>Important: Remove Old Entries</h4>
-                                    <p>If you previously had 2FA enabled and disabled it, you must remove the old SafawiNet entry from your authenticator app before scanning the new QR code. Otherwise, the verification codes won't work.</p>
-                                    <ol className="instructions-list">
-                                        <li>Open Google Authenticator</li>
-                                        <li>Find the old "SafawiNet" entry</li>
-                                        <li>Tap and hold the entry, then select "Delete"</li>
-                                        <li>Now scan the new QR code when you continue</li>
-                                    </ol>
-                                </div>
+                            <div className="important-text">
+                                <h4><span className="important-icon"><FiAlertCircle /></span>Important: Remove Old Entries</h4>
+                                <p>If you previously had 2FA enabled and disabled it, you must remove the old SafawiNet entry from your authenticator app before scanning the new QR code. Otherwise, the verification codes won't work.</p>
+                                <ol className="important-list">
+                                    <li>Open Google Authenticator</li>
+                                    <li>Find the old "PermissionsSystem" entry</li>
+                                    <li>Slide the entry to the left, then select trash icon</li>
+                                    <li>Now scan the new QR code when you continue</li>
+                                </ol>
                             </div>
                         </div>
                     )}
@@ -322,21 +280,24 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                             <p className="description-text">
                                 To disable two-factor authentication, please enter the 6-digit code from your authenticator app.
                             </p>
-                            <div className="security-notice">
-                                <FiAlertCircle />
-                                <span className="notice-text">
-                                    Disabling 2FA will make your account less secure. Consider keeping it enabled.
-                                </span>
+                            <div className="warning-text">
+                                Disabling 2FA will make your account less secure. Consider keeping it enabled.
                             </div>
                         </div>
                     )}
 
                     {step === 'qr-view' && mode === 'enable' && (
-                        <div className="qr-setup-section">
-                            <h3 className="setup-title">Step 1: Scan QR Code</h3>
-                            <p className="setup-description">
+                        <div className="modal-description">
+                            <p className="description-text">
                                 Open your authenticator app and scan this QR code:
                             </p>
+                            <div className="info-text">
+                                If the QR code doesn't work, you can manually enter the secret key below.
+                            </div>
+
+                            <div className="warning-text">
+                                If you previously had 2FA enabled, make sure to remove the old entry first!
+                            </div>
 
                             <div className="qr-container">
                                 {qrCodeUrl && (
@@ -344,38 +305,22 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                 )}
                             </div>
 
-                            <div className="secret-section">
+                            <div className="modal-description">
                                 <h4>Manual Entry (if QR code doesn't work)</h4>
-                                <div className="secret-display">
-                                    <span className="secret-label">Secret Key:</span>
-                                    <div className="secret-input-group">
-                                        <input
-                                            type={showSecret ? 'text' : 'password'}
-                                            value={secret}
-                                            readOnly
-                                            className="secret-input"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowSecret(!showSecret)}
-                                            className="secret-toggle-btn"
-                                        >
-                                            {showSecret ? <FiEyeOff /> : <FiEye />}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => copyToClipboard(secret)}
-                                            className="copy-btn"
-                                        >
-                                            <FiCopy />
-                                        </button>
-                                    </div>
-                                </div>
+                                <FloatingInput
+                                    type="password"
+                                    id="secretKey"
+                                    value={secret}
+                                    onChange={() => { }} // Read-only, so no onChange needed
+                                    label="Secret Key"
+                                    readOnly
+                                    copyable={true}
+                                />
                             </div>
 
-                            <div className="qr-instructions">
+                            <div className="important-text">
                                 <h4>Instructions:</h4>
-                                <ol className="instructions-list">
+                                <ol className="important-list">
                                     <li>Open Google Authenticator on your phone</li>
                                     <li><strong>Important:</strong> If you see an old "SafawiNet" entry, delete it first</li>
                                     <li>Tap the + button to add a new account</li>
@@ -383,20 +328,18 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                     <li>Point your camera at the QR code above</li>
                                     <li>Once scanned, tap "Continue" below</li>
                                 </ol>
-                                <div className="qr-warning">
-                                    <FiAlertCircle />
-                                    <span>If you previously had 2FA enabled, make sure to remove the old entry first!</span>
-                                </div>
                             </div>
                         </div>
                     )}
 
                     {step === 'backup-view' && mode === 'enable' && (
-                        <div className="backup-codes-section">
-                            <h3 className="setup-title">Step 2: Backup Codes</h3>
-                            <p className="setup-description">
+                        <div className="modal-description">
+                            <p className="description-text">
                                 Save these backup codes in a secure location. You can use them if you lose access to your authenticator app:
                             </p>
+                            <div className="info-text">
+                                If you lose your phone, you can use these backup codes to regain access to your account.
+                            </div>
 
                             <div className="backup-codes-container">
                                 <div className="backup-codes-grid">
@@ -417,16 +360,16 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                                     <button
                                         type="button"
                                         onClick={downloadBackupCodes}
-                                        className="btn btn-secondary btn-sm"
+                                        className="btn btn-primary btn-sm"
                                     >
                                         <FiDownload /> Download
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="backup-instructions">
+                            <div className="important-text">
                                 <h4>Important:</h4>
-                                <ul className="instructions-list">
+                                <ul className="important-list">
                                     <li>Each backup code can only be used once</li>
                                     <li>Store them in a secure location (password manager, safe, etc.)</li>
                                     <li>You can regenerate new codes later if needed</li>
@@ -437,36 +380,27 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                     )}
 
                     {step === 'verify' && mode === 'enable' && (
-                        <div className="verification-section">
-                            <h3 className="setup-title">Step 3: Verify Setup</h3>
-                            <p className="setup-description">
+                        <div className="modal-description">
+                            <p className="description-text">
                                 Enter the 6-digit code from your authenticator app to complete setup:
                             </p>
-                            <div className="verification-notice">
+                            <div className="info-text">
                                 <p><strong>Note:</strong> TOTP codes change every 30 seconds. If the code doesn't work, wait for a new code to appear in your authenticator app.</p>
                             </div>
 
                             <form onSubmit={handleVerification} className="modal-form">
-                                <div className={`form-group floating-label${inputFocus.verificationCode ? ' focused' : ''}${verificationCode ? ' filled' : ''}`}> 
-                                    <input
-                                        type="text"
-                                        id="verificationCode"
-                                        value={verificationCode}
-                                        onChange={(e) => setVerificationCode(e.target.value)}
-                                        onFocus={() => setInputFocus(f => ({ ...f, verificationCode: true }))}
-                                        onBlur={() => setInputFocus(f => ({ ...f, verificationCode: false }))}
-                                        placeholder=""
-                                        maxLength="6"
-                                        pattern="[0-9]{6}"
-                                        className="form-input"
-                                        autoComplete="one-time-code"
-                                    />
-                                    <label htmlFor="verificationCode" className="form-label">6-digit verification code</label>
-                                </div>
-
-                                {error && (
-                                    <div className="form-error">{error}</div>
-                                )}
+                                <FloatingInput
+                                    type="text"
+                                    id="verificationCode"
+                                    value={verificationCode}
+                                    onChange={(e) => setVerificationCode(e.target.value)}
+                                    label="6-digit verification code"
+                                    maxLength="6"
+                                    pattern="[0-9]{6}"
+                                    autoComplete="one-time-code"
+                                    required
+                                    error={error}
+                                />
                             </form>
                         </div>
                     )}
@@ -476,34 +410,23 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                             <p className="description-text">
                                 To disable two-factor authentication, please enter the 6-digit code from your authenticator app.
                             </p>
-                            <div className="security-notice">
-                                <FiAlertCircle />
-                                <span className="notice-text">
-                                    Disabling 2FA will make your account less secure. Consider keeping it enabled.
-                                </span>
+                            <div className="warning-text">
+                                Disabling 2FA will make your account less secure. Consider keeping it enabled.
                             </div>
 
                             <form onSubmit={handleDisable2FA} className="modal-form">
-                                <div className={`form-group floating-label${inputFocus.verificationCode ? ' focused' : ''}${verificationCode ? ' filled' : ''}`}> 
-                                    <input
-                                        type="text"
-                                        id="disableVerificationCode"
-                                        value={verificationCode}
-                                        onChange={(e) => setVerificationCode(e.target.value)}
-                                        onFocus={() => setInputFocus(f => ({ ...f, verificationCode: true }))}
-                                        onBlur={() => setInputFocus(f => ({ ...f, verificationCode: false }))}
-                                        placeholder=""
-                                        maxLength="6"
-                                        pattern="[0-9]{6}"
-                                        className="form-input"
-                                        autoComplete="one-time-code"
-                                    />
-                                    <label htmlFor="disableVerificationCode" className="form-label">6-digit verification code</label>
-                                </div>
-
-                                {error && (
-                                    <div className="form-error">{error}</div>
-                                )}
+                                <FloatingInput
+                                    type="text"
+                                    id="disableVerificationCode"
+                                    value={verificationCode}
+                                    onChange={(e) => setVerificationCode(e.target.value)}
+                                    label="6-digit verification code"
+                                    maxLength="6"
+                                    pattern="[0-9]{6}"
+                                    autoComplete="one-time-code"
+                                    required
+                                    error={error}
+                                />
                             </form>
                         </div>
                     )}
@@ -513,10 +436,10 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                             <div className="success-icon">
                                 <FiCheckCircle />
                             </div>
-                            <h3 className="success-title">
+                            <h3 className="success-message">
                                 {mode === 'enable' ? '2FA Enabled Successfully!' : '2FA Disabled Successfully!'}
                             </h3>
-                            <p className="success-message">
+                            <p className="success-subtitle">
                                 {mode === 'enable'
                                     ? 'Your account is now protected with two-factor authentication. You\'ll need to enter a code from your authenticator app when signing in.'
                                     : 'Two-factor authentication has been disabled for your account. Your account is now less secure.'
@@ -524,8 +447,8 @@ const TwoFactorModal = ({ isOpen, onClose, onSuccess, mode = 'enable' }) => {
                             </p>
 
                             {mode === 'enable' && backupCodes.length > 0 && (
-                                <div className="backup-reminder">
-                                    <h4>Important: Save Your Backup Codes</h4>
+                                <div className="important-text">
+                                    <h4><span className="important-icon"><FiAlertCircle /></span>Important: Save Your Backup Codes</h4>
                                     <p>Make sure you've saved your backup codes in a secure location. You can use them if you lose access to your authenticator app.</p>
                                 </div>
                             )}

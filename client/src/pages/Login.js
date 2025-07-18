@@ -2,19 +2,26 @@ import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import BackupCodeModal from '../components/BackupCodeModal';
+import FloatingInput from '../components/FloatingInput';
+import Checkbox from '../components/Checkbox';
 import { showErrorToast } from '../utils/sweetAlertConfig';
-import { FiEye, FiEyeOff, FiShield, FiKey } from 'react-icons/fi';
+import { FiShield, FiKey } from 'react-icons/fi';
 import { FaLock } from 'react-icons/fa';
+import '../styles/pageoneform.css';
 
 const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
     identifier: '',
     password: ''
   });
+  const [errors, setErrors] = useState({
+    identifier: '',
+    password: '',
+    twoFactorCode: ''
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [identifierType, setIdentifierType] = useState('username');
   const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockTime, setBlockTime] = useState(0);
@@ -37,12 +44,28 @@ const Login = ({ onLoginSuccess }) => {
     checkAuth();
   }, [onLoginSuccess]);
 
+  const clearErrors = () => {
+    setErrors({
+      identifier: '',
+      password: '',
+      twoFactorCode: ''
+    });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleIdentifierChange = (e) => {
@@ -51,6 +74,14 @@ const Login = ({ onLoginSuccess }) => {
       ...prev,
       identifier: value
     }));
+
+    // Clear identifier error when user starts typing
+    if (errors.identifier) {
+      setErrors(prev => ({
+        ...prev,
+        identifier: ''
+      }));
+    }
 
     // Auto-detect input type
     if (value.includes('@')) {
@@ -62,6 +93,19 @@ const Login = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleTwoFactorCodeChange = (e) => {
+    const value = e.target.value;
+    setTwoFactorCode(value);
+
+    // Clear two-factor error when user starts typing
+    if (errors.twoFactorCode) {
+      setErrors(prev => ({
+        ...prev,
+        twoFactorCode: ''
+      }));
+    }
+  };
+
   const getInputType = () => {
     switch (identifierType) {
       case 'email':
@@ -70,17 +114,6 @@ const Login = ({ onLoginSuccess }) => {
         return 'tel';
       default:
         return 'text';
-    }
-  };
-
-  const getPlaceholder = () => {
-    switch (identifierType) {
-      case 'email':
-        return 'Enter your email';
-      case 'phone':
-        return 'Enter your phone number';
-      default:
-        return 'Enter your username, email, or phone';
     }
   };
 
@@ -96,17 +129,35 @@ const Login = ({ onLoginSuccess }) => {
   };
 
   const validateForm = () => {
+    const newErrors = {
+      identifier: '',
+      password: '',
+      twoFactorCode: ''
+    };
+    let isValid = true;
+
     if (!formData.identifier.trim()) {
-      showErrorToast('Validation Error', 'Please enter your username, email, or phone number');
-      return false;
+      newErrors.identifier = 'Please enter your username, email, or phone number';
+      isValid = false;
     }
 
     if (!formData.password) {
-      showErrorToast('Validation Error', 'Please enter your password');
-      return false;
+      newErrors.password = 'Please enter your password';
+      isValid = false;
     }
 
-    return true;
+    if (requiresTwoFactor && !twoFactorCode.trim()) {
+      newErrors.twoFactorCode = 'Please enter your 6-digit authentication code';
+      isValid = false;
+    }
+
+    if (requiresTwoFactor && twoFactorCode.trim() && !/^\d{6}$/.test(twoFactorCode.trim())) {
+      newErrors.twoFactorCode = 'Please enter a valid 6-digit code';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleSubmit = async (e, overrideBackupCode) => {
@@ -117,6 +168,7 @@ const Login = ({ onLoginSuccess }) => {
     }
 
     setIsLoading(true);
+    clearErrors();
 
     // Use overrideBackupCode if provided, otherwise use backupCode from state
     const codeToUse = overrideBackupCode !== undefined ? overrideBackupCode : backupCode;
@@ -136,18 +188,6 @@ const Login = ({ onLoginSuccess }) => {
         loginData.backupCode = codeToUse;
       }
 
-      console.log('Login attempt with data:', {
-        identifier: loginData.identifier,
-        hasPassword: !!loginData.password,
-        rememberMe: loginData.rememberMe,
-        hasTwoFactorCode: !!loginData.twoFactorCode,
-        hasBackupCode: !!loginData.backupCode,
-        backupCode: loginData.backupCode,
-        twoFactorCode: loginData.twoFactorCode
-      });
-
-      console.log('Current backupCode state:', backupCode, 'Override backupCode:', overrideBackupCode);
-
       const result = await authService.login(
         formData.identifier.trim(),
         formData.password,
@@ -156,10 +196,7 @@ const Login = ({ onLoginSuccess }) => {
         codeToUse
       );
 
-      console.log('Login result:', result);
-
       if (result.success) {
-        console.log('Login successful, calling onLoginSuccess');
         setAttempts(0);
         setRequiresTwoFactor(false);
         setTwoFactorCode('');
@@ -171,7 +208,15 @@ const Login = ({ onLoginSuccess }) => {
         setRequiresTwoFactor(true);
         setAttempts(0);
       } else {
-        showErrorToast('Login Failed', result.message);
+        // Handle specific field errors from server response
+        if (result.fieldErrors) {
+          setErrors(prev => ({
+            ...prev,
+            ...result.fieldErrors
+          }));
+        } else {
+          showErrorToast('Login Failed', result.message);
+        }
 
         if (result.retryAfter) {
           setIsBlocked(true);
@@ -193,7 +238,6 @@ const Login = ({ onLoginSuccess }) => {
         }
       }
     } catch (error) {
-      console.error('Login error:', error);
       showErrorToast('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -227,6 +271,16 @@ const Login = ({ onLoginSuccess }) => {
           }
           break;
 
+        case 'twoFactorCode':
+          if (twoFactorCode.trim()) {
+            // Submit form if two-factor code is filled
+            handleSubmit(e);
+          } else {
+            // Stay on current field if empty
+            return;
+          }
+          break;
+
         default:
           // For any other field, submit the form
           handleSubmit(e);
@@ -242,97 +296,75 @@ const Login = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-logo">
+    <div className="container">
+      <div className="container-card">
+        <div className="container-header">
+          <div className="container-logo">
             <span className="text-logo">
-              Safawi<span className="text-logo-blue">Net</span>
+              Permissions<span className="text-logo-colored">System</span>
             </span>
           </div>
-          <p className="auth-welcome"><b>Welcome to SafawiNet!</b> Please sign in to continue</p>
+          <p className="sub-text"><b>Welcome to PermissionsSystem!</b> Please sign in to continue</p>
         </div>
 
         {isBlocked && (
-          <div className="auth-blocked">
-            <span className="blocked-icon"><FaLock /></span>
-            Too many login attempts. Please try again in {formatTime(blockTime)}.
+          <div className="warning-text">
+            <FaLock /> Too many login attempts. Please try again in {formatTime(blockTime)}.
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="container-form">
           {!requiresTwoFactor && (
-            <>
-              <div className="form-group">
-                <input
-                  type={getInputType()}
-                  id="identifier"
-                  name="identifier"
-                  value={formData.identifier}
-                  onChange={handleIdentifierChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder=" "
-                  disabled={isLoading || isBlocked}
-                  autoComplete="username"
-                  className="form-input"
-                />
-                <label htmlFor="identifier" className="form-label">{getLabel()}</label>
-              </div>
-            </>
+            <FloatingInput
+              type={getInputType()}
+              id="identifier"
+              name="identifier"
+              value={formData.identifier}
+              onChange={handleIdentifierChange}
+              onKeyPress={handleKeyPress}
+              label={getLabel()}
+              error={errors.identifier}
+              disabled={isLoading || isBlocked}
+              autoComplete="username"
+            />
           )}
 
           {!requiresTwoFactor && (
-            <div className="form-group">
-              <div className="input-group">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder=" "
-                  disabled={isLoading || isBlocked}
-                  autoComplete="current-password"
-                  className="form-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading || isBlocked}
-                  className="input-toggle-btn"
-                >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
-                </button>
-              </div>
-              <label htmlFor="password" className="form-label">Password</label>
-            </div>
+            <FloatingInput
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              onKeyPress={handleKeyPress}
+              label="Password"
+              error={errors.password}
+              disabled={isLoading || isBlocked}
+              autoComplete="current-password"
+            />
           )}
 
           {requiresTwoFactor && (
             <div className="form-group">
-              <div className="auth-2fa-notice">
+              <div className="title-text">
                 <FiShield />
-                <span>Two-factor authentication required</span>
+                Two-factor authentication required
               </div>
-              <div className="input-group">
-                <input
-                  type="text"
-                  id="twoFactorCode"
-                  name="twoFactorCode"
-                  value={twoFactorCode}
-                  onChange={(e) => setTwoFactorCode(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder=" "
-                  disabled={isLoading || isBlocked}
-                  autoComplete="one-time-code"
-                  className="form-input verification-input"
-                  maxLength="6"
-                  pattern="[0-9]{6}"
-                />
-                <label htmlFor="twoFactorCode" className="form-label">6-digit code</label>
-              </div>
-              
+              <FloatingInput
+                type="text"
+                id="twoFactorCode"
+                name="twoFactorCode"
+                value={twoFactorCode}
+                onChange={handleTwoFactorCodeChange}
+                onKeyPress={handleKeyPress}
+                label="6-digit code"
+                error={errors.twoFactorCode}
+                disabled={isLoading || isBlocked}
+                autoComplete="one-time-code"
+                maxLength="6"
+                pattern="[0-9]{6}"
+              />
+
               <div className="backup-code-section">
                 <div className="backup-code-divider">
                   <span>or</span>
@@ -341,9 +373,9 @@ const Login = ({ onLoginSuccess }) => {
                   type="button"
                   onClick={() => setShowBackupCodeModal(true)}
                   disabled={isLoading || isBlocked}
-                  className="btn btn-secondary btn-sm backup-code-btn"
+                  className="btn btn-secondary btn-sm"
                 >
-                  <FiKey />
+                  <span className="btn-icon"><FiKey /></span>
                   Use Backup Code
                 </button>
               </div>
@@ -352,42 +384,41 @@ const Login = ({ onLoginSuccess }) => {
 
           {!requiresTwoFactor && (
             <div className="form-options">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={isLoading || isBlocked}
-                  className="form-checkbox"
-                />
-                <span className="checkbox-text">Remember me</span>
-              </label>
-              <button
-                type="button"
+              <Checkbox
+                id="remember-me"
+                name="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={isLoading || isBlocked}
-                onClick={() => setShowForgotPassword(true)}
-                className="link-btn"
+                label="Remember me"
+                size="medium"
+              />
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowForgotPassword(true);
+                }}
+                className='lnk'
               >
                 Forgot password?
-              </button>
+              </a>
             </div>
           )}
 
           <button
             type="submit"
             disabled={isLoading || isBlocked}
-            className="btn btn-primary btn-full"
+            className="btn btn-primary"
           >
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
         {attempts > 0 && !isBlocked && (
-          <div className="auth-attempts">
-            <span className="attempts-count">Failed login attempts: {attempts}/5</span>
-            <span className="attempts-warning">
-              {attempts >= 3 ? 'Account will be temporarily locked after 5 attempts' : 'Please check your credentials'}
-            </span>
+          <div className="warning-text">
+            Failed login attempts: {attempts}/5,
+            {attempts >= 3 ? ' Account will be temporarily locked after 5 attempts' : ' Please check your credentials'}
           </div>
         )}
       </div>
@@ -398,7 +429,6 @@ const Login = ({ onLoginSuccess }) => {
         onClose={() => setShowForgotPassword(false)}
         onSuccess={() => {
           setShowForgotPassword(false);
-          // Optionally show a success message
         }}
       />
 
@@ -407,10 +437,8 @@ const Login = ({ onLoginSuccess }) => {
         isOpen={showBackupCodeModal}
         onClose={() => setShowBackupCodeModal(false)}
         onSuccess={(data) => {
-          console.log('BackupCodeModal onSuccess called with:', data);
           setShowBackupCodeModal(false);
           setTimeout(() => {
-            console.log('Submitting form with backup code:', data.backupCode);
             handleSubmit(null, data.backupCode);
           }, 100);
         }}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
 import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiX } from 'react-icons/fi';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+import FloatingInput from './FloatingInput';
+import passwordStrengthAnalyzer from '../utils/passwordStrength';
 
 const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
@@ -9,53 +11,19 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         newPassword: '',
         confirmPassword: ''
     });
-    const [showPasswords, setShowPasswords] = useState({
-        current: false,
-        new: false,
-        confirm: false
-    });
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [passwordStrength, setPasswordStrength] = useState(null);
-    // Add focus state for floating label
-    const [inputFocus, setInputFocus] = useState({
-        currentPassword: false,
-        newPassword: false,
-        confirmPassword: false
-    });
 
-    // Password strength requirements
-    const requirements = {
-        minLength: 8,
-        requireUppercase: true,
-        requireLowercase: true,
-        requireNumbers: true,
-        requireSpecialChars: true
-    };
-
-    // Check password strength
+    // Check password strength using the analyzer
     const checkPasswordStrength = (password) => {
         if (!password) {
             setPasswordStrength(null);
             return;
         }
 
-        const checks = {
-            length: password.length >= requirements.minLength,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
-            numbers: /\d/.test(password),
-            specialChars: /[^a-zA-Z0-9]/.test(password)
-        };
-
-        const score = Object.values(checks).filter(Boolean).length;
-        const strength = score < 3 ? 'weak' : score < 5 ? 'medium' : 'strong';
-
-        setPasswordStrength({
-            checks,
-            score,
-            strength
-        });
+        const analysis = passwordStrengthAnalyzer.analyzePassword(password);
+        setPasswordStrength(analysis);
     };
 
     // Handle input changes
@@ -78,14 +46,6 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         if (name === 'newPassword') {
             checkPasswordStrength(value);
         }
-    };
-
-    // Toggle password visibility
-    const togglePasswordVisibility = (field) => {
-        setShowPasswords(prev => ({
-            ...prev,
-            [field]: !prev[field]
-        }));
     };
 
     // Handle Enter key navigation
@@ -150,9 +110,9 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
 
         if (!formData.newPassword) {
             newErrors.newPassword = 'New password is required';
-        } else if (formData.newPassword.length < requirements.minLength) {
-            newErrors.newPassword = `Password must be at least ${requirements.minLength} characters long`;
-        } else if (passwordStrength && passwordStrength.score < 3) {
+        } else if (formData.newPassword.length < 8) {
+            newErrors.newPassword = 'Password must be at least 8 characters long';
+        } else if (passwordStrength && passwordStrength.score < 40) {
             newErrors.newPassword = 'Password does not meet security requirements';
         }
 
@@ -193,11 +153,6 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     confirmPassword: ''
                 });
                 setPasswordStrength(null);
-                setShowPasswords({
-                    current: false,
-                    new: false,
-                    confirm: false
-                });
 
                 // Close modal and notify parent
                 onClose();
@@ -254,186 +209,145 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         };
     }, [isOpen]);
 
-    // Helper to get floating label class
-    const getFloatingLabelClass = (field) => {
-        let cls = 'form-group floating-label';
-        if (inputFocus[field]) cls += ' focused';
-        if (formData[field]) cls += ' filled';
-        return cls;
-    };
-
     if (!isOpen) return null;
 
     return (
         <div className="modal-overlay" onClick={handleClose}>
             <div className="modal-container" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2 className="modal-title"><FiLock /> Change Password</h2>
+                    <h2 className="modal-title"><span className="title-icon"><FiLock /></span> Change Password</h2>
                     <button
                         type="button"
                         onClick={handleClose}
                         disabled={isLoading}
-                        className="modal-close-btn"
+                        className="btn btn-danger btn-md"
                     >
                         <FiX />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="modal-form">
-                    <div className={getFloatingLabelClass('currentPassword')}>
-                        <div className="input-group">
-                            <input
-                                type={showPasswords.current ? 'text' : 'password'}
-                                id="currentPassword"
-                                name="currentPassword"
-                                value={formData.currentPassword}
-                                onChange={handleChange}
-                                onKeyPress={handleKeyPress}
-                                onFocus={() => setInputFocus(f => ({ ...f, currentPassword: true }))}
-                                onBlur={() => setInputFocus(f => ({ ...f, currentPassword: false }))}
-                                disabled={isLoading}
-                                required
-                                autoComplete="current-password"
-                                className="form-input"
-                                placeholder=""
-                            />
-                            <label htmlFor="currentPassword" className="form-label">Current Password</label>
-                            <button
-                                type="button"
-                                onClick={() => togglePasswordVisibility('current')}
-                                disabled={isLoading}
-                                className="input-toggle-btn"
-                            >
-                                {showPasswords.current ? <FiEyeOff /> : <FiEye />}
-                            </button>
-                        </div>
-                        {errors.currentPassword && (
-                            <span className="form-error">{errors.currentPassword}</span>
-                        )}
-                    </div>
-
-                    <div className={getFloatingLabelClass('newPassword')}>
-                        <div className="input-group">
-                            <input
-                                type={showPasswords.new ? 'text' : 'password'}
-                                id="newPassword"
-                                name="newPassword"
-                                value={formData.newPassword}
-                                onChange={handleChange}
-                                onKeyPress={handleKeyPress}
-                                onFocus={() => setInputFocus(f => ({ ...f, newPassword: true }))}
-                                onBlur={() => setInputFocus(f => ({ ...f, newPassword: false }))}
-                                disabled={isLoading}
-                                required
-                                autoComplete="new-password"
-                                className="form-input"
-                                placeholder=""
-                            />
-                            <label htmlFor="newPassword" className="form-label">New Password</label>
-                            <button
-                                type="button"
-                                onClick={() => togglePasswordVisibility('new')}
-                                disabled={isLoading}
-                                className="input-toggle-btn"
-                            >
-                                {showPasswords.new ? <FiEyeOff /> : <FiEye />}
-                            </button>
-                        </div>
-                        {errors.newPassword && (
-                            <span className="form-error">{errors.newPassword}</span>
-                        )}
-                    </div>
-
-                    {/* Password Strength Indicator */}
-                    {passwordStrength && (
-                        <div className="password-strength">
-                            <div className="strength-bar">
-                                <div
-                                    className={`strength-fill strength-${passwordStrength.strength}`}
-                                    style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
-                                ></div>
-                            </div>
-                            <div className="strength-text">
-                                Password Strength: <span className={`strength-label strength-${passwordStrength.strength}`}>
-                                    {passwordStrength.strength.charAt(0).toUpperCase() + passwordStrength.strength.slice(1)}
-                                </span>
-                            </div>
-                            <div className="strength-requirements">
-                                <div className={`requirement ${passwordStrength.checks.length ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle />
-                                    At least {requirements.minLength} characters
-                                </div>
-                                <div className={`requirement ${passwordStrength.checks.uppercase ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle />
-                                    One uppercase letter
-                                </div>
-                                <div className={`requirement ${passwordStrength.checks.lowercase ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle />
-                                    One lowercase letter
-                                </div>
-                                <div className={`requirement ${passwordStrength.checks.numbers ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle />
-                                    One number
-                                </div>
-                                <div className={`requirement ${passwordStrength.checks.specialChars ? 'met' : 'unmet'}`}>
-                                    <FiCheckCircle />
-                                    One special character
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className={getFloatingLabelClass('confirmPassword')}>
-                        <div className="input-group">
-                            <input
-                                type={showPasswords.confirm ? 'text' : 'password'}
-                                id="confirmPassword"
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                onKeyPress={handleKeyPress}
-                                onFocus={() => setInputFocus(f => ({ ...f, confirmPassword: true }))}
-                                onBlur={() => setInputFocus(f => ({ ...f, confirmPassword: false }))}
-                                disabled={isLoading}
-                                required
-                                autoComplete="new-password"
-                                className="form-input"
-                                placeholder=""
-                            />
-                            <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
-                            <button
-                                type="button"
-                                onClick={() => togglePasswordVisibility('confirm')}
-                                disabled={isLoading}
-                                className="input-toggle-btn"
-                            >
-                                {showPasswords.confirm ? <FiEyeOff /> : <FiEye />}
-                            </button>
-                        </div>
-                        {errors.confirmPassword && (
-                            <span className="form-error">{errors.confirmPassword}</span>
-                        )}
-                    </div>
-
-                    <div className="form-actions">
-                        <button
-                            type="button"
-                            onClick={handleClose}
+                <div className="modal-content">
+                    <form onSubmit={handleSubmit} className="modal-form">
+                        <FloatingInput
+                            type="password"
+                            id="currentPassword"
+                            name="currentPassword"
+                            value={formData.currentPassword}
+                            onChange={handleChange}
+                            onKeyPress={handleKeyPress}
                             disabled={isLoading}
-                            className="btn btn-secondary"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            onClick={handleSubmit}
+                            required
+                            autoComplete="current-password"
+                            label="Current Password"
+                            error={errors.currentPassword}
+                        />
+
+                        <FloatingInput
+                            type="password"
+                            id="newPassword"
+                            name="newPassword"
+                            value={formData.newPassword}
+                            onChange={handleChange}
+                            onKeyPress={handleKeyPress}
                             disabled={isLoading}
-                            className="btn btn-primary"
-                        >
-                            {isLoading ? 'Changing Password...' : 'Change Password'}
-                        </button>
-                    </div>
-                </form>
+                            required
+                            autoComplete="new-password"
+                            label="New Password"
+                            error={errors.newPassword}
+                        />
+
+                        {/* Password Strength Indicator */}
+                        {passwordStrength && (
+                            <div className="password-strength">
+                                <div className="strength-bar">
+                                    <div
+                                        className={`strength-fill strength-${passwordStrength.level}`}
+                                        style={{ width: `${passwordStrength.score}%` }}
+                                    ></div>
+                                </div>
+                                <div className="strength-text">
+                                    Password Strength: <span className={`strength-label strength-${passwordStrength.level}`}>
+                                        {passwordStrength.level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    </span>
+                                    <span className="strength-score">({passwordStrength.score}/100)</span>
+                                </div>
+                                <div className="strength-requirements">
+                                    <div className={`requirement ${passwordStrength.details.length >= 8 ? 'met' : 'unmet'}`}>
+                                        <FiCheckCircle />
+                                        At least 8 characters
+                                    </div>
+                                    <div className={`requirement ${passwordStrength.details.hasUppercase ? 'met' : 'unmet'}`}>
+                                        <FiCheckCircle />
+                                        One uppercase letter
+                                    </div>
+                                    <div className={`requirement ${passwordStrength.details.hasLowercase ? 'met' : 'unmet'}`}>
+                                        <FiCheckCircle />
+                                        One lowercase letter
+                                    </div>
+                                    <div className={`requirement ${passwordStrength.details.hasNumbers ? 'met' : 'unmet'}`}>
+                                        <FiCheckCircle />
+                                        One number
+                                    </div>
+                                    <div className={`requirement ${passwordStrength.details.hasSpecialChars ? 'met' : 'unmet'}`}>
+                                        <FiCheckCircle />
+                                        One special character
+                                    </div>
+                                    {passwordStrength.details.hasRepeatingChars && (
+                                        <div className="requirement unmet warning">
+                                            <FiX />
+                                            Avoid repeating characters
+                                        </div>
+                                    )}
+                                    {passwordStrength.details.hasSequentialChars && (
+                                        <div className="requirement unmet warning">
+                                            <FiX />
+                                            Avoid sequential characters
+                                        </div>
+                                    )}
+                                    {passwordStrength.details.hasCommonPatterns && (
+                                        <div className="requirement unmet warning">
+                                            <FiX />
+                                            Avoid common patterns
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <FloatingInput
+                            type="password"
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            onKeyPress={handleKeyPress}
+                            disabled={isLoading}
+                            required
+                            autoComplete="new-password"
+                            label="Confirm New Password"
+                            error={errors.confirmPassword}
+                        />
+
+                        <div className="form-actions">
+                            <button
+                                type="button"
+                                onClick={handleClose}
+                                disabled={isLoading}
+                                className="btn btn-secondary"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                onClick={handleSubmit}
+                                disabled={isLoading}
+                                className="btn btn-primary"
+                            >
+                                {isLoading ? 'Changing Password...' : 'Change Password'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

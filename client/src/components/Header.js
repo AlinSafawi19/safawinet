@@ -19,14 +19,10 @@ import {
 import authService from '../services/authService';
 import ProfilePicture from './ProfilePicture';
 import Swal from 'sweetalert2';
-import { useCalculator } from '../contexts/CalculatorContext';
-import { useLiraRateConverter } from '../contexts/LiraRateConverterContext';
 
 const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpen }) => {
     const user = authService.getCurrentUser();
     const navigate = useNavigate();
-    const { openCalculator } = useCalculator();
-    const { openLiraRateConverter } = useLiraRateConverter();
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showToolsDropdown, setShowToolsDropdown] = useState(false);
     const [notificationCount, setNotificationCount] = useState(3);
@@ -44,13 +40,10 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
     }, []);
 
     const tools = [
-        { id: 'calculator', label: 'Calculator', icon: <FiPlus />, action: () => openCalculator() },
         { id: 'kanban', label: 'Kanban Board', icon: <FiGrid />, action: () => console.log('Kanban clicked') },
         { id: 'calendar', label: 'Calendar', icon: <FiCalendar />, action: () => console.log('Calendar clicked') },
         { id: 'reminder', label: 'Reminder', icon: <FiClock />, action: () => console.log('Reminder clicked') },
-        { id: 'files', label: 'Files', icon: <FiFileText />, action: () => console.log('Files clicked') },
-        { id: 'lira-converter', label: 'Lira Rate Converter', icon: <FiDollarSign />, action: () => openLiraRateConverter() },
-        { id: 'lira-saver', label: 'Lira Rate Saver', icon: <FiTrendingUp />, action: () => console.log('Lira Saver clicked') }
+        { id: 'files', label: 'Files', icon: <FiFileText />, action: () => console.log('Files clicked') }
     ];
 
     const handleLogout = async () => {

@@ -385,7 +385,7 @@ const Profile = () => {
                                 <button
                                     onClick={handleRemoveProfilePicture}
                                     title="Remove profile picture"
-                                    className="btn btn-danger btn-sm"
+                                    className="btn btn-danger btn-md"
                                 >
                                     Remove
                                 </button>

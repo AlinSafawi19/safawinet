@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
+import './styles/Modal.css';
 import Login from './pages/Login';
 import DashboardLayout from './components/DashboardLayout';
 import Dashboard from './pages/Dashboard';
@@ -15,10 +16,6 @@ import CreateUser from './pages/CreateUser';
 import RoleTemplates from './pages/RoleTemplates';
 import EditUser from './pages/EditUser';
 import { applyUserTheme } from './utils/themeUtils';
-import { CalculatorProvider } from './contexts/CalculatorContext';
-import Calculator from './components/Calculator';
-import { LiraRateConverterProvider } from './contexts/LiraRateConverterContext';
-import LiraRateConverter from './components/LiraRateConverter';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -46,7 +43,7 @@ const ProtectedRoute = ({ children }) => {
   if (isLoading) {
     return (
       <div className="App">
-        
+
       </div>
     );
   }
@@ -86,7 +83,7 @@ const LoginPage = () => {
   if (isLoading) {
     return (
       <div className="App">
-        
+
       </div>
     );
   }
@@ -213,87 +210,81 @@ function App() {
   }, []);
 
   return (
-    <CalculatorProvider>
-      <LiraRateConverterProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/verify-email" element={<EmailVerification />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/audit-logs"
-              element={
-                <ProtectedRoute>
-                  <AuditLogsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/knowledge-guide"
-              element={
-                <ProtectedRoute>
-                  <KnowledgeGuidePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute>
-                  <UsersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users/create"
-              element={
-                <ProtectedRoute>
-                  <CreateUserPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users/:id/edit"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <EditUser />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users/role-templates"
-              element={
-                <ProtectedRoute>
-                  <RoleTemplatesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-          <Calculator />
-          <LiraRateConverter />
-        </Router>
-      </LiraRateConverterProvider>
-    </CalculatorProvider>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute>
+              <AuditLogsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/knowledge-guide"
+          element={
+            <ProtectedRoute>
+              <KnowledgeGuidePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/create"
+          element={
+            <ProtectedRoute>
+              <CreateUserPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id/edit"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <EditUser />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/role-templates"
+          element={
+            <ProtectedRoute>
+              <RoleTemplatesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

@@ -5,6 +5,7 @@ import roleTemplateService from '../services/roleTemplateService';
 import axios from 'axios';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/sweetAlertConfig';
+import passwordStrengthAnalyzer from '../utils/passwordStrength';
 import {
     FiEye,
     FiEyeOff,
@@ -350,16 +351,13 @@ const CreateUser = () => {
             case 'password':
                 if (!value) {
                     return 'Password is required';
-                } else if (value.length < 8) {
-                    return 'Password must be at least 8 characters long';
-                } else if (!/(?=.*[a-z])/.test(value)) {
-                    return 'Password must contain at least one lowercase letter';
-                } else if (!/(?=.*[A-Z])/.test(value)) {
-                    return 'Password must contain at least one uppercase letter';
-                } else if (!/(?=.*\d)/.test(value)) {
-                    return 'Password must contain at least one number';
-                } else if (!/(?=.*[!@#$%^&*])/.test(value)) {
-                    return 'Password must contain at least one special character (!@#$%^&*)';
+                } else {
+                    const validation = passwordStrengthAnalyzer.validatePassword(value);
+                    if (!validation.isValid) {
+                        // Return the first error message
+                        const firstError = Object.values(validation.errors)[0];
+                        return firstError;
+                    }
                 }
                 return '';
 
