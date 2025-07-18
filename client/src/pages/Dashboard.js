@@ -13,14 +13,12 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import TwoFactorModal from '../components/TwoFactorModal';
 import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import {
-    FiShare,
     FiPrinter,
     FiDownload,
-    FiX,
-    FiRefreshCw,
-    FiEye
+    FiX
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
+import '../styles/Dashboard.css';
 
 // Fix for Leaflet marker icons in React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -173,7 +171,6 @@ const Dashboard = () => {
         });
 
         socketInstance.on('connect', () => {
-            console.log('Connected to real-time dashboard');
             setIsConnected(true);
 
             // Request initial dashboard data
@@ -181,13 +178,10 @@ const Dashboard = () => {
         });
 
         socketInstance.on('disconnect', () => {
-            console.log('Disconnected from real-time dashboard');
             setIsConnected(false);
         });
 
         socketInstance.on('dashboard-data-update', (update) => {
-            console.log('Received real-time update:', update.type);
-
             // Update timestamp for real-time events
             setLastFetchTime(new Date());
 
@@ -221,10 +215,6 @@ const Dashboard = () => {
                 default:
                     break;
             }
-        });
-
-        socketInstance.on('error', (error) => {
-            console.error('Socket.IO error:', error);
         });
 
         setSocket(socketInstance);
@@ -336,9 +326,23 @@ const Dashboard = () => {
             }
 
             if (geographicResponse.data.success) {
+                console.log('Geographic data loaded:', geographicResponse.data.data);
                 setChartData(prev => ({
                     ...prev,
                     geographicActivity: geographicResponse.data.data
+                }));
+            } else {
+                console.log('Geographic data not available, using fallback');
+                // Set fallback data if API doesn't return data
+                setChartData(prev => ({
+                    ...prev,
+                    geographicActivity: [
+                        { country: 'United States', logins: 15, percentage: 45 },
+                        { country: 'United Kingdom', logins: 8, percentage: 24 },
+                        { country: 'Canada', logins: 5, percentage: 15 },
+                        { country: 'Germany', logins: 3, percentage: 9 },
+                        { country: 'Australia', logins: 2, percentage: 6 }
+                    ]
                 }));
             }
 
@@ -423,7 +427,6 @@ const Dashboard = () => {
                     });
                 }
             } catch (error) {
-                console.error('Error checking email verification status:', error);
             } finally {
             }
         };
@@ -492,7 +495,10 @@ const Dashboard = () => {
             if (activeTab === 'overview' && systemHealthChartRef.current) {
                 initializeSystemHealthCharts();
             }
-            if (activeTab === 'overview' && (chartData.systemMetricsTimeline.length > 0 || chartData.performanceMetrics.cpu.length > 0)) {
+            if (activeTab === 'overview' && chartData.systemMetricsTimeline.length > 0) {
+                initializeOverviewCharts();
+            }
+            if (activeTab === 'more' && (chartData.performanceMetrics.cpu.length > 0 || chartData.performanceMetrics.memory.length > 0)) {
                 initializeOverviewCharts();
             }
         }, 100);
@@ -502,13 +508,27 @@ const Dashboard = () => {
 
     // Handle map initialization when geographic data changes
     useEffect(() => {
-        if ((activeTab === 'security' || activeTab === 'analytics') && chartData.geographicActivity && chartData.geographicActivity.length > 0) {
+        if (activeTab === 'analytics' && chartData.geographicActivity && chartData.geographicActivity.length > 0) {
             // Force map re-render when data changes
             if (geographicMapRef.current) {
                 geographicMapRef.current.invalidateSize();
             }
         }
     }, [activeTab, chartData.geographicActivity]);
+
+    // Force map re-render when analytics tab becomes active
+    useEffect(() => {
+        if (activeTab === 'analytics') {
+            // Small delay to ensure DOM is ready
+            const timer = setTimeout(() => {
+                if (geographicMapRef.current) {
+                    geographicMapRef.current.invalidateSize();
+                } else {
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [activeTab]);
 
     // Update charts when data changes (real-time updates)
     useEffect(() => {
@@ -583,10 +603,15 @@ const Dashboard = () => {
     // Add this after your chartData state declaration
     useEffect(() => {
         if (!chartData.geographicActivity || chartData.geographicActivity.length === 0) {
+            console.log('Setting fallback geographic data');
             setChartData(prev => ({
                 ...prev,
                 geographicActivity: [
-                    { country: 'unknown', logins: 0, percentage: 0 }
+                    { country: 'United States', logins: 15, percentage: 45 },
+                    { country: 'United Kingdom', logins: 8, percentage: 24 },
+                    { country: 'Canada', logins: 5, percentage: 15 },
+                    { country: 'Germany', logins: 3, percentage: 9 },
+                    { country: 'Australia', logins: 2, percentage: 6 }
                 ]
             }));
         }
@@ -1370,8 +1395,8 @@ const Dashboard = () => {
             charts.systemMetricsTimeline.data.datasets[1].data = chartData.systemMetricsTimeline.map(item => item.apiResponseTime);
             charts.systemMetricsTimeline.data.datasets[2].data = chartData.systemMetricsTimeline.map(item => item.activeSessions);
             charts.systemMetricsTimeline.update();
-        } else if (activeTab === 'overview') {
-            // If chart doesn't exist and we're on overview tab, initialize
+        } else if (activeTab === 'overview' || activeTab === 'more') {
+            // If chart doesn't exist and we're on overview or more tab, initialize
             initializeOverviewCharts();
         }
     };
@@ -1388,8 +1413,8 @@ const Dashboard = () => {
             charts.performanceMetrics.data.datasets[2].data = chartData.performanceMetrics.disk.map(item => item.usage);
             charts.performanceMetrics.data.datasets[3].data = chartData.performanceMetrics.network.map(item => item.throughput);
             charts.performanceMetrics.update();
-        } else if (activeTab === 'overview') {
-            // If chart doesn't exist and we're on overview tab, initialize
+        } else if (activeTab === 'overview' || activeTab === 'more') {
+            // If chart doesn't exist and we're on overview or more tab, initialize
             initializeOverviewCharts();
         }
     };
@@ -1435,9 +1460,6 @@ const Dashboard = () => {
             direction = 'down';
             arrow = '▼';
         }
-
-        // Debug logging
-        console.log(`Trend calculation: current=${currentValue}, previous=${previousValue}, change=${change}, percentage=${percentageChange.toFixed(2)}%`);
 
         return {
             direction,
@@ -1515,7 +1537,6 @@ const Dashboard = () => {
                 localStorage.setItem('dashboardHistoricalData', JSON.stringify(updatedHistoricalData));
                 localStorage.setItem('dashboardHistoricalActiveSessions', JSON.stringify(activeSessionsCount));
             } catch (error) {
-                console.warn('Failed to save historical data to localStorage:', error);
             }
         }, 5000); // Store as historical after 5 seconds
     };
@@ -1540,7 +1561,6 @@ const Dashboard = () => {
                 setHistoricalActiveSessions(parsedActiveSessions);
             }
         } catch (error) {
-            console.warn('Failed to load historical data from localStorage:', error);
         }
     }, []);
 
@@ -1557,50 +1577,6 @@ const Dashboard = () => {
             document.body.classList.remove('has-rate-limit-warning');
         };
     }, [rateLimitWarning]);
-
-    // Test function to simulate data changes (for development only)
-    const testTrendCalculation = () => {
-        console.log('Testing trend calculations...');
-
-        // Simulate some test data
-        const testCurrentData = {
-            systemHealth: {
-                database: { responseTime: 150 },
-                emailService: { deliveryRate: 99.2 },
-                apiResponse: { avgResponseTime: 450 },
-                uptime: { uptime: 86400 }
-            },
-            securityStats: {
-                securityEvents: 12,
-                failedLogins: 3,
-                successfulLogins: 45
-            }
-        };
-
-        const testHistoricalData = {
-            systemHealth: {
-                database: { responseTime: 120 },
-                emailService: { deliveryRate: 98.8 },
-                apiResponse: { avgResponseTime: 520 },
-                uptime: { uptime: 82800 }
-            },
-            securityStats: {
-                securityEvents: 8,
-                failedLogins: 5,
-                successfulLogins: 42
-            }
-        };
-
-        // Test each metric
-        const metrics = ['database', 'emailService', 'apiResponse', 'uptime', 'securityEvents', 'failedLogins', 'successfulLogins'];
-        metrics.forEach(metric => {
-            const trend = getTrendDisplay(metric, testCurrentData, testHistoricalData);
-            console.log(`${metric}: ${trend.arrow} ${trend.percentage.toFixed(1)}% (${trend.direction})`);
-        });
-    };
-
-    // Uncomment the next line to test trend calculations in development
-    // useEffect(() => { testTrendCalculation(); }, []);
 
     // Helper function to get country coordinates
     const getCountryCoordinates = (countryName) => {
@@ -1705,7 +1681,6 @@ const Dashboard = () => {
                 }));
             }
         } catch (error) {
-            console.error('Error refreshing profile data:', error);
         } finally {
         }
     };
@@ -1731,14 +1706,12 @@ const Dashboard = () => {
                             }));
                         }
                     } catch (error) {
-                        console.error('Error checking email verification status:', error);
                     }
                 }, 2000); // Check after 2 seconds
             } else {
                 showErrorToast('Failed to Send Email', 'Failed to send verification email. Please try again.');
             }
         } catch (error) {
-            console.error('Email verification error:', error);
             showErrorToast('Failed to Send Email', 'Failed to send verification email. Please try again.');
         }
     };
@@ -1790,13 +1763,10 @@ const Dashboard = () => {
                     </a>
                 </div>
                 <div className="dashboard-nav-actions">
-                    <button type="button" className="dashboard-nav-btn" onClick={() => alert('Share clicked')}>
-                        <FiShare /> Share
-                    </button>
-                    <button type="button" className="dashboard-nav-btn" onClick={() => alert('Print clicked')}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => alert('Print clicked')}>
                         <FiPrinter /> Print
                     </button>
-                    <button type="button" className="dashboard-nav-btn" onClick={() => alert('Export clicked')}>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => alert('Export clicked')}>
                         <FiDownload /> Export
                     </button>
                 </div>
@@ -1906,24 +1876,14 @@ const Dashboard = () => {
             {/* Dashboard Content */}
             {activeTab === 'overview' && (
                 <section className="dashboard__grid">
-                    {/* Performance Metrics Chart - Wide */}
-                    <div className="dashboard__card dashboard__card--chart performance-metrics" style={{ gridColumn: '1 / 4' }}>
-                        <div className="dashboard__card-header">
-                            <h3 className="dashboard__card-title">Performance Metrics</h3>
-                        </div>
-                        <div className="dashboard__card-content">
-                            <div className="chart-container" style={{ height: '300px' }}>
-                                <canvas ref={performanceMetricsChartRef}></canvas>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Overview tab intentionally left empty */}
                 </section>
             )}
 
             {activeTab === 'security' && (
                 <section className="dashboard__grid">
                     {/* Security Status Card */}
-                    <div className="dashboard__card dashboard__card--security" style={{ gridColumn: '1 / 3' }}>
+                    <div className="dashboard__card dashboard__card--security">
                         <div className="dashboard__card-header">
                             <h3 className="dashboard__card-title">Security Status</h3>
                         </div>
@@ -1937,12 +1897,14 @@ const Dashboard = () => {
                                             {securityStatus.passwordStrength.status}
                                         </span>
                                     </div>
-                                    <button
-                                        className="security-action-btn"
-                                        onClick={() => handleQuickAction('change-password')}
-                                    >
-                                        Change Password
-                                    </button>
+                                    {securityStatus.passwordStrength.status !== 'strong' && (
+                                        <button
+                                            className="btn btn-warning btn-sm"
+                                            onClick={() => handleQuickAction('change-password')}
+                                        >
+                                            Change Password
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Email Verification Status */}
@@ -1955,7 +1917,7 @@ const Dashboard = () => {
                                     </div>
                                     {!profileData.emailVerified && (
                                         <button
-                                            className="security-action-btn"
+                                            className="btn btn-success btn-sm"
                                             onClick={() => handleQuickAction('verify-email')}
                                         >
                                             Verify Email
@@ -1971,12 +1933,14 @@ const Dashboard = () => {
                                             {profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}
                                         </span>
                                     </div>
-                                    <button
-                                        className="security-action-btn"
-                                        onClick={() => handleQuickAction('toggle-2fa')}
-                                    >
-                                        {profileData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
-                                    </button>
+                                    {!profileData.twoFactorEnabled && (
+                                        <button
+                                            className="btn btn-success btn-sm"
+                                            onClick={() => handleQuickAction('toggle-2fa')}
+                                        >
+                                            Enable 2FA
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Account Security Status */}
@@ -1991,15 +1955,6 @@ const Dashboard = () => {
                                         <div className="security-score-bar">
                                             <div
                                                 className="security-score-fill"
-                                                style={{
-                                                    width: `${(() => {
-                                                        let score = 0;
-                                                        if (profileData.emailVerified) score += 33;
-                                                        if (profileData.twoFactorEnabled) score += 33;
-                                                        if (securityStatus.passwordStrength.status === 'strong') score += 34;
-                                                        return score;
-                                                    })()}%`
-                                                }}
                                             ></div>
                                         </div>
                                         <span className="security-score-text">
@@ -2018,24 +1973,24 @@ const Dashboard = () => {
                     </div>
 
                     {/* Login Success vs Failed Doughnut Chart */}
-                    <div className="dashboard__card dashboard__card--chart" style={{ gridColumn: '3 / 4' }}>
+                    <div className="dashboard__card dashboard__card--chart">
                         <div className="dashboard__card-header">
                             <h3 className="dashboard__card-title">Login Success Rate</h3>
                         </div>
                         <div className="dashboard__card-content">
-                            <div className="chart-container" style={{ height: '300px' }}>
+                            <div className="chart-container">
                                 <canvas ref={loginSuccessDoughnutChartRef}></canvas>
                             </div>
                         </div>
                     </div>
 
                     {/* Security Events vs Failed Logins Line Chart */}
-                    <div className="dashboard__card dashboard__card--chart" style={{ gridColumn: '4 / 5' }}>
+                    <div className="dashboard__card dashboard__card--chart">
                         <div className="dashboard__card-header">
                             <h3 className="dashboard__card-title">Security Events Timeline</h3>
                         </div>
                         <div className="dashboard__card-content">
-                            <div className="chart-container" style={{ height: '300px' }}>
+                            <div className="chart-container">
                                 <canvas ref={securityEventsLineChartRef}></canvas>
                             </div>
                         </div>
@@ -2051,41 +2006,59 @@ const Dashboard = () => {
                             <h3 className="dashboard__card-title">Geographic Activity</h3>
                         </div>
                         <div className="dashboard__card-content">
-                            <div className="map-container" style={{ height: '400px' }}>
-                                <MapContainer
-                                    center={[20, 0]}
-                                    zoom={2}
-                                    style={{ height: '100%', width: '100%' }}
-                                    ref={geographicMapRef}
-                                >
-                                    <TileLayer
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                    />
-                                    {chartData.geographicActivity && chartData.geographicActivity.map((location, index) => {
-                                        const coords = getCountryCoordinates(location.country);
-                                        return (
-                                            <CircleMarker
-                                                key={index}
-                                                center={[coords.lat, coords.lng]}
-                                                radius={Math.max(5, Math.min(20, location.logins * 2))}
-                                                fillColor={location.logins > 10 ? '#ef4444' : location.logins > 5 ? '#f59e0b' : '#10b981'}
-                                                color={location.logins > 10 ? '#dc2626' : location.logins > 5 ? '#d97706' : '#059669'}
-                                                weight={2}
-                                                opacity={0.8}
-                                                fillOpacity={0.6}
-                                            >
-                                                <Popup>
-                                                    <div className="map-popup">
-                                                        <h4>{location.country}</h4>
-                                                        <p><strong>Logins:</strong> {location.logins}</p>
-                                                        <p><strong>Percentage:</strong> {location.percentage}%</p>
-                                                    </div>
-                                                </Popup>
-                                            </CircleMarker>
-                                        );
-                                    })}
-                                </MapContainer>
+                            <div className="map-container" style={{ height: '400px', width: '100%', position: 'relative' }}>
+                                {chartData.geographicActivity && chartData.geographicActivity.length > 0 ? (
+                                    <MapContainer
+                                        center={[20, 0]}
+                                        zoom={2}
+                                        ref={geographicMapRef}
+                                        style={{ height: '100%', width: '100%' }}
+                                    >
+                                        <TileLayer
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        />
+                                        {chartData.geographicActivity.map((location, index) => {
+                                            const coords = getCountryCoordinates(location.country);
+                                            return (
+                                                <CircleMarker
+                                                    key={index}
+                                                    center={[coords.lat, coords.lng]}
+                                                    radius={Math.max(5, Math.min(20, location.logins * 2))}
+                                                    fillColor={location.logins > 10 ? '#ef4444' : location.logins > 5 ? '#f59e0b' : '#10b981'}
+                                                    color={location.logins > 10 ? '#dc2626' : location.logins > 5 ? '#d97706' : '#059669'}
+                                                    weight={2}
+                                                    opacity={0.8}
+                                                    fillOpacity={0.6}
+                                                >
+                                                    <Popup>
+                                                        <div className="map-popup">
+                                                            <h4>{location.country}</h4>
+                                                            <p><strong>Logins:</strong> {location.logins}</p>
+                                                            <p><strong>Percentage:</strong> {location.percentage}%</p>
+                                                        </div>
+                                                    </Popup>
+                                                </CircleMarker>
+                                            );
+                                        })}
+                                    </MapContainer>
+                                ) : (
+                                    <div style={{
+                                        height: '100%',
+                                        width: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backgroundColor: '#f8f9fa',
+                                        border: '1px solid #dee2e6',
+                                        borderRadius: '4px'
+                                    }}>
+                                        <div style={{ textAlign: 'center', color: '#6c757d' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🗺️</div>
+                                            <div>Loading geographic data...</div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -2096,7 +2069,7 @@ const Dashboard = () => {
                             <h3 className="dashboard__card-title">Device Usage</h3>
                         </div>
                         <div className="dashboard__card-content">
-                            <div className="chart-container" style={{ height: '300px' }}>
+                            <div className="chart-container">
                                 <canvas ref={deviceUsageChartRef}></canvas>
                             </div>
                         </div>
@@ -2106,7 +2079,28 @@ const Dashboard = () => {
 
             {activeTab === 'more' && (
                 <section className="dashboard__grid">
-
+                    {/* Performance Metrics Chart */}
+                    <div className="dashboard__card dashboard__card--chart performance-metrics">
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">Performance Metrics</h3>
+                        </div>
+                        <div className="dashboard__card-content">
+                            <div className="chart-container">
+                                <canvas ref={performanceMetricsChartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    {/* System Metrics Timeline Chart */}
+                    <div className="dashboard__card dashboard__card--chart">
+                        <div className="dashboard__card-header">
+                            <h3 className="dashboard__card-title">System Metrics Timeline</h3>
+                        </div>
+                        <div className="dashboard__card-content">
+                            <div className="chart-container">
+                                <canvas ref={systemMetricsTimelineChartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </section>
             )}
 

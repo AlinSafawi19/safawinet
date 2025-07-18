@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiInbox, FiTool, FiChevronDown, FiUser, FiSettings, FiLogOut, FiMenu } from 'react-icons/fi';
+import { FiBell, FiInbox, FiTool, FiChevronDown, FiUser, FiSettings, FiLogOut, FiMenu, FiCalendar, FiClock, FiFile } from 'react-icons/fi';
 import ProfilePicture from './ProfilePicture';
 import '../styles/Header.css';
 
@@ -70,9 +70,9 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
 
     // Tools data
     const tools = [
-        { id: 1, label: 'Calendar', icon: '📅' },
-        { id: 2, label: 'Reminder', icon: '⏰' },
-        { id: 3, label: 'Files', icon: '📁' }
+        { id: 1, label: 'Calendar', icon: <FiCalendar /> },
+        { id: 2, label: 'Reminder', icon: <FiClock /> },
+        { id: 3, label: 'Files', icon: <FiFile /> }
     ];
 
     return (

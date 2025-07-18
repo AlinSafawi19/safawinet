@@ -689,6 +689,18 @@
 
     .header-left {
         width: 60px;
+        background-color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .header-container.scrolled .header-left {
+        background-color: #ffffff;
+    }
+
+    .header-left .text-logo {
+        display: none;
     }
 
     .dashboard-header {
@@ -808,6 +820,96 @@
 
     .header-profile-button {
         padding: 0.4rem;
+    }
+
+    /* Mobile Header Actions for Tablet Landscape */
+    .mobile-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .mobile-action-btn {
+        background: none;
+        border: none;
+        padding: 0.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #64748b;
+        position: relative;
+    }
+
+    .mobile-action-btn:hover {
+        background: #f1f5f9;
+        color: #334155;
+    }
+
+    .mobile-action-icon {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        background: #ef4444;
+        color: white;
+        font-size: 0.625rem;
+        font-weight: 600;
+        padding: 0.125rem 0.25rem;
+        border-radius: 8px;
+        min-width: 16px;
+        text-align: center;
+        line-height: 1;
+    }
+
+    /* Mobile Tools Dropdown */
+    .mobile-tools-dropdown {
+        position: relative;
+    }
+
+    .mobile-tools-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        min-width: 160px;
+        z-index: 1000;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+        pointer-events: none;
+    }
+
+    .mobile-tools-dropdown.open .mobile-tools-menu {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: all;
+    }
+
+    .mobile-tools-menu button {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        color: #374151;
+        font-size: 0.875rem;
+    }
+
+    .mobile-tools-menu button:hover {
+        background: #f9fafb;
     }
 }
 
