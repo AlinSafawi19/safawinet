@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiInbox, FiTool, FiChevronDown, FiUser, FiSettings, FiLogOut, FiMenu, FiCalendar, FiClock, FiFile } from 'react-icons/fi';
+import { FiBell, FiInbox, FiTool, FiChevronDown, FiUser, FiSettings, FiLogOut, FiCalendar, FiClock, FiFile } from 'react-icons/fi';
 import ProfilePicture from './ProfilePicture';
 import '../styles/Header.css';
+import { showLogoutConfirmation } from '../utils/sweetAlertConfig';
+import authService from '../services/authService';
 
-const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpen, deviceType }) => {
+const Header = ({ onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpen, deviceType }) => {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const [isScrolled, setIsScrolled] = useState(false);
@@ -27,8 +29,11 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const handleLogout = () => {
-        onLogout();
+    const handleLogout = async () => {
+        const result = await showLogoutConfirmation();
+        if (result.isConfirmed) {
+            authService.logout();
+        }
     };
 
     const toggleProfileDropdown = () => {

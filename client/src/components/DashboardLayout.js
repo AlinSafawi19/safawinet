@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import authService from '../services/authService';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import ConfirmationModal from './ConfirmationModal';
 import { initializeTheme } from '../utils/themeUtils';
 import '../styles/DashboardLayout.css';
 
@@ -15,7 +14,6 @@ const DashboardLayout = ({ onLogout, children }) => {
     });
     const [isMobile, setIsMobile] = useState(false);
     const [deviceType, setDeviceType] = useState('desktop');
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const logoutTimerRef = useRef(null);
 
     // Apply theme based on user preferences
@@ -146,19 +144,6 @@ const DashboardLayout = ({ onLogout, children }) => {
         }
     };
 
-    const handleLogout = () => {
-        setShowLogoutConfirm(true);
-    };
-
-    const confirmLogout = async () => {
-        try {
-            await authService.logout();
-            if (onLogout) onLogout();
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-    };
-
     // Ensure we have a valid user before rendering
     if (!user) {
         return (
@@ -173,7 +158,6 @@ const DashboardLayout = ({ onLogout, children }) => {
     return (
         <div className={`dashboard-layout device-${deviceType}`}>
             <Header
-                onLogout={handleLogout}
                 onSidebarToggle={handleHeaderSidebarToggle}
                 isSidebarCollapsed={isSidebarCollapsed}
                 isMobile={isMobile}
@@ -184,7 +168,6 @@ const DashboardLayout = ({ onLogout, children }) => {
                 isMobileMenuOpen={isMobileMenuOpen}
                 onCloseMobileMenu={closeMobileMenu}
                 onSidebarToggle={handleSidebarToggle}
-                onLogout={handleLogout}
                 isMobile={isMobile}
                 isCollapsed={isSidebarCollapsed}
                 deviceType={deviceType}
@@ -194,18 +177,6 @@ const DashboardLayout = ({ onLogout, children }) => {
                     {children}
                 </main>
             </div>
-
-            {/* Confirmation Modal - Rendered at root level */}
-            <ConfirmationModal
-                isOpen={showLogoutConfirm}
-                onClose={() => setShowLogoutConfirm(false)}
-                onConfirm={confirmLogout}
-                title="Logout Confirmation"
-                message="Are you sure you want to logout?"
-                confirmText="Sign out"
-                cancelText="Cancel"
-                type="danger"
-            />
         </div>
     );
 };
