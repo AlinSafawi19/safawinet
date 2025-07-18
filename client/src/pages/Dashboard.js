@@ -15,7 +15,11 @@ import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 import {
     FiPrinter,
     FiDownload,
-    FiX
+    FiX,
+    FiBarChart,
+    FiShield,
+    FiTrendingUp,
+    FiSettings
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
 import '../styles/Dashboard.css';
@@ -1728,7 +1732,9 @@ const Dashboard = () => {
                             e.preventDefault();
                             setActiveTab('overview');
                         }}
+                        title="Dashboard Overview"
                     >
+                        <FiBarChart className="tab-icon" />
                         Overview
                     </a>
                     <a
@@ -1738,7 +1744,9 @@ const Dashboard = () => {
                             e.preventDefault();
                             setActiveTab('security');
                         }}
+                        title="Security & Authentication"
                     >
+                        <FiShield className="tab-icon" />
                         Security
                     </a>
                     <a
@@ -1748,7 +1756,9 @@ const Dashboard = () => {
                             e.preventDefault();
                             setActiveTab('analytics');
                         }}
+                        title="Analytics & Insights"
                     >
+                        <FiTrendingUp className="tab-icon" />
                         Analytics
                     </a>
                     <a
@@ -1758,16 +1768,30 @@ const Dashboard = () => {
                             e.preventDefault();
                             setActiveTab('more');
                         }}
+                        title="Additional Features"
                     >
+                        <FiSettings className="tab-icon" />
                         More
                     </a>
                 </div>
                 <div className="dashboard-nav-actions">
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => alert('Print clicked')}>
-                        <FiPrinter /> Print
+                    <button 
+                        type="button" 
+                        className="btn btn-secondary btn-sm" 
+                        onClick={() => alert('Print clicked')}
+                        title="Print Dashboard"
+                    >
+                        <FiPrinter /> 
+                        <span className="btn-text">Print</span>
                     </button>
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => alert('Export clicked')}>
-                        <FiDownload /> Export
+                    <button 
+                        type="button" 
+                        className="btn btn-primary btn-sm" 
+                        onClick={() => alert('Export clicked')}
+                        title="Export Dashboard Data"
+                    >
+                        <FiDownload /> 
+                        <span className="btn-text">Export</span>
                     </button>
                 </div>
             </nav>
@@ -1777,8 +1801,9 @@ const Dashboard = () => {
                 <div className="system-health-summary-item styled-summary-item">
                     <div className="summary-label">Real-time Status</div>
                     <div className="summary-value">
-                        <span className={`status-dot ${getStatusClass(isConnected ? 'connected' : 'disconnected')}`}></span>
-                        {isConnected ? 'connected' : 'disconnected'}
+                        <span className={`status-tag ${getStatusClass(isConnected ? 'connected' : 'disconnected')}`}>
+                            {isConnected ? 'Connected' : 'Disconnected'}
+                        </span>
                     </div>
                     {lastFetchTime && (
                         <span className='summary-sub-label'>
@@ -1789,7 +1814,11 @@ const Dashboard = () => {
                 </div>
                 <div className="system-health-summary-item styled-summary-item">
                     <div className="summary-label">Database</div>
-                    <div className="summary-value">{systemHealth.database.status}</div>
+                    <div className="summary-value">
+                        <span className={`status-tag ${getStatusClass(systemHealth.database.status)}`}>
+                            {systemHealth.database.status}
+                        </span>
+                    </div>
                     {(() => {
                         const trend = getTrendDisplay('database', systemHealth, historicalData.systemHealth);
                         return trend.percentage > 0 ? (
@@ -1838,7 +1867,6 @@ const Dashboard = () => {
                 <div className="system-health-summary-item styled-summary-item">
                     <div className="summary-label">Active Sessions</div>
                     <div className="summary-value">
-                        <span className={`status-dot ${getStatusClass(activeSessionsCount > 0 ? 'connected' : 'disconnected')}`}></span>
                         {activeSessionsCount}/{maxSessions}
                     </div>
                     {(() => {
@@ -1893,7 +1921,7 @@ const Dashboard = () => {
                                 <div className="security-status-item">
                                     <div className="security-status-header">
                                         <span className="security-status-label">Password</span>
-                                        <span className={`security-status-badge ${securityStatus.passwordStrength.status === 'strong' ? 'status-success' : securityStatus.passwordStrength.status === 'medium' ? 'status-warning' : 'status-error'}`}>
+                                        <span className={`status-tag ${getStatusClass(securityStatus.passwordStrength.status)}`}>
                                             {securityStatus.passwordStrength.status}
                                         </span>
                                     </div>
@@ -1911,7 +1939,7 @@ const Dashboard = () => {
                                 <div className="security-status-item">
                                     <div className="security-status-header">
                                         <span className="security-status-label">Email Verification</span>
-                                        <span className={`security-status-badge ${profileData.emailVerified ? 'status-success' : 'status-error'}`}>
+                                        <span className={`status-tag ${getStatusClass(profileData.emailVerified ? 'verified' : 'unverified')}`}>
                                             {profileData.emailVerified ? 'Verified' : 'Not Verified'}
                                         </span>
                                     </div>
@@ -1929,7 +1957,7 @@ const Dashboard = () => {
                                 <div className="security-status-item">
                                     <div className="security-status-header">
                                         <span className="security-status-label">Two-Factor Auth</span>
-                                        <span className={`security-status-badge ${profileData.twoFactorEnabled ? 'status-success' : 'status-error'}`}>
+                                        <span className={`status-tag ${getStatusClass(profileData.twoFactorEnabled ? 'enabled' : 'disabled')}`}>
                                             {profileData.twoFactorEnabled ? 'Enabled' : 'Disabled'}
                                         </span>
                                     </div>
@@ -1947,7 +1975,7 @@ const Dashboard = () => {
                                 <div className="security-status-item">
                                     <div className="security-status-header">
                                         <span className="security-status-label">Account Security</span>
-                                        <span className={`security-status-badge ${profileData.emailVerified && profileData.twoFactorEnabled && securityStatus.passwordStrength.status === 'strong' ? 'status-success' : 'status-warning'}`}>
+                                        <span className={`status-tag ${getStatusClass(profileData.emailVerified && profileData.twoFactorEnabled && securityStatus.passwordStrength.status === 'strong' ? 'good' : 'warning')}`}>
                                             {profileData.emailVerified && profileData.twoFactorEnabled && securityStatus.passwordStrength.status === 'strong' ? 'Secure' : 'Needs Attention'}
                                         </span>
                                     </div>

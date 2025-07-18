@@ -907,18 +907,6 @@
     justify-content: flex-end;
 }
 
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover:not(:disabled) {
-    background: var(--bg-tertiary);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
 /* Responsive adjustments for profile pictures */
 @media (max-width: 768px) {
     .profile-picture.size-xlarge {

@@ -8,7 +8,6 @@ export const getStatusClass = (status) => {
         case 'verified':
         case 'operational':
         case 'success':
-        case 'verified':
         case 'excellent':
         case 'ok':
             return 'status-good';
@@ -20,18 +19,14 @@ export const getStatusClass = (status) => {
         case 'medium':
         case 'pending':
         case 'unverified':
-        case 'degraded':
         case 'deactivating':
         case 'deactivated':
-        case 'deactivating':
             return 'status-warning';
         case 'error':
         case 'inactive':
         case 'slow':
         case 'failed':
         case 'disconnected':
-        case 'failed':
-        case 'degraded':
             return 'status-error';
         case 'unknown':
         default:
