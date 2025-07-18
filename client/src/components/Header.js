@@ -1,79 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    FiInbox,
-    FiBell,
-    FiSettings,
-    FiUser,
-    FiLogOut,
-    FiChevronDown,
-    FiTool,
-    FiPlus,
-    FiCalendar,
-    FiClock,
-    FiFileText,
-    FiDollarSign,
-    FiTrendingUp,
-    FiGrid
-} from 'react-icons/fi';
-import authService from '../services/authService';
+import { FiBell, FiInbox, FiTool, FiChevronDown, FiUser, FiSettings, FiLogOut, FiMenu } from 'react-icons/fi';
 import ProfilePicture from './ProfilePicture';
-import Swal from 'sweetalert2';
+import '../styles/Header.css';
 
-const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpen }) => {
-    const user = authService.getCurrentUser();
+const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpen, deviceType }) => {
     const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const [isScrolled, setIsScrolled] = useState(false);
     const [showProfileDropdown, setShowProfileDropdown] = useState(false);
     const [showToolsDropdown, setShowToolsDropdown] = useState(false);
-    const [notificationCount, setNotificationCount] = useState(3);
-    const [inboxCount, setInboxCount] = useState(7);
     const profileRef = useRef(null);
     const toolsRef = useRef(null);
-    const [isScrolled, setIsScrolled] = useState(false);
 
+    // Mock data for notifications and inbox
+    const notificationCount = 3;
+    const inboxCount = 7;
+
+    // Scroll effect
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 0);
         };
+
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const tools = [
-        { id: 'kanban', label: 'Kanban Board', icon: <FiGrid />, action: () => console.log('Kanban clicked') },
-        { id: 'calendar', label: 'Calendar', icon: <FiCalendar />, action: () => console.log('Calendar clicked') },
-        { id: 'reminder', label: 'Reminder', icon: <FiClock />, action: () => console.log('Reminder clicked') },
-        { id: 'files', label: 'Files', icon: <FiFileText />, action: () => console.log('Files clicked') }
-    ];
-
-    const handleLogout = async () => {
-        const result = await Swal.fire({
-            title: 'Logout Confirmation',
-            text: 'Are you sure you want to logout?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Sign out',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-        });
-
-        if (result.isConfirmed) {
-            try {
-                await authService.logout();
-                if (onLogout) {
-                    onLogout();
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
-        }
-    };
-
-    const handleTabClick = (tab) => {
-        // Here you can add navigation logic for each tab
-        console.log(`Switched to ${tab} tab`);
+    const handleLogout = () => {
+        onLogout();
     };
 
     const toggleProfileDropdown = () => {
@@ -87,11 +42,12 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
     };
 
     const handleToolClick = (tool) => {
-        tool.action();
         setShowToolsDropdown(false);
+        // Handle tool click
+        console.log('Tool clicked:', tool);
     };
 
-    // Handle clicking outside to close dropdowns
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -103,75 +59,58 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
         };
 
         document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Determine if we should use profile dropdown for navigation items
+    const shouldUseProfileDropdown = deviceType === 'mobile-small' || deviceType === 'mobile-extra-small';
+    
+    // Determine if we should show secondary header
+    const shouldShowSecondaryHeader = deviceType === 'mobile-extra-small';
+
+    // Tools data
+    const tools = [
+        { id: 1, label: 'Calendar', icon: '📅' },
+        { id: 2, label: 'Reminder', icon: '⏰' },
+        { id: 3, label: 'Files', icon: '📁' }
+    ];
+
     return (
-        <div className={`header-container${isScrolled ? ' scrolled' : ''}${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-            <div className="header-left">
-                <button
-                    onClick={onSidebarToggle}
-                    className="sidebar-toggle-btn"
-                    title={isMobile ? (isMobileMenuOpen ? 'Close menu' : 'Open menu') : (isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-                    aria-label={isMobile ? (isMobileMenuOpen ? 'Close menu' : 'Open menu') : (isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
-                >
-                    {isMobile ? (
-                        // Mobile: Show X when menu is open, hamburger when closed
+        <div className="header-wrapper">
+            <header className={`header-container ${isScrolled ? 'scrolled' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+                <div className="header-left">
+                    <button
+                        className="sidebar-toggle-btn"
+                        onClick={onSidebarToggle}
+                        aria-label="Toggle sidebar"
+                    >
                         <div className={`hamburger-menu ${isMobileMenuOpen ? 'active' : ''}`}>
                             <span className="hamburger-line"></span>
                             <span className="hamburger-line"></span>
                             <span className="hamburger-line"></span>
                         </div>
-                    ) : (
-                        // Desktop: Show hamburger when sidebar is expanded, X when collapsed
-                        <div className={`hamburger-menu ${isSidebarCollapsed ? '' : 'active'}`}>
-                            <span className="hamburger-line"></span>
-                            <span className="hamburger-line"></span>
-                            <span className="hamburger-line"></span>
-                        </div>
-                    )}
-                </button>
-                {!isSidebarCollapsed && (
-                    <span className="text-logo">
-                        Safawi<span className="text-logo-blue">Net</span>
-                    </span>
-                )}
-            </div >
-            <header
-                className={`dashboard-header${isSidebarCollapsed ? '' : ''}`}
-                style={{}}
-            >
-                {/* Greeting Section */}
-                <div className="dashboard-greeting">
-                    <span className="dashboard-greeting-main">
-                        Good Morning{user?.firstName || user?.lastName ? ',' : ''} <b>{user?.firstName} {user?.lastName}</b>
-                    </span>
-                    <span className="dashboard-greeting-subtext">
-                        Hope you have a productive day!
-                    </span>
+                    </button>
+                    <div className="text-logo">
+                        Permissions<span className="text-logo-colored">System</span>
+                    </div>
                 </div>
+
+                <div className="dashboard-header">
+                    <div className="dashboard-greeting">
+                        <div className="dashboard-greeting-main">
+                            Welcome back, {user?.firstName || 'User'}!
+                        </div>
+                        <div className="dashboard-greeting-subtext">
+                            Here's what's happening today
+                        </div>
+                    </div>
+                </div>
+
                 <div className="header-right">
-                    {/* Desktop View */}
+                    {/* Desktop Header Tabs */}
                     {!isMobile && (
                         <>
-                            <button
-                                className="header-tab"
-                                onClick={() => handleTabClick('inbox')}
-                            >
-                                <div className="header-tab-icon">
-                                    <FiInbox />
-                                    {inboxCount > 0 && (
-                                        <span className="header-tab-badge">{inboxCount}</span>
-                                    )}
-                                </div>
-                                <span>Inbox</span>
-                            </button>
-                            <button
-                                className="header-tab"
-                                onClick={() => handleTabClick('notifications')}
-                            >
+                            <button className="header-tab" onClick={() => navigate('/notifications')}>
                                 <div className="header-tab-icon">
                                     <FiBell />
                                     {notificationCount > 0 && (
@@ -180,11 +119,19 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                                 </div>
                                 <span>Notifications</span>
                             </button>
+
+                            <button className="header-tab" onClick={() => navigate('/inbox')}>
+                                <div className="header-tab-icon">
+                                    <FiInbox />
+                                    {inboxCount > 0 && (
+                                        <span className="header-tab-badge">{inboxCount}</span>
+                                    )}
+                                </div>
+                                <span>Inbox</span>
+                            </button>
+
                             <div ref={toolsRef} className={`header-tools-dropdown ${showToolsDropdown ? 'open' : ''}`}>
-                                <button
-                                    className="header-tools-button"
-                                    onClick={toggleToolsDropdown}
-                                >
+                                <button className="header-tools-button" onClick={toggleToolsDropdown}>
                                     <FiTool />
                                     <span>Tools</span>
                                     <span className="chevron-icon">
@@ -208,13 +155,59 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                         </>
                     )}
 
-                    {/* Mobile View - Compact Icons */}
-                    {isMobile && (
+                    {/* Tablet Landscape - Show compact icons */}
+                    {deviceType === 'tablet-landscape' && (
                         <div className="mobile-header-actions">
-                            {/* Mobile Notifications */}
+                            <button className="mobile-action-btn" onClick={() => navigate('/notifications')}>
+                                <div className="mobile-action-icon">
+                                    <FiBell />
+                                    {notificationCount > 0 && (
+                                        <span className="mobile-badge">{notificationCount}</span>
+                                    )}
+                                </div>
+                            </button>
+
+                            <button className="mobile-action-btn" onClick={() => navigate('/inbox')}>
+                                <div className="mobile-action-icon">
+                                    <FiInbox />
+                                    {inboxCount > 0 && (
+                                        <span className="mobile-badge">{inboxCount}</span>
+                                    )}
+                                </div>
+                            </button>
+
+                            <div ref={toolsRef} className={`mobile-tools-dropdown ${showToolsDropdown ? 'open' : ''}`}>
+                                <button className="mobile-action-btn" onClick={toggleToolsDropdown}>
+                                    <div className="mobile-action-icon">
+                                        <FiTool />
+                                        <span className="chevron-icon">
+                                            <FiChevronDown />
+                                        </span>
+                                    </div>
+                                </button>
+                                {showToolsDropdown && (
+                                    <div className="mobile-tools-menu">
+                                        {tools.map((tool) => (
+                                            <button
+                                                key={tool.id}
+                                                onClick={() => handleToolClick(tool)}
+                                            >
+                                                <span>{tool.icon}</span>
+                                                <span>{tool.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Mobile Header Actions - Tablet Portrait and Mobile Large */}
+                    {(deviceType === 'tablet-portrait' || deviceType === 'mobile-large') && (
+                        <div className="mobile-header-actions">
                             <button
                                 className="mobile-action-btn"
-                                onClick={() => handleTabClick('notifications')}
+                                onClick={() => navigate('/notifications')}
                                 title="Notifications"
                             >
                                 <div className="mobile-action-icon">
@@ -225,10 +218,9 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                                 </div>
                             </button>
 
-                            {/* Mobile Inbox */}
                             <button
                                 className="mobile-action-btn"
-                                onClick={() => handleTabClick('inbox')}
+                                onClick={() => navigate('/inbox')}
                                 title="Inbox"
                             >
                                 <div className="mobile-action-icon">
@@ -239,7 +231,6 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                                 </div>
                             </button>
 
-                            {/* Mobile Tools Dropdown */}
                             <div ref={toolsRef} className={`mobile-tools-dropdown ${showToolsDropdown ? 'open' : ''}`}>
                                 <button
                                     className="mobile-action-btn"
@@ -276,7 +267,17 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                             className={`header-profile-button ${isMobile ? 'mobile-profile-btn' : ''}`}
                             onClick={toggleProfileDropdown}
                         >
+                                <div className="profile-button-content">
                             <ProfilePicture user={user} size="small" />
+                                    {/* Notification indicator - only show when nav items are in dropdown */}
+                                    {shouldUseProfileDropdown && (notificationCount > 0 || inboxCount > 0) && (
+                                        <div className="profile-notification-indicator">
+                                            <span className="profile-badge">
+                                                {notificationCount + inboxCount}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             <span className="chevron-icon">
                                 <FiChevronDown />
                             </span>
@@ -291,6 +292,44 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                                         <div className="profile-email">{user?.email}</div>
                                     </div>
                                 </div>
+
+                                    {/* Mobile Small - Add navigation items to profile dropdown */}
+                                    {shouldUseProfileDropdown && (
+                                        <>
+                                            <div className="dropdown-section-divider"></div>
+                                            <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/notifications'); }}>
+                                                <div className="dropdown-item-content">
+                                                    <FiBell className="dropdown-icon" />
+                                                    <span>Notifications</span>
+                                                    {notificationCount > 0 && (
+                                                        <span className="dropdown-badge">{notificationCount}</span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                            <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/inbox'); }}>
+                                                <div className="dropdown-item-content">
+                                                    <FiInbox className="dropdown-icon" />
+                                                    <span>Inbox</span>
+                                                    {inboxCount > 0 && (
+                                                        <span className="dropdown-badge">{inboxCount}</span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                            <div className="dropdown-section-divider"></div>
+                                            {tools.map((tool) => (
+                                                <button
+                                                    key={tool.id}
+                                                    className="dropdown-item"
+                                                    onClick={() => { setShowProfileDropdown(false); handleToolClick(tool); }}
+                                                >
+                                                    <span className="dropdown-icon">{tool.icon}</span>
+                                                    <span>{tool.label}</span>
+                                                </button>
+                                            ))}
+                                            <div className="dropdown-section-divider"></div>
+                                        </>
+                                    )}
+
                                 <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/profile'); }}>
                                     <FiUser className="dropdown-icon" />
                                     <span>My Profile</span>
@@ -308,6 +347,46 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                     </div>
                 </div>
             </header >
+
+            {/* Secondary Header for Extra Small Mobile */}
+            {shouldShowSecondaryHeader && (
+                <div className="secondary-header">
+                    <div className="secondary-header-content">
+                        <button className="secondary-header-btn" onClick={() => navigate('/notifications')}>
+                            <FiBell />
+                            <span>Notifications</span>
+                            {notificationCount > 0 && <span className="secondary-badge">{notificationCount}</span>}
+                        </button>
+                        <button className="secondary-header-btn" onClick={() => navigate('/inbox')}>
+                            <FiInbox />
+                            <span>Inbox</span>
+                            {inboxCount > 0 && <span className="secondary-badge">{inboxCount}</span>}
+                        </button>
+                        <div ref={toolsRef} className="secondary-tools-dropdown">
+                            <button className="secondary-header-btn" onClick={toggleToolsDropdown}>
+                                <FiTool />
+                                <span>Tools</span>
+                                <span className="chevron-icon">
+                                    <FiChevronDown />
+                                </span>
+                            </button>
+                            {showToolsDropdown && (
+                                <div className="secondary-tools-menu">
+                                    {tools.map((tool) => (
+                                        <button
+                                            key={tool.id}
+                                            onClick={() => handleToolClick(tool)}
+                                        >
+                                            <span>{tool.icon}</span>
+                                            <span>{tool.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

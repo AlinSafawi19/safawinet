@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import authService from '../services/authService';
-import { FiEye, FiEyeOff, FiLock, FiCheckCircle, FiX } from 'react-icons/fi';
-import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+import { FiLock, FiCheckCircle, FiX } from 'react-icons/fi';
+import { showErrorToast } from '../utils/sweetAlertConfig';
 import FloatingInput from './FloatingInput';
 import passwordStrengthAnalyzer from '../utils/passwordStrength';
 
@@ -14,6 +14,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [passwordStrength, setPasswordStrength] = useState(null);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     // Check password strength using the analyzer
     const checkPasswordStrength = (password) => {
@@ -144,21 +145,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
             );
 
             if (result.success) {
-                showSuccessToast('Password Changed Successfully!', 'Your password has been updated.');
-
-                // Reset form
-                setFormData({
-                    currentPassword: '',
-                    newPassword: '',
-                    confirmPassword: ''
-                });
-                setPasswordStrength(null);
-
-                // Close modal and notify parent
-                onClose();
-                if (onSuccess) {
-                    onSuccess();
-                }
+                setIsSuccess(true);
             } else {
                 setErrors({
                     currentPassword: result.message || 'Failed to change password'
@@ -176,6 +163,25 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
         }
     };
 
+    // Handle success OK button
+    const handleSuccessOK = () => {
+        // Reset form
+        setFormData({
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+        });
+        setPasswordStrength(null);
+        setErrors({});
+        setIsSuccess(false);
+
+        // Close modal and notify parent
+        onClose();
+        if (onSuccess) {
+            onSuccess();
+        }
+    };
+
     // Close modal
     const handleClose = () => {
         if (!isLoading) {
@@ -186,6 +192,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
             });
             setPasswordStrength(null);
             setErrors({});
+            setIsSuccess(false);
             onClose();
         }
     };
@@ -226,128 +233,147 @@ const ChangePasswordModal = ({ isOpen, onClose, onSuccess }) => {
                     </button>
                 </div>
 
-                <div className="modal-content">
-                    <form onSubmit={handleSubmit} className="modal-form">
-                        <FloatingInput
-                            type="password"
-                            id="currentPassword"
-                            name="currentPassword"
-                            value={formData.currentPassword}
-                            onChange={handleChange}
-                            onKeyPress={handleKeyPress}
-                            disabled={isLoading}
-                            required
-                            autoComplete="current-password"
-                            label="Current Password"
-                            error={errors.currentPassword}
-                        />
+                {!isSuccess ? (
+                    <div className="modal-content">
+                        <form onSubmit={handleSubmit} className="modal-form">
+                            <FloatingInput
+                                type="password"
+                                id="currentPassword"
+                                name="currentPassword"
+                                value={formData.currentPassword}
+                                onChange={handleChange}
+                                onKeyPress={handleKeyPress}
+                                disabled={isLoading}
+                                required
+                                autoComplete="current-password"
+                                label="Current Password"
+                                error={errors.currentPassword}
+                            />
 
-                        <FloatingInput
-                            type="password"
-                            id="newPassword"
-                            name="newPassword"
-                            value={formData.newPassword}
-                            onChange={handleChange}
-                            onKeyPress={handleKeyPress}
-                            disabled={isLoading}
-                            required
-                            autoComplete="new-password"
-                            label="New Password"
-                            error={errors.newPassword}
-                        />
+                            <FloatingInput
+                                type="password"
+                                id="newPassword"
+                                name="newPassword"
+                                value={formData.newPassword}
+                                onChange={handleChange}
+                                onKeyPress={handleKeyPress}
+                                disabled={isLoading}
+                                required
+                                autoComplete="new-password"
+                                label="New Password"
+                                error={errors.newPassword}
+                            />
 
-                        {/* Password Strength Indicator */}
-                        {passwordStrength && (
-                            <div className="password-strength">
-                                <div className="strength-bar">
-                                    <div
-                                        className={`strength-fill strength-${passwordStrength.level}`}
-                                        style={{ width: `${passwordStrength.score}%` }}
-                                    ></div>
-                                </div>
-                                <div className="strength-text">
-                                    Password Strength: <span className={`strength-label strength-${passwordStrength.level}`}>
-                                        {passwordStrength.level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                    </span>
-                                    <span className="strength-score">({passwordStrength.score}/100)</span>
-                                </div>
-                                <div className="strength-requirements">
-                                    <div className={`requirement ${passwordStrength.details.length >= 8 ? 'met' : 'unmet'}`}>
-                                        <FiCheckCircle />
-                                        At least 8 characters
+                            {/* Password Strength Indicator */}
+                            {passwordStrength && (
+                                <div className="password-strength">
+                                    <div className="strength-bar">
+                                        <div
+                                            className={`strength-fill strength-${passwordStrength.level}`}
+                                            style={{ width: `${passwordStrength.score}%` }}
+                                        ></div>
                                     </div>
-                                    <div className={`requirement ${passwordStrength.details.hasUppercase ? 'met' : 'unmet'}`}>
-                                        <FiCheckCircle />
-                                        One uppercase letter
+                                    <div className="strength-text">
+                                        Password Strength: <span className={`strength-label strength-${passwordStrength.level}`}>
+                                            {passwordStrength.level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </span>
+                                        <span className="strength-score">({passwordStrength.score}/100)</span>
                                     </div>
-                                    <div className={`requirement ${passwordStrength.details.hasLowercase ? 'met' : 'unmet'}`}>
-                                        <FiCheckCircle />
-                                        One lowercase letter
-                                    </div>
-                                    <div className={`requirement ${passwordStrength.details.hasNumbers ? 'met' : 'unmet'}`}>
-                                        <FiCheckCircle />
-                                        One number
-                                    </div>
-                                    <div className={`requirement ${passwordStrength.details.hasSpecialChars ? 'met' : 'unmet'}`}>
-                                        <FiCheckCircle />
-                                        One special character
-                                    </div>
-                                    {passwordStrength.details.hasRepeatingChars && (
-                                        <div className="requirement unmet warning">
-                                            <FiX />
-                                            Avoid repeating characters
+                                    <div className="strength-requirements">
+                                        <div className={`requirement ${passwordStrength.details.length >= 8 ? 'met' : 'unmet'}`}>
+                                            <FiCheckCircle />
+                                            At least 8 characters
                                         </div>
-                                    )}
-                                    {passwordStrength.details.hasSequentialChars && (
-                                        <div className="requirement unmet warning">
-                                            <FiX />
-                                            Avoid sequential characters
+                                        <div className={`requirement ${passwordStrength.details.hasUppercase ? 'met' : 'unmet'}`}>
+                                            <FiCheckCircle />
+                                            One uppercase letter
                                         </div>
-                                    )}
-                                    {passwordStrength.details.hasCommonPatterns && (
-                                        <div className="requirement unmet warning">
-                                            <FiX />
-                                            Avoid common patterns
+                                        <div className={`requirement ${passwordStrength.details.hasLowercase ? 'met' : 'unmet'}`}>
+                                            <FiCheckCircle />
+                                            One lowercase letter
                                         </div>
-                                    )}
+                                        <div className={`requirement ${passwordStrength.details.hasNumbers ? 'met' : 'unmet'}`}>
+                                            <FiCheckCircle />
+                                            One number
+                                        </div>
+                                        <div className={`requirement ${passwordStrength.details.hasSpecialChars ? 'met' : 'unmet'}`}>
+                                            <FiCheckCircle />
+                                            One special character
+                                        </div>
+                                        {passwordStrength.details.hasRepeatingChars && (
+                                            <div className="requirement unmet warning">
+                                                <FiX />
+                                                Avoid repeating characters
+                                            </div>
+                                        )}
+                                        {passwordStrength.details.hasSequentialChars && (
+                                            <div className="requirement unmet warning">
+                                                <FiX />
+                                                Avoid sequential characters
+                                            </div>
+                                        )}
+                                        {passwordStrength.details.hasCommonPatterns && (
+                                            <div className="requirement unmet warning">
+                                                <FiX />
+                                                Avoid common patterns
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
+                            )}
+
+                            <FloatingInput
+                                type="password"
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                onKeyPress={handleKeyPress}
+                                disabled={isLoading}
+                                required
+                                autoComplete="new-password"
+                                label="Confirm New Password"
+                                error={errors.confirmPassword}
+                            />
+
+                            <div className="form-actions">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    disabled={isLoading}
+                                    className="btn btn-secondary"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    onClick={handleSubmit}
+                                    disabled={isLoading}
+                                    className="btn btn-primary"
+                                >
+                                    {isLoading ? 'Changing Password...' : 'Change Password'}
+                                </button>
                             </div>
-                        )}
-
-                        <FloatingInput
-                            type="password"
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            onKeyPress={handleKeyPress}
-                            disabled={isLoading}
-                            required
-                            autoComplete="new-password"
-                            label="Confirm New Password"
-                            error={errors.confirmPassword}
-                        />
-
-                        <div className="form-actions">
+                        </form>
+                    </div>
+                ) : (
+                    <div className="modal-content">
+                        <div className="success-content">
+                            <div className="success-icon">
+                                <FiCheckCircle />
+                            </div>
+                            <h3 className="success-message">Password Changed Successfully!</h3>
+                            <p className="success-subtitle">Your password has been updated successfully.</p>
                             <button
                                 type="button"
-                                onClick={handleClose}
-                                disabled={isLoading}
-                                className="btn btn-secondary"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                onClick={handleSubmit}
-                                disabled={isLoading}
+                                onClick={handleSuccessOK}
                                 className="btn btn-primary"
                             >
-                                {isLoading ? 'Changing Password...' : 'Change Password'}
+                                Got it!
                             </button>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

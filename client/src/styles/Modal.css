@@ -177,26 +177,374 @@
 }
 
 /* Responsive Design */
-@media (max-width: 640px) {
+/* Large screens (1200px and up) */
+@media (min-width: 1200px) {
     .modal-container {
-        width: 95%;
-        margin: 20px;
+        max-width: 600px;
+    }
+    
+    .modal-title {
+        font-size: 1.75rem;
+    }
+    
+    .description-text {
+        font-size: 1.125rem;
+    }
+}
+
+/* Medium screens (768px to 1199px) */
+@media (max-width: 1199px) and (min-width: 768px) {
+    .modal-container {
+        max-width: 550px;
+    }
+}
+
+/* Small screens (640px to 767px) */
+@media (max-width: 767px) and (min-width: 641px) {
+    .modal-container {
+        width: 90%;
+        max-width: 500px;
+    }
+    
+    .modal-header {
+        padding: 22px 22px 0 22px;
+    }
+    
+    .modal-content {
+        padding: 0 22px 22px 22px;
+    }
+    
+    .modal-title {
+        font-size: 1.375rem;
+    }
+    
+    .title-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .title-icon svg {
+        font-size: 1rem;
+    }
+}
+
+/* Mobile screens (640px and below) */
+@media (max-width: 640px) {
+    .modal-overlay {
+        padding: 10px;
+    }
+    
+    .modal-container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        border-radius: 8px;
+        max-height: 95vh;
     }
 
     .modal-header {
-        padding: 20px 20px 0 20px;
+        padding: 16px 16px 0 16px;
+        margin-bottom: 16px;
     }
 
     .modal-content {
-        padding: 0 20px 20px 20px;
+        padding: 0 16px 16px 16px;
     }
 
     .modal-title {
-        font-size: 1.25rem;
+        font-size: 1.125rem;
+        gap: 6px;
+    }
+    
+    .title-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 6px;
+    }
+    
+    .title-icon svg {
+        font-size: 0.875rem;
     }
 
     .form-actions {
         flex-direction: column;
+        gap: 8px;
+    }
+    
+    .modal-footer {
+        padding: 16px;
+        gap: 8px;
+    }
+    
+    .description-text {
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+    
+    .info-text {
+        font-size: 0.8rem;
+        padding: 10px 12px;
+    }
+    
+    .modal-form {
+        gap: 16px;
+    }
+    
+    .success-content .description-text {
+        font-size: 1rem;
+    }
+    
+    .success-icon svg {
+        font-size: 2.5rem;
+    }
+    
+    .warning-text {
+        font-size: 0.8rem;
+        padding: 10px 12px;
+        margin: 12px 0;
+    }
+    
+    .important-text {
+        padding: 12px;
+        margin: 16px 0;
+    }
+    
+    .important-text h4 {
+        font-size: 0.875rem;
+    }
+    
+    .important-text p {
+        font-size: 0.8rem;
+    }
+    
+    .important-list li {
+        font-size: 0.8rem;
+    }
+    
+    .authenticator-suggestions {
+        margin: 16px 0;
+        padding: 16px;
+    }
+    
+    .authenticator-suggestions h4 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+    
+    .app-suggestion {
+        padding: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .app-suggestion-icon {
+        align-self: center;
+    }
+    
+    .app-links {
+        flex-direction: row;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .app-link {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .qr-container {
+        margin: 16px 0;
+        padding: 16px;
+    }
+    
+    .qr-code {
+        max-width: 180px;
+        max-height: 180px;
+        padding: 8px;
+    }
+    
+    .backup-codes-container {
+        padding: 16px;
+        margin: 16px 0;
+    }
+    
+    .backup-codes-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    
+    .backup-code {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .backup-actions {
+        gap: 8px;
+    }
+}
+
+/* Extra small screens (480px and below) */
+@media (max-width: 480px) {
+    .modal-overlay {
+        padding: 5px;
+    }
+    
+    .modal-container {
+        max-height: 98vh;
+        border-radius: 6px;
+    }
+    
+    .modal-header {
+        padding: 12px 12px 0 12px;
+        margin-bottom: 12px;
+    }
+    
+    .modal-content {
+        padding: 0 12px 12px 12px;
+    }
+    
+    .modal-title {
+        font-size: 1rem;
+    }
+    
+    .title-icon {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .title-icon svg {
+        font-size: 0.75rem;
+    }
+    
+    .description-text {
+        font-size: 0.8rem;
+    }
+    
+    .info-text {
+        font-size: 0.75rem;
+        padding: 8px 10px;
+    }
+    
+    .modal-form {
+        gap: 12px;
+    }
+    
+    .form-actions {
+        gap: 6px;
+    }
+    
+    .modal-footer {
+        padding: 12px;
+        gap: 6px;
+    }
+    
+    .success-content .description-text {
+        font-size: 0.9rem;
+    }
+    
+    .success-icon svg {
+        font-size: 2rem;
+    }
+    
+    .warning-text {
+        font-size: 0.75rem;
+        padding: 8px 10px;
+    }
+    
+    .important-text {
+        padding: 10px;
+    }
+    
+    .important-text h4 {
+        font-size: 0.8rem;
+    }
+    
+    .important-text p {
+        font-size: 0.75rem;
+    }
+    
+    .important-list li {
+        font-size: 0.75rem;
+    }
+    
+    .authenticator-suggestions {
+        padding: 12px;
+    }
+    
+    .authenticator-suggestions h4 {
+        font-size: 0.9rem;
+    }
+    
+    .app-suggestion {
+        padding: 10px;
+    }
+    
+    .app-info h5 {
+        font-size: 0.9rem;
+    }
+    
+    .app-info p {
+        font-size: 0.8rem;
+    }
+    
+    .app-link {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .qr-code {
+        max-width: 160px;
+        max-height: 160px;
+        padding: 6px;
+    }
+    
+    .backup-codes-grid {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 6px;
+    }
+    
+    .backup-code {
+        padding: 6px 8px;
+        font-size: 0.7rem;
+        letter-spacing: 0.25px;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 640px) and (orientation: landscape) {
+    .modal-container {
+        max-height: 85vh;
+    }
+    
+    .modal-header {
+        padding: 12px 16px 0 16px;
+        margin-bottom: 12px;
+    }
+    
+    .modal-content {
+        padding: 0 16px 12px 16px;
+    }
+    
+    .success-icon {
+        margin-bottom: 12px;
+    }
+    
+    .success-icon svg {
+        font-size: 2rem;
+    }
+    
+    .qr-container {
+        margin: 12px 0;
+        padding: 12px;
+    }
+    
+    .backup-codes-container {
+        margin: 12px 0;
+        padding: 12px;
     }
 }
 
@@ -581,6 +929,54 @@
 
     .requirement {
         font-size: 0.7rem;
+    }
+    
+    .strength-label {
+        font-size: 0.65rem;
+        padding: 1px 6px;
+    }
+    
+    .strength-score {
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .password-strength {
+        padding: 10px;
+        margin: 4px 0;
+    }
+    
+    .strength-bar {
+        height: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .strength-text {
+        gap: 2px;
+    }
+    
+    .strength-requirements {
+        gap: 2px;
+    }
+    
+    .requirement {
+        font-size: 0.65rem;
+        gap: 6px;
+    }
+    
+    .requirement svg {
+        font-size: 0.75rem;
+    }
+    
+    .strength-label {
+        font-size: 0.6rem;
+        padding: 1px 4px;
+        letter-spacing: 0.25px;
+    }
+    
+    .strength-score {
+        font-size: 0.6rem;
     }
 }
 

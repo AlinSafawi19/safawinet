@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import authService from '../services/authService';
-import { FiX, FiUpload } from 'react-icons/fi';
+import { FiX, FiUpload, FiUser } from 'react-icons/fi';
 
 const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -83,34 +83,36 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   };
 
   return (
-    <div className="profile-upload-modal">
-      <div className="profile-upload-container">
-        <div className="profile-upload-header">
-          <h3 className="profile-upload-title">Upload Profile Picture</h3>
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <div className="modal-header">
+          <h2 className="modal-title"><span className="title-icon"><FiUser /></span> Upload Profile Picture</h2>
+
           <button
             onClick={handleCancel}
             disabled={isUploading}
-            className="profile-upload-close"
+            className="btn btn-danger btn-md"
             type="button"
           >
             <FiX />
           </button>
         </div>
 
-        <div className="profile-upload-content">
+        <div className="modal-content">
           {!selectedFile ? (
             <div
-              className="profile-upload-dropzone"
+              className="modal-dropzone"
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="profile-upload-icon">
+              <div className="modal-icon">
                 <FiUpload />
               </div>
-              <p className="profile-upload-text">Click to select or drag and drop an image</p>
-              <p className="profile-upload-hint">
+              <p className="info-text">
+                Click to select or drag and drop an image!
+                <br />
                 JPG, PNG, GIF, or WebP (max 5MB)
               </p>
               <input
@@ -122,11 +124,11 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
               />
             </div>
           ) : (
-            <div className="profile-upload-preview">
+            <div className="modal-preview">
               <img src={preview} alt="Preview" />
-              <div className="profile-upload-info">
-                <p className="profile-upload-file-name">{selectedFile.name}</p>
-                <p className="profile-upload-file-size">
+              <div className="modal-info">
+                <p className="modal-file-name">{selectedFile.name}</p>
+                <p className="modal-file-size">
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                 </p>
               </div>
@@ -134,7 +136,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
           )}
         </div>
 
-        <div className="profile-upload-actions">
+        <div className="modal-actions">
           {selectedFile ? (
             <>
               <button

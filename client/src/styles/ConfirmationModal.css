@@ -1,0 +1,463 @@
+.confirmation-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    animation: overlayFadeIn 0.2s ease-out;
+}
+
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.confirmation-modal {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    max-width: 450px;
+    width: calc(100% - 32px);
+    max-height: 90vh;
+    overflow: hidden;
+    animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    outline: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    margin: 16px;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.confirmation-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 24px 0 24px;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.confirmation-modal-title-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.confirmation-modal-icon {
+    font-size: 20px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.confirmation-modal-icon.warning {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.confirmation-modal-icon.danger {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.confirmation-modal-icon.info {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.confirmation-modal-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+}
+
+.confirmation-modal-body {
+    padding: 24px 24px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.confirmation-modal-message {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 15px;
+    font-weight: 400;
+    word-wrap: break-word;
+}
+
+.confirmation-modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 0 24px 24px 24px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Responsive Breakpoints */
+
+/* Large Desktop (1400px and up) */
+@media (min-width: 1400px) {
+    .confirmation-modal {
+        max-width: 500px;
+        width: calc(100% - 40px);
+        margin: 20px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 28px 28px 0 28px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 28px 28px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 28px 28px 28px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 22px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 16px;
+    }
+}
+
+/* Desktop (1024px to 1399px) */
+@media (max-width: 1399px) and (min-width: 1024px) {
+    .confirmation-modal {
+        max-width: 480px;
+        width: calc(100% - 32px);
+        margin: 16px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 24px 24px 0 24px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 24px 24px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 24px 24px 24px;
+    }
+}
+
+/* Tablet Landscape (768px to 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+    .confirmation-modal {
+        max-width: 450px;
+        width: calc(100% - 32px);
+        margin: 16px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 20px 20px 0 20px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 20px 20px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 20px 20px 20px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 18px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 14px;
+    }
+}
+
+/* Tablet Portrait (600px to 767px) */
+@media (max-width: 767px) and (min-width: 600px) {
+    .confirmation-modal {
+        max-width: 400px;
+        width: calc(100% - 24px);
+        margin: 12px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 18px 18px 0 18px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 18px 18px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 18px 18px 18px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 17px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 14px;
+    }
+    
+    .confirmation-modal-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 18px;
+    }
+}
+
+/* Mobile Large (480px to 599px) */
+@media (max-width: 599px) and (min-width: 480px) {
+    .confirmation-modal {
+        max-width: 380px;
+        width: calc(100% - 24px);
+        margin: 12px;
+        border-radius: 12px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 16px 16px 0 16px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 16px 16px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 16px 16px 16px;
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 16px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 13px;
+    }
+    
+    .confirmation-modal-icon {
+        width: 26px;
+        height: 26px;
+        font-size: 16px;
+    }
+}
+
+/* Mobile Small (320px to 479px) */
+@media (max-width: 479px) and (min-width: 320px) {
+    .confirmation-modal {
+        max-width: 240px;
+        width: calc(100% - 16px);
+        margin: 8px;
+        border-radius: 10px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 10px 10px 0 10px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 10px 10px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 10px 10px 10px;
+        flex-direction: column-reverse;
+        gap: 6px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 13px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 10px;
+    }
+    
+    .confirmation-modal-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+    
+    .confirmation-modal-title-container {
+        gap: 4px;
+    }
+}
+
+/* Extra Small Mobile (below 320px) */
+@media (max-width: 319px) {
+    .confirmation-modal {
+        max-width: 200px;
+        width: calc(100% - 12px);
+        margin: 6px;
+        border-radius: 8px;
+    }
+    
+    .confirmation-modal-header {
+        padding: 8px 8px 0 8px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 8px 8px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 8px 8px 8px;
+        flex-direction: column-reverse;
+        gap: 4px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 12px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 9px;
+    }
+    
+    .confirmation-modal-icon {
+        width: 18px;
+        height: 18px;
+        font-size: 9px;
+    }
+    
+    .confirmation-modal-title-container {
+        gap: 3px;
+    }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .confirmation-modal {
+        max-height: 85vh;
+    }
+    
+    .confirmation-modal-header {
+        padding: 12px 20px 0 20px;
+    }
+    
+    .confirmation-modal-body {
+        padding: 12px 20px;
+    }
+    
+    .confirmation-modal-footer {
+        padding: 0 20px 12px 20px;
+    }
+    
+    .confirmation-modal-title {
+        font-size: 16px;
+    }
+    
+    .confirmation-modal-message {
+        font-size: 13px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .confirmation-modal {
+        /* Ensure crisp rendering on high DPI displays */
+    }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .confirmation-modal,
+    .confirmation-modal-overlay {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .confirmation-modal {
+        background: #1a1a1a;
+        border-color: #404040;
+    }
+    
+    .confirmation-modal-title {
+        color: #e5e7eb;
+    }
+    
+    .confirmation-modal-message {
+        color: #9ca3af;
+    }
+    
+    .confirmation-modal-icon.warning {
+        background-color: #451a03;
+        color: #fbbf24;
+    }
+    
+    .confirmation-modal-icon.danger {
+        background-color: #450a0a;
+        color: #f87171;
+    }
+    
+    .confirmation-modal-icon.info {
+        background-color: #1e3a8a;
+        color: #60a5fa;
+    }
+}
+
+/* Focus states for accessibility */
+.confirmation-modal:focus {
+    outline: none;
+}
+
+/* Print styles */
+@media print {
+    .confirmation-modal-overlay {
+        position: static;
+        background: none;
+        padding: 0;
+    }
+    
+    .confirmation-modal {
+        box-shadow: none;
+        border: 1px solid #000;
+        max-height: none;
+    }
+}

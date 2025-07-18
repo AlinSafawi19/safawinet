@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { HiX, HiUser, HiMail, HiPhone, HiShieldCheck, HiCalendar, HiClock, HiGlobe, HiCog, HiLockClosed, HiEye, HiEyeOff, HiCheckCircle, HiXCircle, HiExclamationTriangle, HiInformationCircle, HiDocumentText, HiKey, HiDeviceMobile, HiDesktopComputer, HiLocationMarker, HiStar, HiBadgeCheck, HiUserGroup, HiChartBar, HiDocumentReport, HiBell, HiBookOpen, HiQuestionMarkCircle, HiShieldExclamation, HiHeart, HiLightBulb, HiAcademicCap, HiClipboardList, HiClipboardCheck, HiClipboardCopy, HiPlus, HiPencil, HiTrash, HiCloud } from 'react-icons/hi';
-import { FiDownload, FiCalendar, FiClock, FiXCircle, FiUser, FiMail, FiPhone, FiShield, FiSettings, FiGlobe, FiStar, FiCheckCircle, FiXCircle as FiXCircleIcon, FiAlertTriangle, FiInfo, FiEye, FiEyeOff, FiLock, FiUnlock, FiKey, FiSmartphone, FiMonitor, FiMapPin, FiUsers, FiCog, FiBarChart3, FiFileText, FiBell, FiBook, FiHelpCircle, FiTool, FiCloud, FiHeart, FiZap, FiGraduationCap, FiClipboard, FiCheckSquare, FiSquare } from 'react-icons/fi';
+import { HiUser, HiMail, HiPhone, HiShieldCheck, HiCalendar, HiClock, HiGlobe, HiCog, HiLockClosed, HiEye, HiEyeOff, HiCheckCircle, HiXCircle, HiInformationCircle, HiDocumentText, HiKey, HiDeviceMobile, HiDesktopComputer, HiLocationMarker, HiStar, HiUserGroup, HiChartBar, HiDocumentReport, HiBell, HiBookOpen, HiQuestionMarkCircle, HiShieldExclamation, HiHeart, HiPlus, HiPencil, HiTrash, HiCloud } from 'react-icons/hi';
+import { FiDownload, FiX } from 'react-icons/fi';
 import moment from 'moment-timezone';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
-import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
 
 const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPasswordStrength, setShowPasswordStrength] = useState(false);
-  const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -309,8 +307,8 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
               <div className="security-item">
                 <label>Backup Codes</label>
                 <span>
-                  {user.twoFactorBackupCodes ? 
-                    `${user.twoFactorBackupCodes.filter(code => !code.used).length} remaining` : 
+                  {user.twoFactorBackupCodes ?
+                    `${user.twoFactorBackupCodes.filter(code => !code.used).length} remaining` :
                     'Not generated'
                   }
                 </span>
@@ -573,11 +571,11 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
               </div>
             </div>
           )) || (
-            <div className="no-permissions">
-              <HiInformationCircle className="no-permissions-icon" />
-              <span>No specific permissions assigned</span>
-            </div>
-          )}
+              <div className="no-permissions">
+                <HiInformationCircle className="no-permissions-icon" />
+                <span>No specific permissions assigned</span>
+              </div>
+            )}
         </div>
       </div>
     </div>
@@ -752,54 +750,60 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
   };
 
   return (
-    <div className={`user-view-modal-overlay ${isOpen ? 'show' : ''}`} onClick={onClose}>
-      <div className="user-view-modal" onClick={(e) => e.stopPropagation()}>
+    <div className={`modal-overlay ${isOpen ? 'show' : ''}`} onClick={onClose}>
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="modal-header">
-          <div className="modal-title">
-            <HiUser className="title-icon" />
-            User Details
-          </div>
-          <div className="modal-actions">
-            {onEditUser && (
-              <button 
-                className="modal-edit-btn" 
-                onClick={() => {
-                  onEditUser(user);
-                  onClose();
-                }}
-                title="Edit User"
-              >
-                <HiPencil />
-                Edit User
-              </button>
-            )}
-            <button className="modal-close-btn" onClick={onClose}>
-              <HiX />
-            </button>
-          </div>
+          <h2 className="modal-title"><span className="title-icon"><HiUser /></span> User Details</h2>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-danger btn-md"
+          >
+            <FiX />
+          </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="modal-content">
-          {/* Tab Navigation */}
-          <div className="modal-tabs">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <tab.icon className="tab-icon" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="modal-actions">
+          {onEditUser && (
+            <button
+              className="modal-edit-btn"
+              onClick={() => {
+                onEditUser(user);
+                onClose();
+              }}
+              title="Edit User"
+            >
+              <HiPencil />
+              Edit User
+            </button>
+          )}
+          <button className="btn btn-secondary btn-md" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
 
-          {/* Tab Content */}
-          <div className="tab-content">
-            {renderTabContent()}
-          </div>
+      {/* Modal Content */}
+      <div className="modal-content">
+        {/* Tab Navigation */}
+        <div className="modal-tabs">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <tab.icon className="tab-icon" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="tab-content">
+          {renderTabContent()}
         </div>
       </div>
     </div>

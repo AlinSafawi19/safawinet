@@ -1,0 +1,159 @@
+/* Dashboard Layout */
+.dashboard-layout {
+    min-height: 100vh;
+    background-color: #f4f5f7;
+    overflow-x: hidden;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+    margin-left: 280px;
+    margin-top: 70px;
+    padding: 24px;
+    min-height: calc(100vh - 70px);
+    transition: margin-left 0.3s ease;
+    background-color: #f4f5f7;
+}
+
+.dashboard-content.collapsed {
+    margin-left: 60px;
+}
+
+/* Responsive Breakpoints */
+
+/* Large Desktop (1400px and up) */
+@media (min-width: 1400px) {
+    .dashboard-content {
+        padding: 32px;
+        margin-left: 300px;
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 80px;
+    }
+}
+
+/* Desktop (1024px to 1399px) */
+@media (max-width: 1399px) and (min-width: 1024px) {
+    .dashboard-content {
+        padding: 24px;
+        margin-left: 280px;
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 60px;
+    }
+}
+
+/* Tablet Landscape (768px to 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+    .dashboard-content {
+        margin-left: 0;
+        margin-top: 60px;
+        padding: 20px;
+        min-height: calc(100vh - 60px);
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 0;
+    }
+}
+
+/* Tablet Portrait (600px to 767px) */
+@media (max-width: 767px) and (min-width: 600px) {
+    .dashboard-content {
+        margin-left: 0;
+        margin-top: 60px;
+        padding: 16px;
+        min-height: calc(100vh - 60px);
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 0;
+    }
+}
+
+/* Mobile Large (480px to 599px) */
+@media (max-width: 599px) and (min-width: 480px) {
+    .dashboard-content {
+        margin-left: 0;
+        margin-top: 60px;
+        padding: 12px;
+        min-height: calc(100vh - 60px);
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 0;
+    }
+}
+
+/* Mobile Small (320px to 479px) */
+@media (max-width: 479px) and (min-width: 320px) {
+    .dashboard-content {
+        margin-left: 0;
+        margin-top: 60px;
+        padding: 8px;
+        min-height: calc(100vh - 60px);
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 0;
+    }
+}
+
+/* Extra Small Mobile (below 320px) */
+@media (max-width: 319px) {
+    .dashboard-content {
+        margin-left: 0;
+        margin-top: 100px; /* Account for secondary header */
+        padding: 4px;
+        min-height: calc(100vh - 100px);
+    }
+    
+    .dashboard-content.collapsed {
+        margin-left: 0;
+    }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .dashboard-content {
+        margin-top: 50px;
+        min-height: calc(100vh - 50px);
+        padding: 12px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .dashboard-content {
+        /* Ensure crisp rendering on high DPI displays */
+    }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-content {
+        transition: none;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .dashboard-layout {
+        background-color: #1a1a1a;
+    }
+    
+    .dashboard-content {
+        background-color: #1a1a1a;
+    }
+}
+
+/* Print styles */
+@media print {
+    .dashboard-content {
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+}
