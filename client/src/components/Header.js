@@ -64,9 +64,8 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
 
     // Determine if we should use profile dropdown for navigation items
     const shouldUseProfileDropdown = deviceType === 'mobile-small' || deviceType === 'mobile-extra-small';
-    
-    // Determine if we should show secondary header
-    const shouldShowSecondaryHeader = deviceType === 'mobile-extra-small';
+
+
 
     // Tools data
     const tools = [
@@ -267,17 +266,17 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                             className={`header-profile-button ${isMobile ? 'mobile-profile-btn' : ''}`}
                             onClick={toggleProfileDropdown}
                         >
-                                <div className="profile-button-content">
-                            <ProfilePicture user={user} size="small" />
-                                    {/* Notification indicator - only show when nav items are in dropdown */}
-                                    {shouldUseProfileDropdown && (notificationCount > 0 || inboxCount > 0) && (
-                                        <div className="profile-notification-indicator">
-                                            <span className="profile-badge">
-                                                {notificationCount + inboxCount}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
+                            <div className="profile-button-content">
+                                <ProfilePicture user={user} size="small" />
+                                {/* Notification indicator - only show when nav items are in dropdown */}
+                                {shouldUseProfileDropdown && (notificationCount > 0 || inboxCount > 0) && (
+                                    <div className="profile-notification-indicator">
+                                        <span className="profile-badge">
+                                            {notificationCount + inboxCount}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                             <span className="chevron-icon">
                                 <FiChevronDown />
                             </span>
@@ -293,42 +292,42 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                                     </div>
                                 </div>
 
-                                    {/* Mobile Small - Add navigation items to profile dropdown */}
-                                    {shouldUseProfileDropdown && (
-                                        <>
-                                            <div className="dropdown-section-divider"></div>
-                                            <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/notifications'); }}>
-                                                <div className="dropdown-item-content">
-                                                    <FiBell className="dropdown-icon" />
-                                                    <span>Notifications</span>
-                                                    {notificationCount > 0 && (
-                                                        <span className="dropdown-badge">{notificationCount}</span>
-                                                    )}
-                                                </div>
+                                {/* Mobile Small - Add navigation items to profile dropdown */}
+                                {shouldUseProfileDropdown && (
+                                    <>
+                                        <div className="dropdown-section-divider"></div>
+                                        <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/notifications'); }}>
+                                            <div className="dropdown-item-content">
+                                                <FiBell className="dropdown-icon" />
+                                                <span>Notifications</span>
+                                                {notificationCount > 0 && (
+                                                    <span className="dropdown-badge">{notificationCount}</span>
+                                                )}
+                                            </div>
+                                        </button>
+                                        <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/inbox'); }}>
+                                            <div className="dropdown-item-content">
+                                                <FiInbox className="dropdown-icon" />
+                                                <span>Inbox</span>
+                                                {inboxCount > 0 && (
+                                                    <span className="dropdown-badge">{inboxCount}</span>
+                                                )}
+                                            </div>
+                                        </button>
+                                        <div className="dropdown-section-divider"></div>
+                                        {tools.map((tool) => (
+                                            <button
+                                                key={tool.id}
+                                                className="dropdown-item"
+                                                onClick={() => { setShowProfileDropdown(false); handleToolClick(tool); }}
+                                            >
+                                                <span className="dropdown-icon">{tool.icon}</span>
+                                                <span>{tool.label}</span>
                                             </button>
-                                            <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/inbox'); }}>
-                                                <div className="dropdown-item-content">
-                                                    <FiInbox className="dropdown-icon" />
-                                                    <span>Inbox</span>
-                                                    {inboxCount > 0 && (
-                                                        <span className="dropdown-badge">{inboxCount}</span>
-                                                    )}
-                                                </div>
-                                            </button>
-                                            <div className="dropdown-section-divider"></div>
-                                            {tools.map((tool) => (
-                                                <button
-                                                    key={tool.id}
-                                                    className="dropdown-item"
-                                                    onClick={() => { setShowProfileDropdown(false); handleToolClick(tool); }}
-                                                >
-                                                    <span className="dropdown-icon">{tool.icon}</span>
-                                                    <span>{tool.label}</span>
-                                                </button>
-                                            ))}
-                                            <div className="dropdown-section-divider"></div>
-                                        </>
-                                    )}
+                                        ))}
+                                        <div className="dropdown-section-divider"></div>
+                                    </>
+                                )}
 
                                 <button className="dropdown-item" onClick={() => { setShowProfileDropdown(false); navigate('/profile'); }}>
                                     <FiUser className="dropdown-icon" />
@@ -347,46 +346,6 @@ const Header = ({ onLogout, onSidebarToggle, isSidebarCollapsed, isMobile, isMob
                     </div>
                 </div>
             </header >
-
-            {/* Secondary Header for Extra Small Mobile */}
-            {shouldShowSecondaryHeader && (
-                <div className="secondary-header">
-                    <div className="secondary-header-content">
-                        <button className="secondary-header-btn" onClick={() => navigate('/notifications')}>
-                            <FiBell />
-                            <span>Notifications</span>
-                            {notificationCount > 0 && <span className="secondary-badge">{notificationCount}</span>}
-                        </button>
-                        <button className="secondary-header-btn" onClick={() => navigate('/inbox')}>
-                            <FiInbox />
-                            <span>Inbox</span>
-                            {inboxCount > 0 && <span className="secondary-badge">{inboxCount}</span>}
-                        </button>
-                        <div ref={toolsRef} className="secondary-tools-dropdown">
-                            <button className="secondary-header-btn" onClick={toggleToolsDropdown}>
-                                <FiTool />
-                                <span>Tools</span>
-                                <span className="chevron-icon">
-                                    <FiChevronDown />
-                                </span>
-                            </button>
-                            {showToolsDropdown && (
-                                <div className="secondary-tools-menu">
-                                    {tools.map((tool) => (
-                                        <button
-                                            key={tool.id}
-                                            onClick={() => handleToolClick(tool)}
-                                        >
-                                            <span>{tool.icon}</span>
-                                            <span>{tool.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

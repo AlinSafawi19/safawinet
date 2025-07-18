@@ -22,7 +22,11 @@ import {
     FiKey,
     FiSettings,
     FiLock,
-    FiUnlock
+    FiUnlock,
+    FiZap,
+    FiMail,
+    FiRefreshCw,
+    FiPhone
 } from 'react-icons/fi';
 
 const Profile = () => {
@@ -439,16 +443,6 @@ const Profile = () => {
                 <section className="profile-section">
                     <div className="section-header">
                         <h2 className="section-title">Account Information</h2>
-                        <div className="section-actions">
-                            <button
-                                id="saveButton"
-                                onClick={handleProfileUpdate}
-                                disabled={isLoading}
-                                className="btn btn-primary"
-                            >
-                                {isLoading ? 'Saving Changes...' : 'Save Changes'}
-                            </button>
-                        </div>
                     </div>
 
                     {/* Profile Picture Section */}
@@ -456,29 +450,36 @@ const Profile = () => {
                         <div className="picture-container">
                             <ProfilePicture user={profileData} size="xlarge" />
                         </div>
-                        <div className="picture-actions">
-                            {profileData.profilePicture && profileData.profilePicture.url && (
+                        <div className="picture-info">
+                            <div className="user-basic-info">
+                                <h3 className="user-name">{profileData.firstName} {profileData.lastName}</h3>
+                                <p className="user-username">@{profileData.username}</p>
+                                <p className="user-email">{profileData.email}</p>
+                            </div>
+                            <div className="picture-actions">
+                                {profileData.profilePicture && profileData.profilePicture.url && (
+                                    <button
+                                        onClick={handleRemoveProfilePicture}
+                                        title="Remove profile picture"
+                                        className="btn btn-danger btn-sm"
+                                    >
+                                        Remove
+                                    </button>
+                                )}
                                 <button
-                                    onClick={handleRemoveProfilePicture}
-                                    title="Remove profile picture"
-                                    className="btn btn-danger btn-md"
+                                    onClick={handleProfilePictureUpload}
+                                    className="btn btn-primary btn-sm"
                                 >
-                                    Remove
+                                    Upload New Picture
                                 </button>
-                            )}
-                            <button
-                                onClick={handleProfilePictureUpload}
-                                className="btn btn-primary"
-                            >
-                                Upload New Picture
-                            </button>
+                            </div>
                         </div>
                     </div>
 
                     {/* Read-Only Account Info Cards */}
                     <div className="info-cards">
-                        <div className="info-card">
-                            <div className="card-icon">
+                        <div className="info-card" style={{ '--animation-order': 0 }}>
+                            <div className="card-icon green">
                                 <FiUser />
                             </div>
                             <div className="card-content">
@@ -490,8 +491,8 @@ const Profile = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="info-card">
-                            <div className="card-icon">
+                        <div className="info-card" style={{ '--animation-order': 1 }}>
+                            <div className="card-icon purple">
                                 <FiSettings />
                             </div>
                             <div className="card-content">
@@ -503,8 +504,8 @@ const Profile = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="info-card">
-                            <div className="card-icon">
+                        <div className="info-card" style={{ '--animation-order': 2 }}>
+                            <div className="card-icon blue">
                                 <FiCalendar />
                             </div>
                             <div className="card-content">
@@ -512,8 +513,8 @@ const Profile = () => {
                                 <div className="card-value">{formatDate(profileData.createdAt)}</div>
                             </div>
                         </div>
-                        <div className="info-card">
-                            <div className="card-icon">
+                        <div className="info-card" style={{ '--animation-order': 3 }}>
+                            <div className="card-icon teal">
                                 <FiClock />
                             </div>
                             <div className="card-content">
@@ -586,6 +587,17 @@ const Profile = () => {
                             />
                         </div>
                     </div>
+                    {/* Save Changes Button */}
+                    <div className="form-actions flex-end">
+                        <button
+                            id="saveButton"
+                            onClick={handleProfileUpdate}
+                            disabled={isLoading}
+                            className="btn btn-primary"
+                        >
+                            {isLoading ? 'Saving Changes...' : 'Save Changes'}
+                        </button>
+                    </div>
                 </section>
 
                 {/* Password Change Section */}
@@ -594,9 +606,9 @@ const Profile = () => {
                         <h2 className="section-title">Password Management</h2>
                     </div>
                     <div className="security-cards">
-                        <div className="security-card">
+                        <div className="security-card" style={{ '--animation-order': 0 }}>
                             <div className="card-header">
-                                <div className="card-icon">
+                                <div className="card-icon orange">
                                     <FiKey />
                                 </div>
                                 <div className="card-content">
@@ -620,9 +632,9 @@ const Profile = () => {
                         <h2 className="section-title">Security Settings</h2>
                     </div>
                     <div className="security-cards">
-                        <div className="security-card">
+                        <div className="security-card" style={{ '--animation-order': 0 }}>
                             <div className="card-header">
-                                <div className="card-icon">
+                                <div className="card-icon purple">
                                     {profileData.twoFactorEnabled ? <FiLock /> : <FiUnlock />}
                                 </div>
                                 <div className="card-content">
@@ -638,9 +650,9 @@ const Profile = () => {
                             </button>
                         </div>
 
-                        <div className="security-card">
+                        <div className="security-card" style={{ '--animation-order': 1 }}>
                             <div className="card-header">
-                                <div className="card-icon">
+                                <div className="card-icon green">
                                     {profileData.emailVerified && !emailChanged ? <FiCheckCircle /> : <FiAlertCircle />}
                                 </div>
                                 <div className="card-content">
@@ -658,15 +670,15 @@ const Profile = () => {
                             )}
                         </div>
 
-                        <div className="security-card">
+                        <div className="security-card" style={{ '--animation-order': 2 }}>
                             <div className="card-header">
-                                <div className="card-icon">
+                                <div className="card-icon red">
                                     <FiKey />
                                 </div>
                                 <div className="card-content">
                                     <h3 className="card-title">Password Strength</h3>
                                     <p className="card-description">
-                                        {securityStatus.passwordStrength?.level !== 'unknown' 
+                                        {securityStatus.passwordStrength?.level !== 'unknown'
                                             ? `Current strength: ${getPasswordStrengthText(securityStatus.passwordStrength?.level)}`
                                             : 'Password strength not available'
                                         }
@@ -674,7 +686,7 @@ const Profile = () => {
                                     {securityStatus.passwordStrength?.level !== 'unknown' && (
                                         <div className="password-strength-meter">
                                             <div className="strength-bar">
-                                                <div 
+                                                <div
                                                     className={`strength-fill strength-${securityStatus.passwordStrength?.level}`}
                                                     style={{ width: `${(securityStatus.passwordStrength?.score / 4) * 100}%` }}
                                                 ></div>
