@@ -8,19 +8,17 @@ import ProfilePicture from '../components/ProfilePicture';
 import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import TwoFactorModal from '../components/TwoFactorModal';
+import FloatingInput from '../components/FloatingInput';
 import { applyUserTheme } from '../utils/themeUtils';
-import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/sweetAlertConfig';
 import Swal from 'sweetalert2';
+import '../styles/Profile.css';
 import {
     FiUser,
     FiCalendar,
     FiClock,
-    FiShield,
     FiCheckCircle,
     FiAlertCircle,
-    FiEdit3,
-    FiSave,
-    FiX,
     FiKey,
     FiSettings,
     FiLock,
@@ -78,13 +76,13 @@ const Profile = () => {
         username: profileData.username
     });
 
-    // Add focus state for each input
-    const [inputFocus, setInputFocus] = useState({
-        firstName: false,
-        lastName: false,
-        email: false,
-        phone: false,
-        username: false
+    // Add error state for form validation
+    const [formErrors, setFormErrors] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        username: ''
     });
 
     // Create axios instance for API calls
@@ -189,6 +187,40 @@ const Profile = () => {
         }
     };
 
+    // Validation functions
+    const validateField = (field, value) => {
+        switch (field) {
+            case 'firstName':
+                if (!value.trim()) return 'First name is required';
+                if (value.trim().length < 2) return 'First name must be at least 2 characters';
+                if (value.trim().length > 50) return 'First name must be less than 50 characters';
+                return '';
+            case 'lastName':
+                if (!value.trim()) return 'Last name is required';
+                if (value.trim().length < 2) return 'Last name must be at least 2 characters';
+                if (value.trim().length > 50) return 'Last name must be less than 50 characters';
+                return '';
+            case 'username':
+                if (!value.trim()) return 'Username is required';
+                if (value.trim().length < 3) return 'Username must be at least 3 characters';
+                if (value.trim().length > 30) return 'Username must be less than 30 characters';
+                if (!/^[a-zA-Z0-9_-]+$/.test(value.trim())) return 'Username can only contain letters, numbers, hyphens, and underscores';
+                return '';
+            case 'email':
+                if (!value.trim()) return 'Email is required';
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value.trim())) return 'Please enter a valid email address';
+                return '';
+            case 'phone':
+                if (value.trim() && !/^[\+]?[1-9][\d]{0,15}$/.test(value.replace(/[\s\-\(\)]/g, ''))) {
+                    return 'Please enter a valid phone number';
+                }
+                return '';
+            default:
+                return '';
+        }
+    };
+
     // Handle form input changes
     const handleInputChange = (field, value) => {
         setEditForm(prev => ({
@@ -196,12 +228,29 @@ const Profile = () => {
             [field]: value
         }));
 
+        // Clear error when user starts typing
+        if (formErrors[field]) {
+            setFormErrors(prev => ({
+                ...prev,
+                [field]: ''
+            }));
+        }
+
         // Track if email has changed
         if (field === 'email' && value !== profileData.email) {
             setEmailChanged(true);
         } else if (field === 'email' && value === profileData.email) {
             setEmailChanged(false);
         }
+    };
+
+    // Handle input blur for validation
+    const handleInputBlur = (field, value) => {
+        const error = validateField(field, value);
+        setFormErrors(prev => ({
+            ...prev,
+            [field]: error
+        }));
     };
 
     // Handle key press events for form navigation
@@ -235,8 +284,42 @@ const Profile = () => {
     // Remove handleEditToggle
     // Remove all references to setIsEditing
 
+    // Check if form has any changes
+    const hasFormChanges = () => {
+        return (
+            editForm.firstName !== profileData.firstName ||
+            editForm.lastName !== profileData.lastName ||
+            editForm.email !== profileData.email ||
+            editForm.phone !== profileData.phone ||
+            editForm.username !== profileData.username
+        );
+    };
+
     // Handle profile update
     const handleProfileUpdate = async () => {
+        // Check if there are any changes
+        if (!hasFormChanges()) {
+            showWarningToast('No Changes Detected', 'You haven\'t made any changes to your profile. Please make changes before saving.');
+            return;
+        }
+
+        // Validate all fields before submitting
+        const newErrors = {};
+        let hasErrors = false;
+
+        Object.keys(editForm).forEach(field => {
+            const error = validateField(field, editForm[field]);
+            newErrors[field] = error;
+            if (error) hasErrors = true;
+        });
+
+        setFormErrors(newErrors);
+
+        if (hasErrors) {
+            showErrorToast('Validation Error', 'Please fix the errors in the form before saving.');
+            return;
+        }
+
         setIsLoading(true);
         try {
             const api = createApiInstance();
@@ -246,7 +329,6 @@ const Profile = () => {
                 const emailWasChanged = emailChanged;
                 showSuccessToast('Profile Updated!', 'Your profile has been updated successfully.');
                 await refreshProfileData();
-                // setIsEditing(false); // Removed
                 setEmailChanged(false); // Reset email changed status
 
                 // Show additional message if email was changed
@@ -340,18 +422,12 @@ const Profile = () => {
         }
     };
 
-    // Helper to get floating label class
-    const getFloatingLabelClass = (field) => {
-        let cls = 'form-group floating-label';
-        if (inputFocus[field]) cls += ' focused';
-        if (editForm[field]) cls += ' filled';
-        return cls;
-    };
+
 
     return (
-        <div className="profile-container">
-            <div className="profile-content">
-                <div className="header-content">
+        <div className="page-container">
+            <div className="page-content">
+                <div className="page-header">
                     <h1 className="page-title">
                         <FiUser /> Profile & Account Settings
                     </h1>
@@ -392,7 +468,7 @@ const Profile = () => {
                             )}
                             <button
                                 onClick={handleProfilePictureUpload}
-                                className="btn btn-secondary"
+                                className="btn btn-primary"
                             >
                                 Upload New Picture
                             </button>
@@ -450,75 +526,64 @@ const Profile = () => {
                     {/* Editable Form Fields */}
                     <div className="form-fields">
                         <div className="form-row">
-                            <div className={getFloatingLabelClass('firstName')}>
-                                <input
-                                    type="text"
-                                    id="firstName"
-                                    value={editForm.firstName}
-                                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    onFocus={() => setInputFocus(f => ({ ...f, firstName: true }))}
-                                    onBlur={() => setInputFocus(f => ({ ...f, firstName: false }))}
-                                    className="form-input"
-                                />
-                                <label htmlFor="firstName" className="form-label">First Name</label>
-                            </div>
-                            <div className={getFloatingLabelClass('lastName')}>
-                                <input
-                                    type="text"
-                                    id="lastName"
-                                    value={editForm.lastName}
-                                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    onFocus={() => setInputFocus(f => ({ ...f, lastName: true }))}
-                                    onBlur={() => setInputFocus(f => ({ ...f, lastName: false }))}
-                                    className="form-input"
-                                />
-                                <label htmlFor="lastName" className="form-label">Last Name</label>
-                            </div>
+                            <FloatingInput
+                                type="text"
+                                id="firstName"
+                                label="First Name"
+                                value={editForm.firstName}
+                                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                                onBlur={(e) => handleInputBlur('firstName', e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                error={formErrors.firstName}
+                                required
+                            />
+                            <FloatingInput
+                                type="text"
+                                id="lastName"
+                                label="Last Name"
+                                value={editForm.lastName}
+                                onChange={(e) => handleInputChange('lastName', e.target.value)}
+                                onBlur={(e) => handleInputBlur('lastName', e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                error={formErrors.lastName}
+                                required
+                            />
                         </div>
                         <div className="form-row">
-                            <div className={getFloatingLabelClass('username')}>
-                                <input
-                                    type="text"
-                                    id="username"
-                                    value={editForm.username}
-                                    onChange={(e) => handleInputChange('username', e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    onFocus={() => setInputFocus(f => ({ ...f, username: true }))}
-                                    onBlur={() => setInputFocus(f => ({ ...f, username: false }))}
-                                    className="form-input"
-                                />
-                                <label htmlFor="username" className="form-label">Username</label>
-                            </div>
-                            <div className={getFloatingLabelClass('email')}>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    value={editForm.email}
-                                    onChange={(e) => handleInputChange('email', e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    onFocus={() => setInputFocus(f => ({ ...f, email: true }))}
-                                    onBlur={() => setInputFocus(f => ({ ...f, email: false }))}
-                                    className="form-input"
-                                />
-                                <label htmlFor="email" className="form-label">Email Address</label>
-                            </div>
+                            <FloatingInput
+                                type="text"
+                                id="username"
+                                label="Username"
+                                value={editForm.username}
+                                onChange={(e) => handleInputChange('username', e.target.value)}
+                                onBlur={(e) => handleInputBlur('username', e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                error={formErrors.username}
+                                required
+                            />
+                            <FloatingInput
+                                type="email"
+                                id="email"
+                                label="Email Address"
+                                value={editForm.email}
+                                onChange={(e) => handleInputChange('email', e.target.value)}
+                                onBlur={(e) => handleInputBlur('email', e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                error={formErrors.email}
+                                required
+                            />
                         </div>
                         <div className="form-row">
-                            <div className={getFloatingLabelClass('phone')}>
-                                <input
-                                    type="tel"
-                                    id="phone"
-                                    value={editForm.phone}
-                                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                                    onKeyPress={handleKeyPress}
-                                    onFocus={() => setInputFocus(f => ({ ...f, phone: true }))}
-                                    onBlur={() => setInputFocus(f => ({ ...f, phone: false }))}
-                                    className="form-input"
-                                />
-                                <label htmlFor="phone" className="form-label">Phone Number</label>
-                            </div>
+                            <FloatingInput
+                                type="tel"
+                                id="phone"
+                                label="Phone Number"
+                                value={editForm.phone}
+                                onChange={(e) => handleInputChange('phone', e.target.value)}
+                                onBlur={(e) => handleInputBlur('phone', e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                error={formErrors.phone}
+                            />
                         </div>
                     </div>
                 </section>
@@ -541,7 +606,7 @@ const Profile = () => {
                             </div>
                             <button
                                 onClick={() => setShowChangePassword(true)}
-                                className="btn btn-secondary"
+                                className="btn btn-primary"
                             >
                                 Change Password
                             </button>
@@ -586,11 +651,45 @@ const Profile = () => {
                             {(!profileData.emailVerified || emailChanged) && (
                                 <button
                                     onClick={handleEmailVerification}
-                                    className="btn btn-secondary"
+                                    className="btn btn-primary"
                                 >
                                     {emailChanged ? 'Verify New Email' : 'Verify Email'}
                                 </button>
                             )}
+                        </div>
+
+                        <div className="security-card">
+                            <div className="card-header">
+                                <div className="card-icon">
+                                    <FiKey />
+                                </div>
+                                <div className="card-content">
+                                    <h3 className="card-title">Password Strength</h3>
+                                    <p className="card-description">
+                                        {securityStatus.passwordStrength?.level !== 'unknown' 
+                                            ? `Current strength: ${getPasswordStrengthText(securityStatus.passwordStrength?.level)}`
+                                            : 'Password strength not available'
+                                        }
+                                    </p>
+                                    {securityStatus.passwordStrength?.level !== 'unknown' && (
+                                        <div className="password-strength-meter">
+                                            <div className="strength-bar">
+                                                <div 
+                                                    className={`strength-fill strength-${securityStatus.passwordStrength?.level}`}
+                                                    style={{ width: `${(securityStatus.passwordStrength?.score / 4) * 100}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="strength-score">Score: {securityStatus.passwordStrength?.score}/4</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowChangePassword(true)}
+                                className="btn btn-primary"
+                            >
+                                Change Password
+                            </button>
                         </div>
                     </div>
                 </section>

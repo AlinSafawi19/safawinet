@@ -150,3 +150,39 @@ body.has-rate-limit-warning {
     max-width: 300px;
     line-height: 1.5;
 }
+
+.page-container {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.page-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.page-title svg {
+    color: #667eea;
+}
+
+.page-description {
+    font-size: 1.1rem;
+    margin: 0;
+}
