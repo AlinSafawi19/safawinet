@@ -2,15 +2,15 @@
 
 const { seedRoleTemplates } = require('./seed/seedRoleTemplates');
 
-console.log('🎯 Starting 100 Role Template Seed Script...');
-console.log('This will create 100 role templates with various permissions and realistic data.');
+console.log('🎯 Starting Role Template Seed Script...');
+console.log('This will clear existing templates and create 3 default role templates: Admin, Manager, and Viewer.');
 console.log('');
 
 seedRoleTemplates()
     .then(() => {
         console.log('');
         console.log('🎉 Role template seed completed successfully!');
-        console.log('You can now test the role template filtering and pagination features with 100+ templates.');
+        console.log('Created 3 default role templates with appropriate permissions.');
         process.exit(0);
     })
     .catch((error) => {

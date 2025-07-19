@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil, HiX } from 'react-icons/hi';
 import { FiDownload, FiXCircle } from 'react-icons/fi';
 import Select from 'react-select';
-import DatePicker from 'react-datepicker';
 import moment from 'moment-timezone';
 import Swal from 'sweetalert2';
 import userService from '../services/userService';
@@ -15,7 +14,7 @@ import FloatingInput from '../components/FloatingInput';
 import Checkbox from '../components/Checkbox';
 import RoleBadge from '../components/RoleBadge';
 import StatusBadge from '../components/StatusBadge';
-import 'react-datepicker/dist/react-datepicker.css';
+import { DateRangePicker } from '../components';
 import { showSuccessToast } from '../utils/sweetAlertConfig';
 import '../styles/Users.css';
 
@@ -102,29 +101,13 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
-  // Filter sidebar visibility state
-  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(true);
+  // Filter section visibility state
+  const [isFilterSectionOpen, setIsFilterSectionOpen] = useState(true);
 
-  // Handle sidebar toggle and layout adjustment
-  const handleSidebarToggle = () => {
-    setIsFilterSidebarOpen(!isFilterSidebarOpen);
+  // Handle filter section toggle
+  const handleFilterToggle = () => {
+    setIsFilterSectionOpen(!isFilterSectionOpen);
   };
-
-  // Adjust layout when sidebar state changes
-  useEffect(() => {
-    const mainContent = document.querySelector('.users-main-content');
-    const layout = document.querySelector('.users-layout');
-
-    if (mainContent && layout) {
-      if (isFilterSidebarOpen) {
-        layout.classList.remove('sidebar-closed');
-        mainContent.classList.remove('expanded');
-      } else {
-        layout.classList.add('sidebar-closed');
-        mainContent.classList.add('expanded');
-      }
-    }
-  }, [isFilterSidebarOpen]);
 
   const hasPermission = (page, action) => {
     if (!currentUser) return false;
@@ -980,10 +963,154 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Main Content with Sidebar Layout */}
-      <div className="users-layout">
+      {/* Main Content Area */}
+      <div className="users-main-content">
+        {/* Filter Section - Positioned absolutely on the right */}
+        <div className={`filter-section ${isFilterSectionOpen ? 'open' : 'closed'}`}>
+          <div className="filter-header" onClick={handleFilterToggle}>
+            <h3>
+              <HiFilter />
+              Filters
+            </h3>
+            <button
+              className="btn btn-light"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFilterToggle();
+              }}
+              title={isFilterSectionOpen ? "Hide filters" : "Show filters"}
+            >
+              <HiX />
+            </button>
+          </div>
+
+          <div className="filter-content">
+            <div className="filter-grid">
+
+              {/* Status Filter */}
+              <div className="filter-item">
+                <h4>Status</h4>
+                <Select
+                  value={statusOptions.find(option => option.value === filters.status)}
+                  onChange={(selectedOption) => handleFilterChange('status', selectedOption ? selectedOption.value : '')}
+                  options={statusOptions}
+                  placeholder="Select status..."
+                  isClearable
+                  isSearchable
+                />
+              </div>
+
+              {/* Role Filter */}
+              <div className="filter-item">
+                <h4>Role</h4>
+                <Select
+                  value={roleOptions.find(option => option.value === filters.role)}
+                  onChange={(selectedOption) => handleFilterChange('role', selectedOption ? selectedOption.value : '')}
+                  onInputChange={(newValue) => setRoleSearchTerm(newValue)}
+                  inputValue={roleSearchTerm}
+                  options={roleOptions}
+                  placeholder={loadingRoles ? "Loading roles..." : "Select role..."}
+                  isClearable
+                  isSearchable
+                  isLoading={loadingRoles}
+                  filterOption={() => true}
+                  onMenuScrollToBottom={loadMoreRoles}
+                  closeMenuOnSelect={false}
+                  loadingMessage={() => "Loading more roles..."}
+                  noOptionsMessage={() => "No roles found"}
+                />
+              </div>
+
+              {/* Created By Filter */}
+              {canViewUsers && (
+                <div className="filter-item">
+                  <h4>Created By</h4>
+                  <Select
+                    value={Array.isArray(filters.createdBy) ? filters.createdBy.map(value => createdByOptions.find(option => option.value === value)).filter(Boolean) : []}
+                    onChange={(selectedOptions) => {
+                      const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                      handleFilterChange('createdBy', selectedValues);
+                    }}
+                    onInputChange={(newValue) => setCreatedBySearchTerm(newValue)}
+                    inputValue={createdBySearchTerm}
+                    options={createdByOptions}
+                    placeholder={loadingCreatedBy ? "Loading users..." : "Select users..."}
+                    isMulti
+                    isClearable
+                    isSearchable
+                    isLoading={loadingCreatedBy}
+                    closeMenuOnSelect={false}
+                    filterOption={() => true}
+                    onMenuScrollToBottom={loadMoreCreatedBy}
+                    loadingMessage={() => "Loading more users..."}
+                    noOptionsMessage={() => "No users found"}
+                  />
+                </div>
+              )}
+
+              {/* Sort By Filter */}
+              <div className="filter-item">
+                <h4>Sort By</h4>
+                <Select
+                  value={sortOptions.find(option => option.value === sorting.field)}
+                  onChange={(selectedOption) => handleSortChange(selectedOption ? selectedOption.value : 'createdAt')}
+                  options={sortOptions}
+                  placeholder="Select sort field..."
+                  isClearable
+                  isSearchable
+                />
+              </div>
+
+              {/* Sort Order Filter */}
+              <div className="filter-item">
+                <h4>Sort Order</h4>
+                <div className="sort-order-buttons">
+                  <button
+                    className={`btn ${sorting.order === 'asc' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => handleSortChange(sorting.field, 'asc')}
+                    title="Sort ascending"
+                  >
+                    <HiSortAscending />
+                  </button>
+                  <button
+                    className={`btn ${sorting.order === 'desc' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => handleSortChange(sorting.field, 'desc')}
+                    title="Sort descending"
+                  >
+                    <HiSortDescending />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Actions */}
+            <div className="filter-actions">
+              <div className="filter-actions-left">
+                <span className="filter-summary">
+                  {(() => {
+                    const activeFilters = [];
+                    if (filters.status) activeFilters.push(`Status: ${filters.status === 'true' ? 'Active' : 'Inactive'}`);
+                    if (filters.role) activeFilters.push(`Role: ${filters.role}`);
+                    if (filters.createdBy && filters.createdBy.length > 0) activeFilters.push(`Created By: ${filters.createdBy.length} selected`);
+                    return activeFilters.length > 0 ? `${activeFilters.length} filter(s) active` : 'No filters applied';
+                  })()}
+                </span>
+              </div>
+              <div className="filter-actions-right">
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleClearFilters}
+                  title="Clear all filters"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Main Content Area */}
-        <div className="users-main-content">
+        <div className="users-content">
           {/* Search Bar */}
           <div className="search-bar-container">
             <div className="search-section">
@@ -994,25 +1121,41 @@ const Users = () => {
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 icon={<HiSearch />}
               />
-              {filters.search && (
-                <button
-                  className="clear-search-btn"
-                  onClick={() => handleFilterChange('search', '')}
-                  title="Clear search"
-                >
-                  <FiXCircle />
-                </button>
-              )}
+              {/* Date Range Picker */}
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={(update) => {
+                  const [start, end] = update;
+                  setStartDate(start);
+                  setEndDate(end);
+                  if (start && end) {
+                    setFilters(prev => ({
+                      ...prev,
+                      createdDateRange: {
+                        start: start.toISOString().split('T')[0],
+                        end: end.toISOString().split('T')[0]
+                      }
+                    }));
+                    setPagination(prev => ({ ...prev, page: 1 }));
+                  }
+                }}
+                placeholder="Select date range..."
+                dateFormat="yyyy-MM-dd"
+                showMonthDropdown={false}
+                showYearDropdown={false}
+                dropdownMode="select"
+              />
             </div>
 
             {/* Filter Toggle Button */}
             <button
               className="btn btn-light"
-              onClick={handleSidebarToggle}
-              title={isFilterSidebarOpen ? "Hide filters" : "Show filters"}
+              onClick={handleFilterToggle}
+              title={isFilterSectionOpen ? "Hide filters" : "Show filters"}
             >
               <HiFilter />
-              {isFilterSidebarOpen ? "Hide Filters" : "Show Filters"}
+              {isFilterSectionOpen ? "Hide Filters" : "Show Filters"}
             </button>
           </div>
 
@@ -1361,159 +1504,7 @@ const Users = () => {
           </div>
         </div>
 
-        {/* Filter Sidebar */}
-        <div className={`filter-sidebar ${isFilterSidebarOpen ? 'open' : 'closed'}`}>
-          <div className="sidebar-header">
-            <h3>Filters</h3>
-            <button
-              className="btn btn-icon"
-              onClick={() => setIsFilterSidebarOpen(false)}
-              title="Close filters"
-            >
-              <HiX />
-            </button>
-          </div>
 
-          <div className="sidebar-content">
-            {/* Date Range Filter */}
-            <div className="filter-section">
-              <h4>Date Range</h4>
-              <DatePicker
-                selectsRange={true}
-                startDate={startDate}
-                endDate={endDate}
-                onChange={(update) => {
-                  const [start, end] = update;
-                  setStartDate(start);
-                  setEndDate(end);
-                  if (start && end) {
-                    setFilters(prev => ({
-                      ...prev,
-                      createdDateRange: {
-                        start: start.toISOString().split('T')[0],
-                        end: end.toISOString().split('T')[0]
-                      }
-                    }));
-                    setPagination(prev => ({ ...prev, page: 1 }));
-                  }
-                }}
-                isClearable={true}
-                placeholderText="Select date range..."
-                className="date-range-input"
-                dateFormat="yyyy-MM-dd"
-                showMonthDropdown
-                showYearDropdown
-                dropdownMode="select"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="filter-section">
-              <h4>Status</h4>
-              <Select
-                value={statusOptions.find(option => option.value === filters.status)}
-                onChange={(selectedOption) => handleFilterChange('status', selectedOption ? selectedOption.value : '')}
-                options={statusOptions}
-                placeholder="Select status..."
-                isClearable
-                isSearchable
-              />
-            </div>
-
-            {/* Role Filter */}
-            <div className="filter-section">
-              <h4>Role</h4>
-              <Select
-                value={roleOptions.find(option => option.value === filters.role)}
-                onChange={(selectedOption) => handleFilterChange('role', selectedOption ? selectedOption.value : '')}
-                onInputChange={(newValue) => setRoleSearchTerm(newValue)}
-                inputValue={roleSearchTerm}
-                options={roleOptions}
-                placeholder={loadingRoles ? "Loading roles..." : "Select role..."}
-                isClearable
-                isSearchable
-                isLoading={loadingRoles}
-                filterOption={() => true}
-                onMenuScrollToBottom={loadMoreRoles}
-                closeMenuOnSelect={false}
-                loadingMessage={() => "Loading more roles..."}
-                noOptionsMessage={() => "No roles found"}
-              />
-            </div>
-
-            {/* Created By Filter */}
-            {canViewUsers && (
-              <div className="filter-section">
-                <h4>Created By</h4>
-                <Select
-                  value={Array.isArray(filters.createdBy) ? filters.createdBy.map(value => createdByOptions.find(option => option.value === value)).filter(Boolean) : []}
-                  onChange={(selectedOptions) => {
-                    const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
-                    handleFilterChange('createdBy', selectedValues);
-                  }}
-                  onInputChange={(newValue) => setCreatedBySearchTerm(newValue)}
-                  inputValue={createdBySearchTerm}
-                  options={createdByOptions}
-                  placeholder={loadingCreatedBy ? "Loading users..." : "Select users..."}
-                  isMulti
-                  isClearable
-                  isSearchable
-                  isLoading={loadingCreatedBy}
-                  closeMenuOnSelect={false}
-                  filterOption={() => true}
-                  onMenuScrollToBottom={loadMoreCreatedBy}
-                  loadingMessage={() => "Loading more users..."}
-                  noOptionsMessage={() => "No users found"}
-                />
-              </div>
-            )}
-
-            {/* Sort By Filter */}
-            <div className="filter-section">
-              <h4>Sort By</h4>
-              <Select
-                value={sortOptions.find(option => option.value === sorting.field)}
-                onChange={(selectedOption) => handleSortChange(selectedOption ? selectedOption.value : 'createdAt')}
-                options={sortOptions}
-                placeholder="Select sort field..."
-                isClearable
-                isSearchable
-              />
-            </div>
-
-            {/* Sort Order Filter */}
-            <div className="filter-section">
-              <h4>Sort Order</h4>
-              <div className="sort-order-buttons">
-                <button
-                  className={`btn ${sorting.order === 'asc' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => handleSortChange(sorting.field, 'asc')}
-                  title="Sort ascending"
-                >
-                  <HiSortAscending />
-                </button>
-                <button
-                  className={`btn ${sorting.order === 'desc' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => handleSortChange(sorting.field, 'desc')}
-                  title="Sort descending"
-                >
-                  <HiSortDescending />
-                </button>
-              </div>
-            </div>
-
-            {/* Filter Actions */}
-            <div className="filter-actions">
-              <button
-                className="btn btn-secondary"
-                onClick={handleClearFilters}
-                title="Clear all filters"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* User View Modal */}

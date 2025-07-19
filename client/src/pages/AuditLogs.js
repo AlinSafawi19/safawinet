@@ -933,8 +933,8 @@ const AuditLogs = () => {
               placeholderText="Select date range..."
               className="date-range-input"
               dateFormat="yyyy-MM-dd"
-              showMonthDropdown
-              showYearDropdown
+              showMonthDropdown={false}
+              showYearDropdown={false}
               dropdownMode="select"
             />
           </div>
