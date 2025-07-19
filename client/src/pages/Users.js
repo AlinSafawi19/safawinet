@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil, HiX } from 'react-icons/hi';
-import { FiDownload, FiCalendar, FiClock, FiXCircle } from 'react-icons/fi';
+import { FiDownload, FiXCircle } from 'react-icons/fi';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import moment from 'moment-timezone';
@@ -13,11 +13,11 @@ import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 import UserViewModal from '../components/UserViewModal';
 import FloatingInput from '../components/FloatingInput';
 import Checkbox from '../components/Checkbox';
-import Tooltip from '../components/Tooltip';
 import RoleBadge from '../components/RoleBadge';
 import StatusBadge from '../components/StatusBadge';
 import 'react-datepicker/dist/react-datepicker.css';
-import { showSuccessToast, showErrorToast } from '../utils/sweetAlertConfig';
+import { showSuccessToast } from '../utils/sweetAlertConfig';
+import '../styles/Users.css';
 
 // Debounce utility function
 const useDebounce = (value, delay) => {
@@ -34,20 +34,6 @@ const useDebounce = (value, delay) => {
   }, [value, delay]);
 
   return debouncedValue;
-};
-
-// TruncatedText component with tooltip
-const TruncatedText = ({ text, className = '', children, alwaysShowTooltip = false }) => {
-  return (
-    <Tooltip text={text} showOnTruncated={!alwaysShowTooltip}>
-      <div
-        className={className}
-        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-      >
-        {children || text}
-      </div>
-    </Tooltip>
-  );
 };
 
 const Users = () => {
@@ -119,8 +105,6 @@ const Users = () => {
   // Filter sidebar visibility state
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(true);
 
-
-
   // Handle sidebar toggle and layout adjustment
   const handleSidebarToggle = () => {
     setIsFilterSidebarOpen(!isFilterSidebarOpen);
@@ -163,8 +147,6 @@ const Users = () => {
   useEffect(() => {
     loadUsers();
   }, [pagination.page, pagination.limit, filters, sorting]);
-
-
 
   // Fetch role templates for filter options
   const fetchRoleOptions = async (search = '', page = 1, append = false) => {
@@ -511,18 +493,6 @@ const Users = () => {
     setFilters(prev => ({
       ...prev,
       [filterType]: filterType === 'createdBy' ? (Array.isArray(value) ? value : []) : value
-    }));
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
-  };
-
-  // Handle date range changes
-  const handleDateRangeChange = (rangeType, date) => {
-    setFilters(prev => ({
-      ...prev,
-      createdDateRange: {
-        ...prev.createdDateRange,
-        [rangeType]: date
-      }
     }));
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
@@ -878,10 +848,6 @@ const Users = () => {
     return moment(dateString).tz(userTimezone).format(userDateFormat);
   };
 
-
-
-
-
   // Filter options
   const statusOptions = [
     { value: '', label: 'All Status' },
@@ -1197,61 +1163,29 @@ const Users = () => {
                                 })()}
                               </div>
                               <div className="user-details">
-                                <TruncatedText
-                                  text={`${user.firstName} ${user.lastName}`}
-                                  className="user-name"
-                                  alwaysShowTooltip={true}
-                                >
-                                  {user.firstName} {user.lastName}
-                                </TruncatedText>
-                                <TruncatedText
-                                  text={`@${user.username}`}
-                                  className="username"
-                                  alwaysShowTooltip={true}
-                                >
-                                  @{user.username}
-                                </TruncatedText>
+                                <span className="user-name">{user.firstName} {user.lastName}</span>
+                                <span className="username">@{user.username}</span>
                                 {user.phone && (
-                                  <TruncatedText
-                                    text={user.phone}
-                                    className="user-phone"
-                                    alwaysShowTooltip={true}
-                                  >
-                                    {user.phone}
-                                  </TruncatedText>
+                                  <span className="user-phone">{user.phone}</span>
                                 )}
                               </div>
                             </div>
                           </td>
                           <td>
-                            <TruncatedText text={user.email} className="email-cell" alwaysShowTooltip={true}>
-                              {user.email}
-                            </TruncatedText>
+                            {user.email}
                           </td>
                           <td><RoleBadge role={user.role} /></td>
                           <td><StatusBadge isActive={user.isActive} /></td>
                           <td>
                             {user.lastLogin ? (
-                              <TruncatedText
-                                text={formatDate(user.lastLogin)}
-                                className="last-login"
-                                alwaysShowTooltip={true}
-                              >
-                                {formatDate(user.lastLogin)}
-                              </TruncatedText>
+                              formatDate(user.lastLogin)
                             ) : (
                               <span className="last-login never">Never</span>
                             )}
                           </td>
                           <td>
                             {user.createdBy ? (
-                              <TruncatedText
-                                text={`${user.createdBy.firstName} ${user.createdBy.lastName}`}
-                                className="created-by"
-                                alwaysShowTooltip={true}
-                              >
-                                {user.createdBy.firstName} {user.createdBy.lastName}
-                              </TruncatedText>
+                              user.createdBy.firstName + ' ' + user.createdBy.lastName
                             ) : (
                               <span className="created-by">System</span>
                             )}

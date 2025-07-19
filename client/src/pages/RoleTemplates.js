@@ -29,6 +29,7 @@ import {
 } from 'react-icons/fi';
 import roleTemplateService from '../services/roleTemplateService';
 import { useNavigate } from 'react-router-dom';
+import { availableColors } from '../utils/gradientUtils';
 
 const RoleTemplates = () => {
     const user = authService.getCurrentUser();
@@ -178,16 +179,6 @@ const RoleTemplates = () => {
         { value: 'FiLock', label: 'Lock', icon: <FiLock /> },
         { value: 'FiUnlock', label: 'Unlock', icon: <FiUnlock /> },
         { value: 'FiEye', label: 'Eye', icon: <FiEye /> }
-    ];
-
-    // Available colors for templates
-    const availableColors = [
-        { value: 'bg-gradient-to-r from-blue-500 to-cyan-500', label: 'Blue', preview: 'bg-gradient-to-r from-blue-500 to-cyan-500' },
-        { value: 'bg-gradient-to-r from-purple-500 to-pink-500', label: 'Purple', preview: 'bg-gradient-to-r from-purple-500 to-pink-500' },
-        { value: 'bg-gradient-to-r from-green-500 to-emerald-500', label: 'Green', preview: 'bg-gradient-to-r from-green-500 to-emerald-500' },
-        { value: 'bg-gradient-to-r from-orange-500 to-red-500', label: 'Orange', preview: 'bg-gradient-to-r from-orange-500 to-red-500' },
-        { value: 'bg-gradient-to-r from-indigo-500 to-purple-500', label: 'Indigo', preview: 'bg-gradient-to-r from-indigo-500 to-purple-500' },
-        { value: 'bg-gradient-to-r from-teal-500 to-cyan-500', label: 'Teal', preview: 'bg-gradient-to-r from-teal-500 to-cyan-500' }
     ];
 
     // Available permissions - users and audit logs

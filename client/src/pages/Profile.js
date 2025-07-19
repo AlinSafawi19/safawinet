@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import authService from '../services/authService';
-import roleTemplateService from '../services/roleTemplateService';
 import axios from 'axios';
 import moment from 'moment';
 import 'moment-timezone';
@@ -10,8 +9,8 @@ import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import TwoFactorModal from '../components/TwoFactorModal';
 import FloatingInput from '../components/FloatingInput';
-import Tooltip from '../components/Tooltip';
 import RoleBadge from '../components/RoleBadge';
+import StatusBadge from '../components/StatusBadge';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/sweetAlertConfig';
 import Swal from 'sweetalert2';
@@ -25,11 +24,7 @@ import {
     FiKey,
     FiSettings,
     FiLock,
-    FiUnlock,
-    FiZap,
-    FiMail,
-    FiRefreshCw,
-    FiPhone
+    FiUnlock
 } from 'react-icons/fi';
 
 const Profile = () => {
@@ -47,16 +42,12 @@ const Profile = () => {
     const userTimezone = user?.userPreferences?.timezone || 'Asia/Beirut';
     const userDateFormat = user?.userPreferences?.dateFormat || 'MMM DD, YYYY h:mm a';
 
-    // Remove isEditing and related logic
-    // const [isEditing, setIsEditing] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showProfilePictureUpload, setShowProfilePictureUpload] = useState(false);
     const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
     const [twoFactorMode, setTwoFactorMode] = useState('enable');
     const [isLoading, setIsLoading] = useState(false);
     const [emailChanged, setEmailChanged] = useState(false);
-
-
 
     const [profileData, setProfileData] = useState({
         firstName: user?.firstName || '',
@@ -163,10 +154,6 @@ const Profile = () => {
         const shouldEdit = urlParams.get('edit');
 
         if (shouldEdit === 'true') {
-            // Automatically open edit mode
-            // setIsEditing(true); // Removed
-
-            // Clean up the URL parameter to prevent it from persisting
             const newUrl = window.location.pathname;
             window.history.replaceState({}, document.title, newUrl);
         }
@@ -291,9 +278,6 @@ const Profile = () => {
             }
         }
     };
-
-    // Remove handleEditToggle
-    // Remove all references to setIsEditing
 
     // Check if form has any changes
     const hasFormChanges = () => {
@@ -433,8 +417,6 @@ const Profile = () => {
         }
     };
 
-
-
     return (
         <div className="page-container">
             <div className="page-content">
@@ -492,9 +474,7 @@ const Profile = () => {
                             <div className="card-content">
                                 <div className="card-label">Account Status</div>
                                 <div className="card-value">
-                                    <span className={`status-badge ${profileData.isActive ? 'status-active' : 'status-inactive'}`}>
-                                        {profileData.isActive ? 'Active' : 'Inactive'}
-                                    </span>
+                                    <StatusBadge isActive={profileData.isActive} />
                                 </div>
                             </div>
                         </div>

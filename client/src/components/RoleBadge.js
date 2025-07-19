@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import roleTemplateService from '../services/roleTemplateService';
-import Tooltip from './Tooltip';
+import { getGradientStyle } from '../utils/gradientUtils';
 import '../styles/RoleBadge.css';
 
 /**
@@ -9,44 +9,32 @@ import '../styles/RoleBadge.css';
  * @param {Object} props - Component props
  * @param {string} props.role - The role name (e.g., 'admin', 'manager', 'custom')
  * @param {string} props.className - Additional CSS classes
- * @param {boolean} props.showTooltip - Whether to show tooltip (default: true)
- * @param {string} props.tooltipText - Custom tooltip text (optional)
  * 
  * @example
  * // Basic usage
  * <RoleBadge role="admin" />
  * 
- * @example
- * // With custom tooltip
- * <RoleBadge role="custom" tooltipText="Custom Role" />
- * 
- * @example
- * // Without tooltip
- * <RoleBadge role="manager" showTooltip={false} />
  */
-const RoleBadge = ({ 
-  role, 
-  className = '', 
-  showTooltip = true,
-  tooltipText = null 
+const RoleBadge = ({
+  role,
+  className = ''
 }) => {
   const [roleTemplates, setRoleTemplates] = useState([]);
-  const [loadingRoleTemplates, setLoadingRoleTemplates] = useState(false);
 
   // Fetch role templates for dynamic colors
   const fetchRoleTemplates = async () => {
     try {
-      setLoadingRoleTemplates(true);
       const response = await roleTemplateService.getTemplates({
         page: 1,
         limit: 100,
         status: 'active'
       });
+      console.log('Role templates response:', response);
 
-      if (response.success && response.data && response.data.templates) {
-        setRoleTemplates(response.data.templates);
-      } else if (response.success && response.data && Array.isArray(response.data)) {
+      if (response.success && response.data && Array.isArray(response.data)) {
         setRoleTemplates(response.data);
+      } else if (response.success && response.data && response.data.templates) {
+        setRoleTemplates(response.data.templates);
       } else if (response.success && response.templates) {
         setRoleTemplates(response.templates);
       } else if (Array.isArray(response)) {
@@ -55,10 +43,6 @@ const RoleBadge = ({
         setRoleTemplates(response.data);
       }
     } catch (error) {
-      console.error('Error fetching role templates for colors:', error);
-      // Continue without role templates - will use fallback colors
-    } finally {
-      setLoadingRoleTemplates(false);
     }
   };
 
@@ -66,32 +50,61 @@ const RoleBadge = ({
     fetchRoleTemplates();
   }, []);
 
+  // Helper function to clean role name for matching
+  const cleanRoleName = (name) => {
+    return name.toLowerCase()
+      .replace(/[0-9]+/g, '') // Remove numbers
+      .replace(/[^\w\s]/g, '') // Remove special characters
+      .trim();
+  };
+
   const getRoleBadge = () => {
     const roleText = role.toUpperCase();
 
     // Find the role template that matches this role
-    const roleTemplate = roleTemplates.find(template => 
-      template.name.toLowerCase() === role.toLowerCase() ||
-      template.name.toLowerCase().includes(role.toLowerCase()) ||
-      role.toLowerCase().includes(template.name.toLowerCase())
-    );
+    const roleTemplate = roleTemplates.find(template => {
+      const templateName = template.name.toLowerCase();
+      const roleName = role.toLowerCase();
+      
+      // Exact match
+      if (templateName === roleName) return true;
+      
+      // Check if role contains template name or vice versa
+      if (templateName.includes(roleName) || roleName.includes(templateName)) return true;
+      
+      // Check for partial matches using cleaned names
+      const cleanTemplateName = cleanRoleName(templateName);
+      const cleanRoleNameText = cleanRoleName(roleName);
+      
+      if (cleanTemplateName === cleanRoleNameText) return true;
+      
+      // Check if cleaned names contain each other
+      if (cleanTemplateName.includes(cleanRoleNameText) || cleanRoleNameText.includes(cleanTemplateName)) return true;
+      
+      // Check for word-based matching
+      const templateWords = cleanTemplateName.split(' ').filter(word => word.length > 2);
+      const roleWords = cleanRoleNameText.split(' ').filter(word => word.length > 2);
+      
+      if (templateWords.length === 0 || roleWords.length === 0) return false;
+      
+      // Check if most words match
+      const matchingWords = templateWords.filter(word => 
+        roleWords.some(roleWord => roleWord.includes(word) || word.includes(roleWord))
+      );
+      
+      return matchingWords.length >= Math.min(templateWords.length, roleWords.length) * 0.6;
+    });
 
-    // Use the template's color if found, otherwise use fallback
-    const badgeColor = roleTemplate?.color || `role-${role.toLowerCase()}`;
+    // Create inline styles
+    const badgeStyle = {
+      background: roleTemplate?.color ? getGradientStyle(roleTemplate.color) : 'linear-gradient(to right, #6b7280, #9ca3af)'
+    };
 
     const badgeElement = (
-      <span className={`role-badge ${badgeColor} ${className}`}>
+      <span className={`role-badge ${className}`} style={badgeStyle}>
         {roleText}
       </span>
     );
-
-    if (showTooltip) {
-      return (
-        <Tooltip text={tooltipText || roleText} showOnTruncated={false}>
-          {badgeElement}
-        </Tooltip>
-      );
-    }
 
     return badgeElement;
   };

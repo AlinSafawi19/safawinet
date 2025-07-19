@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { HiUser, HiMail, HiPhone, HiShieldCheck, HiCalendar, HiClock, HiGlobe, HiCog, HiLockClosed, HiEye, HiEyeOff, HiCheckCircle, HiXCircle, HiInformationCircle, HiDocumentText, HiKey, HiDeviceMobile, HiDesktopComputer, HiLocationMarker, HiStar, HiUserGroup, HiChartBar, HiDocumentReport, HiBell, HiBookOpen, HiQuestionMarkCircle, HiShieldExclamation, HiHeart, HiPlus, HiPencil, HiTrash, HiCloud } from 'react-icons/hi';
 import { FiDownload, FiX } from 'react-icons/fi';
 import moment from 'moment-timezone';
-import roleTemplateService from '../services/roleTemplateService';
-import Tooltip from './Tooltip';
 import RoleBadge from './RoleBadge';
 import StatusBadge from './StatusBadge';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
@@ -11,8 +9,6 @@ import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPasswordStrength, setShowPasswordStrength] = useState(false);
-  
-
 
   useEffect(() => {
     if (isOpen) {
@@ -36,10 +32,6 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
     if (!dateString) return 'N/A';
     return moment(dateString).fromNow();
   };
-
-
-
-
 
   const getVerificationBadge = (isVerified) => {
     return (
