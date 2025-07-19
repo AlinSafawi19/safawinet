@@ -12,8 +12,7 @@ import FloatingInput from '../components/FloatingInput';
 import RoleBadge from '../components/RoleBadge';
 import StatusBadge from '../components/StatusBadge';
 import { applyUserTheme } from '../utils/themeUtils';
-import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/sweetAlertConfig';
-import Swal from 'sweetalert2';
+import { showSuccessToast, showErrorToast, showWarningToast, showConfirmationDialog } from '../utils/sweetAlertConfig';
 import '../styles/Profile.css';
 import {
     FiUser,
@@ -388,18 +387,15 @@ const Profile = () => {
     };
 
     const handleRemoveProfilePicture = async () => {
-        const result = await Swal.fire({
-            title: 'Remove Profile Picture?',
-            text: 'Are you sure you want to remove your profile picture? This action cannot be undone.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#aaa',
-            confirmButtonText: 'Yes, remove it',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-        });
+        const result = await showConfirmationDialog(
+            'Remove Profile Picture',
+            'Are you sure you want to remove your profile picture? This action cannot be undone.',
+            'Yes, remove it',
+            'Cancel'
+        );
+
         if (!result.isConfirmed) return;
+
         try {
             setIsLoading(true);
             const api = createApiInstance();

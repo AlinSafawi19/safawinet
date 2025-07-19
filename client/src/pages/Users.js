@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil, HiX } from 'react-icons/hi';
-import { FiDownload, FiXCircle } from 'react-icons/fi';
+import { FiDownload } from 'react-icons/fi';
 import Select from 'react-select';
 import moment from 'moment-timezone';
 import Swal from 'sweetalert2';
@@ -15,7 +15,7 @@ import Checkbox from '../components/Checkbox';
 import RoleBadge from '../components/RoleBadge';
 import StatusBadge from '../components/StatusBadge';
 import { DateRangePicker } from '../components';
-import { showSuccessToast } from '../utils/sweetAlertConfig';
+import { showSuccessToast, showConfirmationDialog } from '../utils/sweetAlertConfig';
 import '../styles/Users.css';
 
 // Debounce utility function
@@ -718,21 +718,12 @@ const Users = () => {
   };
 
   const confirmDeleteUser = async (user) => {
-    const result = await Swal.fire({
-      title: 'Delete User',
-      text: `Are you sure you want to delete user ${user.firstName} ${user.lastName} (${user.username || user.email})?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete user',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true,
-      customClass: {
-        confirmButton: 'swal2-confirm-danger',
-        cancelButton: 'swal2-cancel'
-      }
-    });
+    const result = await showConfirmationDialog(
+      'Delete User',
+      `Are you sure you want to delete user ${user.firstName} ${user.lastName} (${user.username || user.email})?`,
+      'Yes, delete user',
+      'Cancel'
+    );
 
     if (result.isConfirmed) {
       handleDeleteUser(user._id);
@@ -902,21 +893,12 @@ const Users = () => {
               <button
                 className="btn btn-danger"
                 onClick={async () => {
-                  const result = await Swal.fire({
-                    title: 'Delete Multiple Users',
-                    text: `Are you sure you want to delete ${selectedUsers.length} selected user(s)?`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: `Yes, delete ${selectedUsers.length} user(s)`,
-                    cancelButtonText: 'Cancel',
-                    reverseButtons: true,
-                    customClass: {
-                      confirmButton: 'swal2-confirm-danger',
-                      cancelButton: 'swal2-cancel'
-                    }
-                  });
+                  const result = await showConfirmationDialog(
+                    'Delete Multiple Users',
+                    `Are you sure you want to delete ${selectedUsers.length} selected user(s)?`,
+                    `Yes, delete ${selectedUsers.length} user(s)`,
+                    'Cancel'
+                  );
 
                   if (result.isConfirmed) {
                     handleBulkDeleteUsers();

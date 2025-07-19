@@ -6,6 +6,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileInputKey, setFileInputKey] = useState(0); // Add key to force re-render
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (file) => {
@@ -38,6 +39,8 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   const handleFileInputChange = (e) => {
     const file = e.target.files[0];
     handleFileSelect(file);
+    // Clear the input value so the same file can be selected again
+    e.target.value = '';
   };
 
   const handleDragOver = (e) => {
@@ -79,7 +82,36 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
   const handleCancel = () => {
     setSelectedFile(null);
     setPreview(null);
+    // Clear the file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    // Force re-render of file input
+    setFileInputKey(prev => prev + 1);
     onCancel?.();
+  };
+
+  const handleResetFile = () => {
+    setSelectedFile(null);
+    setPreview(null);
+    // Clear the file input value so it can be used again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    // Force re-render of file input
+    setFileInputKey(prev => prev + 1);
+  };
+
+  const handleDropzoneClick = (e) => {
+    // Don't trigger if clicking on the file input itself
+    if (e.target === fileInputRef.current) {
+      return;
+    }
+    
+    // Directly trigger the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   return (
@@ -105,7 +137,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleDropzoneClick}
             >
               <div className="modal-icon">
                 <FiUpload />
@@ -116,6 +148,7 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
                 JPG, PNG, GIF, or WebP (max 5MB)
               </p>
               <input
+                key={fileInputKey}
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -134,37 +167,37 @@ const ProfilePictureUpload = ({ onUploadSuccess, onUploadError, onCancel }) => {
               </div>
             </div>
           )}
-        </div>
 
-        <div className="modal-actions">
-          {selectedFile ? (
-            <>
-              <button
-                onClick={handleUpload}
-                disabled={isUploading}
-                className="btn btn-primary"
-                type="button"
-              >
-                {isUploading ? 'Uploading Picture...' : 'Upload Picture'}
-              </button>
+          <div className="form-actions">
+            {selectedFile ? (
+              <>
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                  className="btn btn-primary"
+                  type="button"
+                >
+                  {isUploading ? 'ApplyingProfile Picture...' : 'Apply Profile Picture'}
+                </button>
+                <button
+                  onClick={handleResetFile}
+                  disabled={isUploading}
+                  className="btn btn-secondary"
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
               <button
                 onClick={handleCancel}
-                disabled={isUploading}
                 className="btn btn-secondary"
                 type="button"
               >
                 Cancel
               </button>
-            </>
-          ) : (
-            <button
-              onClick={handleCancel}
-              className="btn btn-secondary"
-              type="button"
-            >
-              Cancel
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
