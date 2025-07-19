@@ -165,6 +165,72 @@ const sanitizeInput = (req, res, next) => {
     next();
 };
 
+// Notification validation
+const validateNotification = (req, res, next) => {
+    const errors = [];
+    const { title, message, type, category, priority, channels, targetUsers } = req.body;
+
+    // Required fields
+    if (!title || title.trim().length === 0) {
+        errors.push('Title is required');
+    } else if (title.length > 200) {
+        errors.push('Title must be no more than 200 characters');
+    }
+
+    if (!message || message.trim().length === 0) {
+        errors.push('Message is required');
+    } else if (message.length > 1000) {
+        errors.push('Message must be no more than 1000 characters');
+    }
+
+    // Type validation
+    const validTypes = ['info', 'success', 'warning', 'error', 'security', 'system', 'user', 'email', 'sms'];
+    if (type && !validTypes.includes(type)) {
+        errors.push(`Type must be one of: ${validTypes.join(', ')}`);
+    }
+
+    // Category validation
+    const validCategories = ['security', 'system', 'user', 'email', 'sms', 'audit', 'login', 'password', 'profile', 'admin', 'general'];
+    if (category && !validCategories.includes(category)) {
+        errors.push(`Category must be one of: ${validCategories.join(', ')}`);
+    }
+
+    // Priority validation
+    const validPriorities = ['low', 'normal', 'high', 'urgent'];
+    if (priority && !validPriorities.includes(priority)) {
+        errors.push(`Priority must be one of: ${validPriorities.join(', ')}`);
+    }
+
+    // Channels validation
+    const validChannels = ['in_app', 'email', 'sms', 'push'];
+    if (channels && Array.isArray(channels)) {
+        channels.forEach(channel => {
+            if (!validChannels.includes(channel)) {
+                errors.push(`Channel must be one of: ${validChannels.join(', ')}`);
+            }
+        });
+    }
+
+    // Target users validation (if provided)
+    if (targetUsers && Array.isArray(targetUsers)) {
+        targetUsers.forEach(userId => {
+            if (typeof userId !== 'string' || userId.trim().length === 0) {
+                errors.push('Invalid target user ID');
+            }
+        });
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Notification validation failed',
+            errors: errors
+        });
+    }
+
+    next();
+};
+
 // File upload validation
 const validateFileUpload = (req, res, next) => {
     if (!req.files || Object.keys(req.files).length === 0) {
@@ -318,6 +384,7 @@ module.exports = {
     validateInput,
     sanitizeInput,
     validateFileUpload,
+    validateNotification,
     userRateLimit,
     commonSchemas
 }; 

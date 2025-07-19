@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiBell, FiInbox, FiTool, FiChevronDown, FiUser, FiSettings, FiLogOut, FiCalendar, FiClock, FiFile } from 'react-icons/fi';
 import ProfilePicture from './ProfilePicture';
+import NotificationBell from './NotificationBell';
 import '../styles/Header.css';
 import { showLogoutConfirmation } from '../utils/sweetAlertConfig';
 import authService from '../services/authService';
@@ -114,15 +115,7 @@ const Header = ({ onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpe
                     {/* Desktop Header Tabs */}
                     {!isMobile && (
                         <>
-                            <button className="header-tab" onClick={() => navigate('/notifications')}>
-                                <div className="header-tab-icon">
-                                    <FiBell />
-                                    {notificationCount > 0 && (
-                                        <span className="header-tab-badge">{notificationCount}</span>
-                                    )}
-                                </div>
-                                <span>Notifications</span>
-                            </button>
+                            <NotificationBell isMobile={false} />
 
                             <button className="header-tab" onClick={() => navigate('/inbox')}>
                                 <div className="header-tab-icon">
@@ -162,14 +155,7 @@ const Header = ({ onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpe
                     {/* Tablet Landscape - Show compact icons */}
                     {deviceType === 'tablet-landscape' && (
                         <div className="mobile-header-actions">
-                            <button className="mobile-action-btn" onClick={() => navigate('/notifications')}>
-                                <div className="mobile-action-icon">
-                                    <FiBell />
-                                    {notificationCount > 0 && (
-                                        <span className="mobile-badge">{notificationCount}</span>
-                                    )}
-                                </div>
-                            </button>
+                            <NotificationBell isMobile={true} />
 
                             <button className="mobile-action-btn" onClick={() => navigate('/inbox')}>
                                 <div className="mobile-action-icon">
@@ -209,18 +195,7 @@ const Header = ({ onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpe
                     {/* Mobile Header Actions - Tablet Portrait and Mobile Large */}
                     {(deviceType === 'tablet-portrait' || deviceType === 'mobile-large') && (
                         <div className="mobile-header-actions">
-                            <button
-                                className="mobile-action-btn"
-                                onClick={() => navigate('/notifications')}
-                                title="Notifications"
-                            >
-                                <div className="mobile-action-icon">
-                                    <FiBell />
-                                    {notificationCount > 0 && (
-                                        <span className="mobile-badge">{notificationCount}</span>
-                                    )}
-                                </div>
-                            </button>
+                            <NotificationBell isMobile={true} />
 
                             <button
                                 className="mobile-action-btn"

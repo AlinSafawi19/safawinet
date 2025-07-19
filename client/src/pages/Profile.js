@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import authService from '../services/authService';
+import roleTemplateService from '../services/roleTemplateService';
 import axios from 'axios';
 import moment from 'moment';
 import 'moment-timezone';
@@ -9,6 +10,8 @@ import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import TwoFactorModal from '../components/TwoFactorModal';
 import FloatingInput from '../components/FloatingInput';
+import Tooltip from '../components/Tooltip';
+import RoleBadge from '../components/RoleBadge';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/sweetAlertConfig';
 import Swal from 'sweetalert2';
@@ -52,6 +55,8 @@ const Profile = () => {
     const [twoFactorMode, setTwoFactorMode] = useState('enable');
     const [isLoading, setIsLoading] = useState(false);
     const [emailChanged, setEmailChanged] = useState(false);
+
+
 
     const [profileData, setProfileData] = useState({
         firstName: user?.firstName || '',
@@ -172,6 +177,8 @@ const Profile = () => {
         if (!dateString) return 'N/A';
         return moment(dateString).tz(userTimezone).format(userDateFormat);
     };
+
+
 
     // Get password strength text
     const getPasswordStrengthText = (level) => {
@@ -498,9 +505,7 @@ const Profile = () => {
                             <div className="card-content">
                                 <div className="card-label">Role</div>
                                 <div className="card-value">
-                                    <span className={`role-badge ${profileData.isAdmin ? 'role-admin' : 'role-user'}`}>
-                                        {profileData.isAdmin ? 'Administrator' : 'User'}
-                                    </span>
+                                    <RoleBadge role={profileData.isAdmin ? 'admin' : 'user'} />
                                 </div>
                             </div>
                         </div>

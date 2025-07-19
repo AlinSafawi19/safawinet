@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { HiUser, HiMail, HiPhone, HiShieldCheck, HiCalendar, HiClock, HiGlobe, HiCog, HiLockClosed, HiEye, HiEyeOff, HiCheckCircle, HiXCircle, HiInformationCircle, HiDocumentText, HiKey, HiDeviceMobile, HiDesktopComputer, HiLocationMarker, HiStar, HiUserGroup, HiChartBar, HiDocumentReport, HiBell, HiBookOpen, HiQuestionMarkCircle, HiShieldExclamation, HiHeart, HiPlus, HiPencil, HiTrash, HiCloud } from 'react-icons/hi';
 import { FiDownload, FiX } from 'react-icons/fi';
 import moment from 'moment-timezone';
+import roleTemplateService from '../services/roleTemplateService';
+import Tooltip from './Tooltip';
+import RoleBadge from './RoleBadge';
+import StatusBadge from './StatusBadge';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 
 const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPasswordStrength, setShowPasswordStrength] = useState(false);
+  
+
 
   useEffect(() => {
     if (isOpen) {
@@ -31,28 +37,9 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
     return moment(dateString).fromNow();
   };
 
-  const getStatusBadge = (isActive) => {
-    return (
-      <span className={`status-badge ${isActive ? 'active' : 'inactive'}`}>
-        {isActive ? 'Active' : 'Inactive'}
-      </span>
-    );
-  };
 
-  const getRoleBadge = (role) => {
-    const roleColors = {
-      admin: 'bg-red-100 text-red-800',
-      manager: 'bg-blue-100 text-blue-800',
-      viewer: 'bg-green-100 text-green-800',
-      custom: 'bg-purple-100 text-purple-800'
-    };
 
-    return (
-      <span className={`role-badge ${roleColors[role] || 'bg-gray-100 text-gray-800'}`}>
-        {role.charAt(0).toUpperCase() + role.slice(1)}
-      </span>
-    );
-  };
+
 
   const getVerificationBadge = (isVerified) => {
     return (
@@ -175,8 +162,8 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
             })()}
           </div>
           <div className="profile-status">
-            {getStatusBadge(user.isActive)}
-            {getRoleBadge(user.role)}
+            <StatusBadge isActive={user.isActive} />
+            <RoleBadge role={user.role} />
           </div>
         </div>
         <div className="profile-info">
@@ -226,11 +213,11 @@ const UserViewModal = ({ user, isOpen, onClose, currentUser, onEditUser }) => {
           )}
           <div className="info-item">
             <label>Role</label>
-            <span>{getRoleBadge(user.role)}</span>
+            <span><RoleBadge role={user.role} /></span>
           </div>
           <div className="info-item">
             <label>Status</label>
-            <span>{getStatusBadge(user.isActive)}</span>
+            <span><StatusBadge isActive={user.isActive} /></span>
           </div>
           <div className="info-item">
             <label>Admin Access</label>

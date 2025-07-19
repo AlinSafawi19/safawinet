@@ -21,6 +21,7 @@ const FloatingInput = ({
     autoFocus = false,
     className = '',
     copyable = false,
+    icon = null,
     ...props
 }) => {
     const [isFocused, setIsFocused] = useState(false);
@@ -121,7 +122,12 @@ const FloatingInput = ({
 
     return (
         <div className={`floating-input-container ${className}`}>
-            <div className={`floating-input-wrapper ${error ? 'has-error' : ''} ${disabled ? 'disabled' : ''}`}>
+            <div className={`floating-input-wrapper ${error ? 'has-error' : ''} ${disabled ? 'disabled' : ''} ${icon ? 'has-icon' : ''}`}>
+                {icon && (
+                    <div className="floating-input-icon">
+                        {icon}
+                    </div>
+                )}
                 <input
                     ref={inputRef}
                     type={inputType}
