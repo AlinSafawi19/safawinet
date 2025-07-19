@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiSearch, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil, HiX } from 'react-icons/hi';
-import { FiDownload } from 'react-icons/fi';
+import { HiUsers, HiShieldCheck, HiUserAdd, HiChevronLeft, HiChevronRight, HiRefresh, HiFilter, HiSortAscending, HiSortDescending, HiTrash, HiEye, HiPencil, HiX } from 'react-icons/hi';
+import { FiDownload, FiSearch } from 'react-icons/fi';
 import Select from 'react-select';
 import moment from 'moment-timezone';
-import Swal from 'sweetalert2';
 import userService from '../services/userService';
 import authService from '../services/authService';
 import roleTemplateService from '../services/roleTemplateService';
@@ -1098,10 +1097,12 @@ const Users = () => {
             <div className="search-section">
               <FloatingInput
                 type="text"
-                placeholder="Search users..."
+                id="userSearch"
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                icon={<HiSearch />}
+                label="Search Users"
+                icon={<FiSearch />}
+                autoComplete="off"
               />
               {/* Date Range Picker */}
               <DateRangePicker

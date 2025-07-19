@@ -1,0 +1,792 @@
+/* TemplateCard Component Styles */
+
+.template-card {
+    position: relative;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.template-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: rgba(31, 59, 179, 0.2);
+}
+
+.template-card.selected {
+    border-color: #1f3bb3;
+    background: linear-gradient(135deg, #f8faff 0%, #eaf0fb 100%);
+    box-shadow: 0 8px 24px rgba(31, 59, 179, 0.15);
+}
+
+.template-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.template-card.disabled:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Size Variants */
+.template-card-small {
+    padding: 12px;
+    gap: 12px;
+}
+
+.template-card-medium {
+    padding: 20px;
+    gap: 16px;
+}
+
+.template-card-large {
+    padding: 24px;
+    gap: 20px;
+}
+
+.template-card-compact {
+    padding: 16px;
+    gap: 12px;
+    flex-direction: row;
+    align-items: center;
+}
+
+/* Variant Styles */
+.template-card-selectable {
+    position: relative;
+}
+
+.template-card-selectable:hover {
+    border-color: rgba(31, 59, 179, 0.3);
+}
+
+.template-card-editable {
+    border: 2px solid #e5e7eb;
+}
+
+.template-card-editable:hover {
+    border-color: #1f3bb3;
+}
+
+.template-card-detailed {
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Template Icon Container */
+.template-icon-container {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Template Icon */
+.template-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.template-icon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.template-icon-small {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    border-radius: 8px;
+}
+
+.template-icon-medium {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    border-radius: 12px;
+}
+
+.template-icon-large {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+    border-radius: 16px;
+}
+
+.template-icon-compact {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    border-radius: 10px;
+}
+
+/* Default Badge */
+.default-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #f59e0b;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Template Info */
+.template-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.template-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.template-text-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.template-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.template-status-badges {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.template-name {
+    margin: 0;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.template-name-small {
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.template-name-medium {
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.template-name-large {
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.template-name-compact {
+    font-size: 15px;
+    line-height: 1.3;
+}
+
+/* Admin Badge */
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* Template Description */
+.template-description {
+    margin: 0 0 12px 0;
+    color: #6b7280;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.template-description-small {
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.template-description-medium {
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.template-description-large {
+    font-size: 15px;
+    margin-bottom: 16px;
+}
+
+.template-description-compact {
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+/* Template Permissions */
+.template-permissions {
+    margin-top: auto;
+}
+
+.permission-badge-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.permission-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    cursor: help;
+    transition: transform 0.2s ease;
+}
+
+.permission-badge:hover {
+    transform: scale(1.05);
+}
+
+.permission-badge-small {
+    padding: 1px 6px;
+    font-size: 10px;
+}
+
+.permission-badge-medium {
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.permission-badge-large {
+    padding: 4px 12px;
+    font-size: 13px;
+}
+
+.permission-badge-compact {
+    padding: 1px 6px;
+    font-size: 10px;
+}
+
+.permission-hint {
+    font-size: 10px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.permission-dots-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.permission-dot {
+    transition: transform 0.2s ease;
+}
+
+.permission-dot:hover {
+    transform: scale(1.2);
+}
+
+.no-permissions {
+    font-size: 10px;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.permission-compact-container {
+    margin-top: 4px;
+}
+
+.permission-compact-text {
+    cursor: help;
+    transition: all 0.2s ease;
+}
+
+.permission-compact-text:hover {
+    background-color: #f3f4f6 !important;
+}
+
+/* Template Stats */
+.template-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.stat-item svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Template Creator */
+.template-creator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
+.template-creator svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Template Actions */
+.template-actions {
+    position: relative;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.action-menu-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    border-radius: 4px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-menu-btn:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.action-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    padding: 8px 0;
+    min-width: 160px;
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+.action-menu button {
+    width: 100%;
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #374151;
+    transition: background-color 0.2s ease;
+}
+
+.action-menu button:hover {
+    background: #f9fafb;
+}
+
+.action-menu button.delete-action {
+    color: #ef4444;
+}
+
+.action-menu button.delete-action:hover {
+    background: #fef2f2;
+}
+
+/* Template Arrow */
+.template-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: #6b7280;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.template-card.selected .template-arrow {
+    color: #1f3bb3;
+}
+
+/* Loading State */
+.template-card-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 120px;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #1f3bb3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .template-card {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .template-card-large {
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .template-name {
+        font-size: 15px;
+    }
+
+    .template-description {
+        font-size: 13px;
+    }
+
+    .permission-badge {
+        font-size: 10px;
+        padding: 1px 6px;
+    }
+
+    .action-menu {
+        min-width: 140px;
+    }
+
+    .permission-item {
+        padding: 0.75rem;
+    }
+
+    .permission-actions {
+        gap: 0.25rem;
+    }
+
+    .permission-action {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .template-card {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .template-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .template-name {
+        font-size: 14px;
+    }
+
+    .template-description {
+        font-size: 12px;
+    }
+
+    .template-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .template-actions {
+        align-self: flex-end;
+    }
+
+    .permission-item {
+        padding: 0.5rem;
+    }
+
+    .permission-actions {
+        gap: 0.2rem;
+    }
+
+    .permission-action {
+        font-size: 0.75rem;
+        padding: 0.15rem 0.5rem;
+    }
+}
+
+/* Compact variant specific styles */
+.template-card-compact .template-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.template-card-compact .template-name {
+    margin-bottom: 0;
+}
+
+.template-card-compact .template-description {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+.template-card-compact .template-permissions {
+    margin-top: 0;
+}
+
+/* Detailed variant specific styles */
+.template-card-detailed .template-icon {
+    align-self: flex-start;
+}
+
+.template-card-detailed .template-info {
+    width: 100%;
+}
+
+.template-card-detailed .template-stats {
+    margin-top: 16px;
+}
+
+/* Grid Layout Support */
+.template-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.template-grid-small {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.template-grid-large {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+/* Focus states for accessibility */
+.template-card:focus {
+    outline: 2px solid #1f3bb3;
+    outline-offset: 2px;
+}
+
+.action-menu-btn:focus {
+    outline: 2px solid #1f3bb3;
+    outline-offset: 2px;
+}
+
+/* Animation for card entrance */
+@keyframes cardEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.template-card {
+    animation: cardEntrance 0.3s ease-out;
+}
+
+/* Hover effects for interactive elements */
+.template-card:hover .template-arrow {
+    transform: translateX(2px);
+}
+
+.template-card:hover .permission-badge {
+    transform: scale(1.05);
+}
+
+/* Color gradient backgrounds */
+.template-card.bg-gradient-to-r {
+    background: linear-gradient(135deg, var(--tw-gradient-stops));
+}
+
+/* Custom scrollbar for long descriptions */
+.template-description {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+}
+
+/* Permission Modal Styles */
+.permission-modal.modal-overlay {
+    background-color: transparent;
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+}
+
+.no-permissions-message {
+    text-align: center;
+    color: #718096;
+    padding: 2rem;
+}
+
+.no-permissions-message p {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.permissions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.permission-item {
+    background: #f7fafc;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.permission-page h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    text-transform: capitalize;
+}
+
+.permission-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.permission-action {
+    background: #3182ce;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    transition: all 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Hover effects for clickable permission elements */
+.permission-badge:hover,
+.permission-dot:hover,
+.permission-compact-text:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.permission-badge:active,
+.permission-dot:active,
+.permission-compact-text:active {
+    transform: scale(0.95);
+}

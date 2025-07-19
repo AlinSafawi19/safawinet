@@ -782,16 +782,8 @@ router.post('/reset-password', sanitizeInput, validateInput({
     try {
         const { token, newPassword } = req.body;
 
-        // Validate password strength using the new analyzer
-        const passwordValidation = passwordStrengthAnalyzer.validatePassword(newPassword);
-        if (!passwordValidation.isValid) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password does not meet security requirements',
-                errors: passwordValidation.errors,
-                strength: passwordValidation.analysis
-            });
-        }
+        // Analyze password strength for feedback (but don't block weak passwords)
+        const passwordAnalysis = passwordStrengthAnalyzer.analyzePassword(newPassword);
 
         const user = await User.findOne({
             passwordResetToken: token,
@@ -1557,16 +1549,8 @@ router.put('/change-password', authenticateToken, sanitizeInput, validateInput({
     try {
         const { currentPassword, newPassword } = req.body;
 
-        // Validate password strength using the new analyzer
-        const passwordValidation = passwordStrengthAnalyzer.validatePassword(newPassword);
-        if (!passwordValidation.isValid) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password does not meet security requirements',
-                errors: passwordValidation.errors,
-                strength: passwordValidation.analysis
-            });
-        }
+        // Analyze password strength for feedback (but don't block weak passwords)
+        const passwordAnalysis = passwordStrengthAnalyzer.analyzePassword(newPassword);
 
         const user = await User.findById(req.user._id);
 
@@ -1604,9 +1588,9 @@ router.put('/change-password', authenticateToken, sanitizeInput, validateInput({
                     failedAttempts: user.failedLoginAttempts || 0
                 },
                 passwordStrength: {
-                    status: passwordValidation.analysis.level === 'weak' ? 'weak' :
-                        passwordValidation.analysis.level === 'medium' ? 'medium' : 'strong',
-                    level: passwordValidation.analysis.level
+                    status: passwordAnalysis.level === 'weak' ? 'weak' :
+                        passwordAnalysis.level === 'medium' ? 'medium' : 'strong',
+                    level: passwordAnalysis.level
                 },
                 twoFactorAuth: {
                     enabled: user.twoFactorEnabled || false,

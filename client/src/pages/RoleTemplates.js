@@ -4,10 +4,12 @@ import axios from 'axios';
 import Select from 'react-select';
 import { applyUserTheme } from '../utils/themeUtils';
 import { showSuccessToast, showErrorToast, showConfirmationDialog, showWarningToast } from '../utils/sweetAlertConfig';
+import { availablePermissions } from '../utils/permissionUtils';
+import TemplateCard from '../components/TemplateCard';
+import Checkbox from '../components/Checkbox';
 import {
     FiPlus,
     FiEdit,
-    FiTrash2,
     FiEye,
     FiSettings,
     FiAward,
@@ -22,14 +24,12 @@ import {
     FiLock,
     FiUnlock,
     FiAlertCircle,
-    FiToggleLeft,
-    FiToggleRight,
-    FiMoreVertical,
     FiSearch
 } from 'react-icons/fi';
 import roleTemplateService from '../services/roleTemplateService';
 import { useNavigate } from 'react-router-dom';
 import { availableColors } from '../utils/gradientUtils';
+import { renderIcon } from '../utils/iconUtils';
 
 const RoleTemplates = () => {
     const user = authService.getCurrentUser();
@@ -110,62 +110,8 @@ const RoleTemplates = () => {
         permissions: ''
     });
 
-    // Add state for open menu
-    const [openMenuId, setOpenMenuId] = useState(null);
-
     // Permission display mode state
     const [permissionDisplayMode, setPermissionDisplayMode] = useState('badge'); // 'badge', 'dots', 'compact'
-
-    // Tooltip state
-    const [tooltip, setTooltip] = useState({
-        show: false,
-        content: '',
-        x: 0,
-        y: 0
-    });
-
-    // Tooltip handlers
-    const handleMouseEnter = (e, permissions) => {
-        if (!permissions || permissions.length === 0) {
-            setTooltip({
-                show: true,
-                content: 'No permissions assigned',
-                x: e.clientX + 10,
-                y: e.clientY - 10
-            });
-            return;
-        }
-
-        const tooltipContent = permissions.map(p =>
-            `<strong>${p.page.replace(/_/g, ' ')}:</strong> ${p.actions.map(action => action.replace(/_/g, ' ')).join(', ')}`
-        ).join('<br>');
-
-        setTooltip({
-            show: true,
-            content: tooltipContent,
-            x: e.clientX + 10,
-            y: e.clientY - 10
-        });
-    };
-
-    const handleMouseLeave = () => {
-        setTooltip({ show: false, content: '', x: 0, y: 0 });
-    };
-
-    // Close menu on outside click
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (!event.target.closest('.template-actions-menu') && !event.target.closest('.template-actions-kebab')) {
-                setOpenMenuId(null);
-            }
-        };
-        if (openMenuId !== null) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [openMenuId]);
 
     // Available icons for templates
     const availableIcons = [
@@ -181,32 +127,7 @@ const RoleTemplates = () => {
         { value: 'FiEye', label: 'Eye', icon: <FiEye /> }
     ];
 
-    // Available permissions - users and audit logs
-    const availablePermissions = [
-        {
-            page: 'users',
-            name: 'Users Management',
-            description: 'Manage system users and their permissions',
-            actions: [
-                { id: 'view', name: 'View Users', description: 'View user list and details' },
-                { id: 'view_own', name: 'View Own Users', description: 'View only own user details' },
-                { id: 'add', name: 'Create Users', description: 'Create new user accounts' },
-                { id: 'edit', name: 'Edit Users', description: 'Modify existing user accounts' },
-                { id: 'delete', name: 'Delete Users', description: 'Remove user accounts' },
-                { id: 'export', name: 'Export Users', description: 'Export user data to CSV/Excel' }
-            ]
-        },
-        {
-            page: 'audit-logs',
-            name: 'Audit Logs',
-            description: 'View and manage system audit logs',
-            actions: [
-                { id: 'view', name: 'View Audit Logs', description: 'View all audit logs' },
-                { id: 'view_own', name: 'View Own Logs', description: 'View only own audit logs' },
-                { id: 'export', name: 'Export Logs', description: 'Export audit log data to CSV/Excel' }
-            ]
-        }
-    ];
+    // Available permissions are now imported from permissionUtils
 
     // Custom styles for React Select (same as AuditLogs)
     const customStyles = {
@@ -822,117 +743,9 @@ const RoleTemplates = () => {
         resetFormData();
         setShowCreateModal(true);
     };
-
-    // Get icon component by name
-    const getIconComponent = (iconName) => {
-        const iconMap = {
-            FiSettings: <FiSettings />,
-            FiAward: <FiAward />,
-            FiBriefcase: <FiBriefcase />,
-            FiUsers: <FiUsers />,
-            FiShield: <FiShield />,
-            FiUserCheck: <FiUserCheck />,
-            FiUserX: <FiUserX />,
-            FiLock: <FiLock />,
-            FiUnlock: <FiUnlock />,
-            FiEye: <FiEye />
-        };
-        return iconMap[iconName] || <FiSettings />;
-    };
-
-    // Helper function to get permission summary
-    const getPermissionSummary = (permissions) => {
-        if (!permissions || permissions.length === 0) return { count: 0, summary: 'No permissions' };
-
-        const totalActions = permissions.reduce((sum, perm) => sum + perm.actions.length, 0);
-        const pages = permissions.map(p => p.page.replace(/_/g, ' ')).join(', ');
-
-        return {
-            count: totalActions,
-            summary: `${pages} (${totalActions} actions)`
-        };
-    };
-
-    // Helper function to get permission badge color
-    const getPermissionBadgeColor = (permissionCount) => {
-        if (permissionCount === 0) return 'bg-gray-400';
-        if (permissionCount <= 3) return 'bg-green-500';
-        if (permissionCount <= 6) return 'bg-blue-500';
-        if (permissionCount <= 9) return 'bg-orange-500';
-        return 'bg-red-500';
-    };
-
-    // Helper function to get permission icons
-    const getPermissionIcons = (permissions) => {
-        const icons = [];
-        permissions.forEach(permission => {
-            switch (permission.page) {
-                case 'users':
-                    icons.push('👥');
-                    break;
-                case 'audit-logs':
-                    icons.push('📋');
-                    break;
-                case 'settings':
-                    icons.push('⚙️');
-                    break;
-                default:
-                    icons.push('🔑');
-            }
-        });
-        return icons.slice(0, 3); // Limit to 3 icons
-    };
-
-    // Helper function to get permission dots
-    const getPermissionDots = (permissions) => {
-        if (!permissions || permissions.length === 0) return [];
-
-        const dots = [];
-        permissions.forEach(permission => {
-            const actionCount = permission.actions.length;
-            const color = actionCount <= 2 ? '#10b981' :
-                actionCount <= 4 ? '#3b82f6' :
-                    actionCount <= 6 ? '#f59e0b' : '#ef4444';
-
-            dots.push({
-                color,
-                count: actionCount,
-                page: permission.page
-            });
-        });
-
-        return dots.slice(0, 4); // Limit to 4 dots
-    };
-
-    // Helper function to get compact permission text
-    const getCompactPermissionText = (permissions) => {
-        if (!permissions || permissions.length === 0) return '';
-
-        const totalActions = permissions.reduce((sum, perm) => sum + perm.actions.length, 0);
-        const pages = permissions.map(p => p.page.replace(/_/g, ' ')).slice(0, 2);
-
-        if (pages.length === 1) {
-            return `${pages[0]} (${totalActions})`;
-        } else if (pages.length === 2) {
-            return `${pages[0]}, ${pages[1]} (${totalActions})`;
-        } else {
-            return `${pages[0]}, +${pages.length - 1} more (${totalActions})`;
-        }
-    };
-
+    
     return (
         <div className="role-templates-page">
-            {/* Custom Tooltip */}
-            {tooltip.show && (
-                <div
-                    className="custom-tooltip"
-                    style={{
-                        left: tooltip.x,
-                        top: tooltip.y
-                    }}
-                    dangerouslySetInnerHTML={{ __html: tooltip.content }}
-                />
-            )}
 
             {/* Header */}
             <div className="role-templates-header">
@@ -1093,197 +906,28 @@ const RoleTemplates = () => {
                         {templates.length > 0 && (
                             <div className="templates-grid">
                                 {templates.map((template) => (
-                                    <div key={template._id} className={`template-card ${template.color}`}>
-                                        <div className="template-header">
-                                            <div className="template-icon">
-                                                {getIconComponent(template.icon)}
-                                            </div>
-                                            <div className="template-actions">
-                                                <div className="template-status">
-                                                    {template.isDefault && (
-                                                        <span className="status-badge default">Default</span>
-                                                    )}
-                                                    {!template.isActive && (
-                                                        <span className="status-badge inactive">Inactive</span>
-                                                    )}
-                                                </div>
-                                                <button
-                                                    className="btn btn-icon template-actions-kebab"
-                                                    onClick={e => {
-                                                        e.stopPropagation();
-                                                        setOpenMenuId(template._id === openMenuId ? null : template._id);
-                                                    }}
-                                                    title="More actions"
-                                                    aria-haspopup="true"
-                                                    aria-expanded={openMenuId === template._id}
-                                                >
-                                                    <FiMoreVertical />
-                                                </button>
-                                                {openMenuId === template._id && (
-                                                    <div className="template-actions-menu">
-                                                        <button
-                                                            className="menu-item"
-                                                            onClick={() => {
-                                                                setOpenMenuId(null);
-                                                                handleViewTemplate(template);
-                                                            }}
-                                                        >
-                                                            <FiEye /> View Details
-                                                        </button>
-                                                        {!template.isDefault && (
-                                                            <button
-                                                                className="menu-item"
-                                                                onClick={() => {
-                                                                    setOpenMenuId(null);
-                                                                    handleEditTemplate(template);
-                                                                }}
-                                                            >
-                                                                <FiEdit /> Edit Template
-                                                            </button>
-                                                        )}
-                                                        {!template.isDefault && (
-                                                            <button
-                                                                className="menu-item"
-                                                                onClick={() => {
-                                                                    setOpenMenuId(null);
-                                                                    handleToggleTemplateStatus(template);
-                                                                }}
-                                                            >
-                                                                {template.isActive ? <FiToggleRight /> : <FiToggleLeft />} {template.isActive ? 'Deactivate' : 'Activate'}
-                                                            </button>
-                                                        )}
-                                                        {template.canBeDeleted && (
-                                                            <button
-                                                                className="menu-item danger"
-                                                                onClick={() => {
-                                                                    setOpenMenuId(null);
-                                                                    handleDeleteTemplate(template);
-                                                                }}
-                                                            >
-                                                                <FiTrash2 /> Delete Template
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="template-content">
-                                            <h3 className="template-name">{template.name}</h3>
-                                            <p className="template-description">{template.description}</p>
-                                            <div className="template-stats">
-                                                <span className="stat">
-                                                    <FiUsers />
-                                                    {template.usageCount} users
-                                                </span>
-                                                {template.lastUsed && (
-                                                    <span className="stat">
-                                                        Last used: {new Date(template.lastUsed).toLocaleDateString()}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Permission display based on mode */}
-                                            {(() => {
-                                                const permissionSummary = getPermissionSummary(template.permissions);
-                                                const permissionIcons = getPermissionIcons(template.permissions);
-                                                const permissionDots = getPermissionDots(template.permissions);
-                                                const compactPermissionText = getCompactPermissionText(template.permissions);
-
-                                                return (
-                                                    <>
-                                                        {permissionDisplayMode === 'badge' && (
-                                                            <div className="permission-badge-container">
-                                                                <div
-                                                                    className={`permission-badge ${getPermissionBadgeColor(permissionSummary.count)}`}
-                                                                    onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
-                                                                    onMouseLeave={handleMouseLeave}
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px',
-                                                                        padding: '2px 8px',
-                                                                        borderRadius: '12px',
-                                                                        fontSize: '11px',
-                                                                        fontWeight: '600',
-                                                                        color: 'white',
-                                                                        backgroundColor: permissionSummary.count === 0 ? '#9ca3af' :
-                                                                            permissionSummary.count <= 3 ? '#10b981' :
-                                                                                permissionSummary.count <= 6 ? '#3b82f6' :
-                                                                                    permissionSummary.count <= 9 ? '#f59e0b' : '#ef4444',
-                                                                        cursor: 'help'
-                                                                    }}
-                                                                >
-                                                                    <span>🔑</span>
-                                                                    <span>{permissionSummary.count}</span>
-                                                                </div>
-                                                                {permissionSummary.count > 0 && (
-                                                                    <span
-                                                                        className="permission-hint"
-                                                                        style={{
-                                                                            fontSize: '10px',
-                                                                            color: '#6b7280',
-                                                                            marginLeft: '4px'
-                                                                        }}
-                                                                    >
-                                                                        {permissionSummary.summary}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {permissionDisplayMode === 'dots' && (
-                                                            <div className="permission-dots-container" style={{ marginTop: '4px' }}>
-                                                                {permissionDots.map((dot, index) => (
-                                                                    <div
-                                                                        key={index}
-                                                                        className="permission-dot"
-                                                                        onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
-                                                                        onMouseLeave={handleMouseLeave}
-                                                                        style={{
-                                                                            width: '8px',
-                                                                            height: '8px',
-                                                                            borderRadius: '50%',
-                                                                            backgroundColor: dot.color,
-                                                                            display: 'inline-block',
-                                                                            marginRight: '4px',
-                                                                            cursor: 'help',
-                                                                            transition: 'transform 0.2s ease'
-                                                                        }}
-                                                                    />
-                                                                ))}
-                                                                {permissionDots.length === 0 && (
-                                                                    <span style={{ fontSize: '10px', color: '#9ca3af' }}>No permissions</span>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {permissionDisplayMode === 'compact' && (
-                                                            <div className="permission-compact-container" style={{ marginTop: '4px' }}>
-                                                                <span
-                                                                    className="permission-compact-text"
-                                                                    onMouseEnter={(e) => handleMouseEnter(e, template.permissions)}
-                                                                    onMouseLeave={handleMouseLeave}
-                                                                    style={{
-                                                                        fontSize: '10px',
-                                                                        color: permissionSummary.count === 0 ? '#9ca3af' : '#1f3bb3',
-                                                                        fontWeight: '500',
-                                                                        cursor: 'help',
-                                                                        display: 'inline-block',
-                                                                        padding: '2px 6px',
-                                                                        backgroundColor: permissionSummary.count === 0 ? '#f3f4f6' : '#eaf0fb',
-                                                                        borderRadius: '4px',
-                                                                        border: `1px solid ${permissionSummary.count === 0 ? '#e5e7eb' : '#bee5eb'}`
-                                                                    }}
-                                                                >
-                                                                    {compactPermissionText || 'No permissions'}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                );
-                                            })()}
-                                        </div>
-                                    </div>
+                                    <TemplateCard
+                                        key={template._id}
+                                        template={template}
+                                        size="medium"
+                                        variant="default"
+                                        showActions={true}
+                                        showStats={true}
+                                        permissionDisplayMode={permissionDisplayMode}
+                                        onView={handleViewTemplate}
+                                        onEdit={!template.isDefault ? handleEditTemplate : null}
+                                        onDelete={template.canBeDeleted ? handleDeleteTemplate : null}
+                                        onToggleStatus={!template.isDefault ? handleToggleTemplateStatus : null}
+                                        onClick={() => {
+                                            // Handle template selection or navigation if needed
+                                            // For now, just view the template
+                                            handleViewTemplate(template);
+                                        }}
+                                        className={`
+                                            ${template.isDefault ? 'template-default' : ''}
+                                            ${!template.isActive ? 'template-inactive' : ''}
+                                        `}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -1547,17 +1191,19 @@ const RoleTemplates = () => {
                                                 <p className="permission-description">{permission.description}</p>
                                                 <div className="permission-actions">
                                                     {permission.actions.map((action) => (
-                                                        <label key={action.id} className="permission-checkbox">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={formData.permissions.some(p =>
-                                                                    p.page === permission.page && p.actions.includes(action.id)
-                                                                )}
-                                                                onChange={(e) => handlePermissionChange(permission.page, action.id, e.target.checked)}
-                                                            />
-                                                            <span className="checkmark"></span>
-                                                            <span className="permission-label">{action.name}</span>
-                                                        </label>
+                                                        <Checkbox
+                                                            key={action.id}
+                                                            id={`permission-${permission.page}-${action.id}`}
+                                                            name={`permission-${permission.page}-${action.id}`}
+                                                            checked={formData.permissions.some(p =>
+                                                                p.page === permission.page && p.actions.includes(action.id)
+                                                            )}
+                                                            onChange={(e) => handlePermissionChange(permission.page, action.id, e.target.checked)}
+                                                            label={action.name}
+                                                            size="medium"
+                                                            variant="primary"
+                                                            className="permission-checkbox"
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -1737,17 +1383,19 @@ const RoleTemplates = () => {
                                                 <p className="permission-description">{permission.description}</p>
                                                 <div className="permission-actions">
                                                     {permission.actions.map((action) => (
-                                                        <label key={action.id} className="permission-checkbox">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={formData.permissions.some(p =>
-                                                                    p.page === permission.page && p.actions.includes(action.id)
-                                                                )}
-                                                                onChange={(e) => handlePermissionChange(permission.page, action.id, e.target.checked)}
-                                                            />
-                                                            <span className="checkmark"></span>
-                                                            <span className="permission-label">{action.name}</span>
-                                                        </label>
+                                                        <Checkbox
+                                                            key={action.id}
+                                                            id={`permission-${permission.page}-${action.id}`}
+                                                            name={`permission-${permission.page}-${action.id}`}
+                                                            checked={formData.permissions.some(p =>
+                                                                p.page === permission.page && p.actions.includes(action.id)
+                                                            )}
+                                                            onChange={(e) => handlePermissionChange(permission.page, action.id, e.target.checked)}
+                                                            label={action.name}
+                                                            size="medium"
+                                                            variant="primary"
+                                                            className="permission-checkbox"
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -1822,7 +1470,7 @@ const RoleTemplates = () => {
                             <div className="template-details">
                                 <div className="template-header-info">
                                     <div className={`template-icon ${selectedTemplate.color}`}>
-                                        {getIconComponent(selectedTemplate.icon)}
+                                        {renderIcon(selectedTemplate.icon)}
                                     </div>
                                     <div className="template-info">
                                         <h3 className="template-name">{selectedTemplate.name}</h3>

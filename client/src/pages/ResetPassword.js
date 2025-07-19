@@ -112,8 +112,6 @@ const ResetPassword = () => {
             newErrors.newPassword = 'New password is required';
         } else if (formData.newPassword.length < 8) {
             newErrors.newPassword = 'Password must be at least 8 characters long';
-        } else if (passwordStrength && passwordStrength.score < 40) {
-            newErrors.newPassword = 'Password does not meet security requirements';
         }
 
         if (!formData.confirmPassword) {
