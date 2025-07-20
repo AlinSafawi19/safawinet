@@ -40,8 +40,8 @@ class AuthService {
                 const originalRequest = error.config;
 
                 // Skip token refresh for login requests and unauthenticated requests
-                if (error.response?.status === 401 && 
-                    !originalRequest._retry && 
+                if (error.response?.status === 401 &&
+                    !originalRequest._retry &&
                     !originalRequest.url.includes('/auth/login') &&
                     this.token) {
                     originalRequest._retry = true;
@@ -49,7 +49,7 @@ class AuthService {
                     try {
                         // Try to refresh token using this instance
                         const refreshSuccess = await this.refreshToken();
-                        
+
                         if (refreshSuccess) {
                             // Retry original request with new token
                             originalRequest.headers.Authorization = `Bearer ${this.token}`;
@@ -76,7 +76,7 @@ class AuthService {
             const storedUser = localStorage.getItem('user');
             const storedToken = localStorage.getItem('authToken');
             const storedRefreshToken = localStorage.getItem('refreshToken');
-            
+
             if (storedUser && storedToken) {
                 this.user = JSON.parse(storedUser);
                 this.token = storedToken;
@@ -132,14 +132,14 @@ class AuthService {
 
             if (response.data.success) {
                 const { user, token, refreshToken, expiresIn } = response.data.data;
-                
+
                 this.user = user;
                 this.token = token;
                 this.refreshToken = refreshToken;
                 this.isAuthenticated = true;
-                
+
                 this.saveToStorage();
-                
+
                 return {
                     success: true,
                     user,
@@ -150,7 +150,7 @@ class AuthService {
             }
         } catch (error) {
             console.error('Login error:', error);
-            
+
             if (error.response?.status === 429) {
                 return {
                     success: false,
@@ -166,7 +166,7 @@ class AuthService {
                     message: error.response.data.message
                 };
             }
-            
+
             return {
                 success: false,
                 message: error.response?.data?.message || 'Login failed'
@@ -204,7 +204,7 @@ class AuthService {
     hasPermission(page, action) {
         if (!this.user) return false;
         if (this.user.isAdmin) return true;
-        
+
         const permission = this.user.permissions?.find(p => p.page === page);
         return permission?.actions?.includes(action) || false;
     }
@@ -213,7 +213,7 @@ class AuthService {
     getPagePermissions(page) {
         if (!this.user) return [];
         if (this.user.isAdmin) return ['view', 'view_own', 'add', 'edit', 'delete', 'export'];
-        
+
         const permission = this.user.permissions?.find(p => p.page === page);
         return permission?.actions || [];
     }
@@ -244,7 +244,7 @@ class AuthService {
             const response = await api.post('/auth/refresh', {
                 refreshToken: this.refreshToken
             });
-            
+
             if (response.data.success) {
                 const { accessToken, refreshToken: newRefreshToken } = response.data.data;
                 this.token = accessToken;
@@ -266,6 +266,8 @@ class AuthService {
             if (response.data.success) {
                 this.user = response.data.data;
                 this.saveToStorage();
+                // Invalidate cache when profile is updated
+                localStorage.removeItem('lastProfileUpdate');
                 return {
                     success: true,
                     user: this.user
@@ -346,6 +348,8 @@ class AuthService {
             if (response.data.success) {
                 this.user = response.data.data;
                 this.saveToStorage();
+                // Update the cache timestamp
+                localStorage.setItem('lastProfileUpdate', Date.now().toString());
                 return {
                     success: true,
                     user: this.user
@@ -429,6 +433,11 @@ class AuthService {
     isAuthenticatedForRouting() {
         const isAuth = this.isAuthenticated && this.user && this.token;
         return isAuth;
+    }
+
+    // Clear profile cache (useful when you need fresh data)
+    clearProfileCache() {
+        localStorage.removeItem('lastProfileUpdate');
     }
 }
 

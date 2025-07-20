@@ -103,13 +103,38 @@ const Profile = () => {
     // Refresh profile data from server
     const refreshProfileData = async () => {
         try {
-            const [profileResult, securityResult] = await Promise.all([
-                authService.getProfile(),
-                createApiInstance().get('/auth/security-status')
-            ]);
+            // Check if we already have recent profile data from authService
+            const currentUser = authService.getCurrentUser();
+            const lastProfileUpdate = localStorage.getItem('lastProfileUpdate');
+            const fiveMinutesAgo = Date.now() - (5 * 60 * 1000); // 5 minutes
+
+            let profileResult;
+            let updatedData;
+
+            // Only fetch if we don't have recent data (more aggressive caching)
+            const cacheTime = 10 * 60 * 1000; // 10 minutes instead of 5
+            if (!currentUser || !lastProfileUpdate || parseInt(lastProfileUpdate) < (Date.now() - cacheTime)) {
+                console.log('Profile: Fetching fresh profile data');
+                const [profileResponse, securityResult] = await Promise.all([
+                    authService.getProfile(),
+                    createApiInstance().get('/auth/security-status')
+                ]);
+
+                profileResult = profileResponse;
+
+                if (securityResult.data.success) {
+                    setSecurityStatus(securityResult.data.data);
+                }
+
+                // Store timestamp of last profile update
+                localStorage.setItem('lastProfileUpdate', Date.now().toString());
+            } else {
+                // Use cached data from authService
+                profileResult = { success: true, user: currentUser };
+            }
 
             if (profileResult.success) {
-                const updatedData = {
+                updatedData = {
                     firstName: profileResult.user.firstName || '',
                     lastName: profileResult.user.lastName || '',
                     email: profileResult.user.email || '',
@@ -122,7 +147,7 @@ const Profile = () => {
                     twoFactorEnabled: profileResult.user.twoFactorEnabled || false,
                     emailVerified: profileResult.user.emailVerified || false,
                     phoneVerified: profileResult.user.phoneVerified || false,
-                    profilePicture: profileResult.user.profilePicture || null, // <-- add this line
+                    profilePicture: profileResult.user.profilePicture || null,
                 };
                 setProfileData(updatedData);
                 setEditForm({
@@ -132,10 +157,6 @@ const Profile = () => {
                     phone: updatedData.phone,
                     username: updatedData.username
                 });
-            }
-
-            if (securityResult.data.success) {
-                setSecurityStatus(securityResult.data.data);
             }
         } catch (error) {
             console.error('Error refreshing profile data:', error);
