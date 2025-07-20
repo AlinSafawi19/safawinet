@@ -28,9 +28,7 @@ class EmailService {
     // Verify connection configuration
     this.transporter.verify((error, success) => {
       if (error) {
-        console.error('SMTP connection error:', error);
       } else {
-        console.log('SMTP server is ready to send emails');
       }
     });
   }
