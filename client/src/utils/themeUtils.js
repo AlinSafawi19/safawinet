@@ -80,8 +80,6 @@ export const updateUserThemePreference = async (theme, updateUserPreference) => 
         if (updateUserPreference) {
             await updateUserPreference({ theme });
         }
-        console.log('Theme preference updated:', theme);
     } catch (error) {
-        console.error('Failed to update theme preference:', error);
     }
 }; 

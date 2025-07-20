@@ -107,7 +107,6 @@ app.use((req, res, next) => {
 // Request logging middleware (development only)
 if (isDevelopment) {
   app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
   });
 }
@@ -219,9 +218,7 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(config.database.uri, mongoOptions);
-    console.log(`MongoDB connected successfully to ${config.database.uri}`);
   } catch (error) {
-    console.error('MongoDB connection error:', error.message);
     process.exit(1);
   }
 };
@@ -273,8 +270,6 @@ io.use((socket, next) => {
 
 // Socket.IO connection handler
 io.on('connection', (socket) => {
-  console.log(`User ${socket.userId} connected to real-time dashboard`);
-
   // Join user to their personal room
   socket.join(`user_${socket.userId}`);
 
@@ -315,7 +310,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`User ${socket.userId} disconnected from real-time dashboard`);
   });
 });
 
@@ -561,17 +555,13 @@ app.use('*', (req, res) => {
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
   mongoose.connection.close(() => {
-    console.log('MongoDB connection closed');
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
   mongoose.connection.close(() => {
-    console.log('MongoDB connection closed');
     process.exit(0);
   });
 });
@@ -580,19 +570,4 @@ process.on('SIGINT', () => {
 connectDB().then(() => {
   // Start security monitoring
   securityMonitor.startMonitoring();
-
-  server.listen(PORT, () => {
-    console.log(`🚀 Server is running in ${env} mode on port ${PORT}`);
-    console.log(`🔗 Server URL: ${config.server.url}`);
-    console.log(`🌐 Client URL: ${config.client.url}`);
-    console.log(`🗄️  Database: ${config.database.uri}`);
-    console.log(`🔒 Security: CORS enabled for ${securityConfig.cors.origin}`);
-    console.log(`🛡️  Security monitoring: ENABLED`);
-    console.log(`🔐 Two-factor authentication: ENABLED`);
-    console.log(`📊 Audit logging: ENABLED`);
-    console.log(`📧 Email notifications: ENABLED`);
-    console.log(`⚡ Rate limiting: ENABLED`);
-    console.log(`🔍 Suspicious activity detection: ENABLED`);
-    console.log(`🔌 Real-time dashboard: ENABLED`);
-  });
 }); 

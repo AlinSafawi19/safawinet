@@ -46,9 +46,6 @@ const useDebounce = (value, delay) => {
 
 const AuditLogs = () => {
   const user = authService.getCurrentUser();
-  // Remove sidebarRef, filtersVisible, and sidebar toggling logic
-  console.log(user);
-
   // Apply user theme preference
   useEffect(() => {
     if (user) {

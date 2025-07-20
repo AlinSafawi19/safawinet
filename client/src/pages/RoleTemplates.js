@@ -225,8 +225,6 @@ const RoleTemplates = () => {
                 sortOrder: sortDirection
             };
 
-            console.log('fetchTemplates called with params:', params); // Debug log
-
             const response = await roleTemplateService.getTemplates(params);
 
             if (response.success) {
@@ -265,7 +263,6 @@ const RoleTemplates = () => {
 
     // Handle sort
     const handleSort = (field, order) => {
-        console.log('handleSort called with:', { field, order }); // Debug log
         setSortBy(field);
         setSortOrder(order);
         setPagination(prev => ({ ...prev, currentPage: 1 }));
@@ -757,7 +754,6 @@ const RoleTemplates = () => {
                                 }}
                                 onChange={(selectedOption) => {
                                     const newSortField = selectedOption ? selectedOption.value : 'createdAt';
-                                    console.log('Sort field changed to:', newSortField); // Debug log
                                     // When changing to name sort, default to ascending order
                                     const newSortOrder = newSortField === 'name' ? 'asc' : sortOrder;
                                     handleSort(newSortField, newSortOrder);

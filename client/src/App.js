@@ -27,10 +27,8 @@ const ProtectedRoute = ({ children }) => {
       try {
         // Use routing-specific auth check that doesn't validate token
         const isAuth = authService.isAuthenticatedForRouting();
-        console.log('ProtectedRoute auth check:', isAuth);
         setIsAuthenticated(isAuth);
       } catch (error) {
-        console.error('Auth check error:', error);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -61,12 +59,10 @@ const LoginPage = () => {
       try {
         // Check if user is already authenticated for routing
         const isAuth = authService.isAuthenticatedForRouting();
-        console.log('LoginPage auth check:', isAuth);
         if (isAuth) {
           navigate('/dashboard', { replace: true });
         }
       } catch (error) {
-        console.error('Auth check error:', error);
       } finally {
         setIsLoading(false);
       }
@@ -76,7 +72,6 @@ const LoginPage = () => {
   }, [navigate]);
 
   const handleLoginSuccess = () => {
-    console.log('Login successful, redirecting to dashboard');
     navigate('/dashboard', { replace: true });
   };
 

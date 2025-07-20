@@ -23,15 +23,6 @@ class EmailService {
       }
     };
 
-    // Debug logging for troubleshooting
-    console.log('Email configuration:', {
-      host: smtpConfig.host,
-      port: smtpConfig.port,
-      secure: smtpConfig.secure,
-      user: smtpConfig.auth.user,
-      passSet: !!smtpConfig.auth.pass
-    });
-
     this.transporter = nodemailer.createTransport(smtpConfig);
 
     // Verify connection configuration

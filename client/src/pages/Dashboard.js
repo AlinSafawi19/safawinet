@@ -330,13 +330,11 @@ const Dashboard = () => {
             }
 
             if (geographicResponse.data.success) {
-                console.log('Geographic data loaded:', geographicResponse.data.data);
                 setChartData(prev => ({
                     ...prev,
                     geographicActivity: geographicResponse.data.data
                 }));
             } else {
-                console.log('Geographic data not available, using fallback');
                 // Set fallback data if API doesn't return data
                 setChartData(prev => ({
                     ...prev,
@@ -607,7 +605,6 @@ const Dashboard = () => {
     // Add this after your chartData state declaration
     useEffect(() => {
         if (!chartData.geographicActivity || chartData.geographicActivity.length === 0) {
-            console.log('Setting fallback geographic data');
             setChartData(prev => ({
                 ...prev,
                 geographicActivity: [

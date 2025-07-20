@@ -155,16 +155,13 @@ const Users = () => {
           limit: 50, // Load 50 templates at a time
           search
         });
-        console.log('Active templates API response:', response);
       } catch (error) {
-        console.log('Active templates failed, trying regular templates');
         response = await roleTemplateService.getTemplates({
           page,
           limit: 50,
           status: 'all',
           search
         });
-        console.log('Regular templates API response:', response);
       }
 
       // Handle different possible response structures
@@ -187,8 +184,6 @@ const Users = () => {
         templates = response.data;
         pagination = response.pagination || { hasNextPage: false };
       }
-
-      console.log('Templates extracted:', templates);
 
       if (templates && templates.length > 0) {
         const newOptions = templates.map(template => ({
@@ -227,7 +222,6 @@ const Users = () => {
           loading: false
         }));
       } else {
-        console.log('No templates found, using fallback options');
         // Set fallback options
         const fallbackOptions = [
           { value: '', label: 'All Roles' },
@@ -260,11 +254,6 @@ const Users = () => {
     fetchRoleOptions();
   }, []);
 
-  // Debug: Log roleOptions when it changes
-  useEffect(() => {
-    console.log('Role options state updated:', roleOptions);
-  }, [roleOptions]);
-
   // Fetch all users for "Created By" filter options
   const fetchCreatedByOptions = async (search = '', page = 1, append = false) => {
     // Define cacheKey at the beginning of the function
@@ -287,8 +276,6 @@ const Users = () => {
         page,
         limit: 20 // Load 20 users at a time
       });
-
-      console.log('Filter options API response:', response);
 
       if (response.success && response.data && response.data.users) {
         const newOptions = response.data.users;
@@ -316,7 +303,6 @@ const Users = () => {
             { value: 'me', label: 'Me' },
             ...newOptions
           ];
-          console.log('Created By options created:', options);
           setCreatedByOptions(options);
 
           // Cache the results for first page only
@@ -332,7 +318,6 @@ const Users = () => {
           loading: false
         }));
       } else {
-        console.log('No users found, using fallback options');
         const fallbackOptions = [
           { value: '', label: 'All Creators' },
           { value: 'system', label: 'System' },

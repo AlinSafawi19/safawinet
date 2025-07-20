@@ -128,25 +128,7 @@ class AuthService {
                 loginData.backupCode = backupCode;
             }
 
-            console.log('AuthService sending login data:', {
-                identifier: loginData.identifier,
-                hasPassword: !!loginData.password,
-                rememberMe: loginData.rememberMe,
-                hasTwoFactorCode: !!loginData.twoFactorCode,
-                hasBackupCode: !!loginData.backupCode,
-                twoFactorCode: loginData.twoFactorCode
-            });
-
             const response = await api.post('/auth/login', loginData);
-
-            console.log('AuthService received response:', {
-                success: response.data.success,
-                message: response.data.message,
-                requiresTwoFactor: response.data.requiresTwoFactor,
-                hasData: !!response.data.data,
-                hasUser: !!response.data.data?.user,
-                hasToken: !!response.data.data?.token
-            });
 
             if (response.data.success) {
                 const { user, token, refreshToken, expiresIn } = response.data.data;
@@ -446,12 +428,6 @@ class AuthService {
     // Check authentication without validation (for routing)
     isAuthenticatedForRouting() {
         const isAuth = this.isAuthenticated && this.user && this.token;
-        console.log('AuthService isAuthenticatedForRouting:', {
-            isAuthenticated: this.isAuthenticated,
-            hasUser: !!this.user,
-            hasToken: !!this.token,
-            result: isAuth
-        });
         return isAuth;
     }
 }

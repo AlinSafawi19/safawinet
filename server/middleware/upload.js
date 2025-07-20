@@ -98,10 +98,8 @@ const deleteOldProfilePicture = async (user) => {
     try {
       if (fs.existsSync(oldFilePath)) {
         fs.unlinkSync(oldFilePath);
-        console.log('Deleted old profile picture:', user.profilePicture.filename);
       }
     } catch (error) {
-      console.error('Error deleting old profile picture:', error);
     }
   }
 };

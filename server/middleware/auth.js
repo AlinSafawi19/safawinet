@@ -29,7 +29,6 @@ const authenticateToken = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production');
         
         // Check token issuer and audience
-        console.log("decoded: ", decoded);
         if (decoded.iss !== 'safawinet' || decoded.aud !== 'safawinet-users') {
             return res.status(401).json({
                 success: false,

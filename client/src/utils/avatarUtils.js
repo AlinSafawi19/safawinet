@@ -74,7 +74,6 @@ export function getInitialsColor(str = '') {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   const index = Math.abs(hash) % AVATAR_COLORS.length;
-  console.log('getInitialsColor input:', str, 'hash:', hash, 'index:', index); // DEBUG
   return AVATAR_COLORS[index];
 }
 

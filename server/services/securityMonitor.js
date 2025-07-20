@@ -290,8 +290,6 @@ class SecurityMonitor {
     setInterval(() => {
       this.cleanupOldPatterns();
     }, 60 * 60 * 1000);
-
-    console.log('Security monitoring started');
   }
 }
 

@@ -49,8 +49,6 @@ const Header = ({ onSidebarToggle, isSidebarCollapsed, isMobile, isMobileMenuOpe
 
     const handleToolClick = (tool) => {
         setShowToolsDropdown(false);
-        // Handle tool click
-        console.log('Tool clicked:', tool);
     };
 
     // Close dropdowns when clicking outside

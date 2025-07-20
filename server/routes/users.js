@@ -615,14 +615,9 @@ router.post('/', authenticateToken, requirePermission('users', 'add'), async (re
             if (emailResult.success) {
                 newUser.welcomeEmailSent = true;
                 await newUser.save();
-                console.log('✅ Welcome email sent successfully to:', newUser.email);
             } else {
-                console.error('❌ Welcome email failed:', emailResult.error);
-                // Don't set welcomeEmailSent to true if email failed
             }
         } catch (emailError) {
-            console.error('❌ Welcome email error:', emailError);
-            // Don't fail the user creation if email fails, and don't set welcomeEmailSent to true
         }
 
         // Return user without password

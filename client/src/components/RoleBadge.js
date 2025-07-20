@@ -29,7 +29,6 @@ const RoleBadge = ({
         limit: 100,
         status: 'active'
       });
-      console.log('Role templates response:', response);
 
       if (response.success && response.data && Array.isArray(response.data)) {
         setRoleTemplates(response.data);

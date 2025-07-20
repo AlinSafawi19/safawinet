@@ -109,10 +109,7 @@ const FloatingInput = ({
     const copyToClipboard = () => {
         if (value) {
             navigator.clipboard.writeText(value).then(() => {
-                // You can add a toast notification here if needed
-                console.log('Copied to clipboard');
             }).catch(() => {
-                console.error('Failed to copy to clipboard');
             });
         }
     };
