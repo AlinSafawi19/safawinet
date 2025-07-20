@@ -891,13 +891,6 @@ const Users = () => {
             />
           </div>
           <div className="page-controls-right">
-            {/* Selected Count Display */}
-            {canDeleteUsers && selectedUsers.length > 0 && (
-              <span className="selected-count-display">
-                {selectedUsers.length} user(s) selected
-              </span>
-            )}
-
             {/* Bulk Delete Button */}
             {canDeleteUsers && selectedUsers.length > 0 && (
               <button
