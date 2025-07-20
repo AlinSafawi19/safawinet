@@ -8,6 +8,7 @@ import { applyUserTheme } from '../utils/themeUtils';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
 import DateRangePicker from '../components/DateRangePicker';
 import { RiskBadge, StatusBadge } from '../components';
+import '../styles/AuditLogs.css';
 import {
   FiAlertTriangle,
   FiCheckCircle,
