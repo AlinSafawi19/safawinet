@@ -1220,7 +1220,7 @@ const Users = () => {
                               checked={selectedUsers.length === users.length && users.length > 0}
                               onChange={(e) => handleSelectAll(e.target.checked)}
                               title="Select all users"
-                              size="small"
+                              size="medium"
                               className="select-all-checkbox"
                             />
                           </th>

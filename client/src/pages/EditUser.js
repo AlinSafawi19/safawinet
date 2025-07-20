@@ -709,6 +709,7 @@ const EditUser = () => {
 
                             {/* Permission Display Mode Toggle */}
                             <div className="permission-display-toggle" style={{
+                                border: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
@@ -779,7 +780,7 @@ const EditUser = () => {
                                         </div>
                                         <div className="pagination-navigation">
                                             <button
-                                                className="btn btn-secondary"
+                                                className="btn btn-secondary btn-sm"
                                                 onClick={() => handleTemplatePageChange((templatePagination?.currentPage || 1) - 1)}
                                                 disabled={!templatePagination?.hasPrevPage}
                                                 title="Previous page"
@@ -841,7 +842,7 @@ const EditUser = () => {
                                                                 indicators.push(
                                                                     <button
                                                                         key={i}
-                                                                        className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                                                                        className={`btn ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                                                                         onClick={() => handleTemplatePageChange(i)}
                                                                         title={`Page ${i}`}
                                                                     >
@@ -865,7 +866,7 @@ const EditUser = () => {
                                                             indicators.push(
                                                                 <button
                                                                     key={totalPages}
-                                                                    className={`page-indicator ${totalPages === currentPage ? 'active' : ''}`}
+                                                                    className={`btn ${totalPages === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                                                                     onClick={() => handleTemplatePageChange(totalPages)}
                                                                     title={`Page ${totalPages}`}
                                                                 >
@@ -880,7 +881,7 @@ const EditUser = () => {
                                             </div>
 
                                             <button
-                                                className="btn btn-secondary"
+                                                className="btn btn-secondary btn-sm"
                                                 onClick={() => handleTemplatePageChange((templatePagination?.currentPage || 1) + 1)}
                                                 disabled={!templatePagination?.hasNextPage}
                                                 title="Next page"

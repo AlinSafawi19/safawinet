@@ -7,6 +7,8 @@ import { showSuccessToast, showErrorToast, showConfirmationDialog, showWarningTo
 import { availablePermissions } from '../utils/permissionUtils';
 import TemplateCard from '../components/TemplateCard';
 import Checkbox from '../components/Checkbox';
+import FloatingInput from '../components/FloatingInput';
+import '../styles/RoleTemplates.css';
 import {
     FiPlus,
     FiEdit,
@@ -95,11 +97,7 @@ const RoleTemplates = () => {
         isActive: true
     });
 
-    // Add focus state for floating labels
-    const [inputFocus, setInputFocus] = useState({
-        name: false,
-        description: false
-    });
+
 
     // Add field-level validation states
     const [fieldErrors, setFieldErrors] = useState({
@@ -126,81 +124,6 @@ const RoleTemplates = () => {
         { value: 'FiUnlock', label: 'Unlock', icon: <FiUnlock /> },
         { value: 'FiEye', label: 'Eye', icon: <FiEye /> }
     ];
-
-    // Available permissions are now imported from permissionUtils
-
-    // Custom styles for React Select (same as AuditLogs)
-    const customStyles = {
-        control: (provided, state) => ({
-            ...provided,
-            backgroundColor: '#f4f5f7',
-            border: `1.5px solid ${state.isFocused ? '#1f3bb3' : '#e3e6ea'}`,
-            borderRadius: '8px',
-            boxShadow: state.isFocused ? '0 0 0 2px rgba(31, 59, 179, 0.08)' : 'none',
-            minHeight: '44px',
-            fontSize: '1rem',
-            color: '#222',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
-            '&:hover': {
-                borderColor: '#1f3bb3'
-            }
-        }),
-        menu: (provided) => ({
-            ...provided,
-            backgroundColor: '#fff',
-            border: '1px solid #e3e6ea',
-            borderRadius: '8px',
-            boxShadow: '0 4px 16px rgba(60,60,60,0.10)',
-            zIndex: 9999
-        }),
-        option: (provided, state) => ({
-            ...provided,
-            backgroundColor: state.isSelected
-                ? '#1f3bb3'
-                : state.isFocused
-                    ? '#eaf0fb'
-                    : 'transparent',
-            color: state.isSelected ? '#fff' : '#222',
-            fontWeight: state.isSelected ? 600 : 400,
-            fontSize: '1rem',
-            cursor: 'pointer',
-            '&:hover': {
-                backgroundColor: state.isSelected ? '#1f3bb3' : '#eaf0fb'
-            }
-        }),
-        singleValue: (provided) => ({
-            ...provided,
-            color: '#222',
-            fontWeight: 500
-        }),
-        input: (provided) => ({
-            ...provided,
-            color: '#222'
-        }),
-        placeholder: (provided) => ({
-            ...provided,
-            color: '#bfc5ce',
-            fontWeight: 400
-        }),
-        dropdownIndicator: (provided, state) => ({
-            ...provided,
-            color: state.isFocused ? '#1f3bb3' : '#bfc5ce',
-            '&:hover': {
-                color: '#1f3bb3'
-            }
-        }),
-        indicatorSeparator: (provided) => ({
-            ...provided,
-            backgroundColor: '#e3e6ea'
-        }),
-        clearIndicator: (provided) => ({
-            ...provided,
-            color: '#bfc5ce',
-            '&:hover': {
-                color: '#1f3bb3'
-            }
-        })
-    };
 
     // Create API instance
     const createApiInstance = () => {
@@ -531,23 +454,7 @@ const RoleTemplates = () => {
         }
     };
 
-    // Helper to get floating label class
-    const getFloatingLabelClass = (field) => {
-        let cls = 'form-group floating-label';
-        if (inputFocus[field]) cls += ' focused';
-        if (formData[field]) cls += ' filled';
-        // Only show error class when form is submitted (formSubmitting state indicates submission attempt)
-        if (formSubmitting && fieldErrors[field]) cls += ' error';
-        return cls;
-    };
 
-    // Helper to get input class
-    const getInputClass = (field) => {
-        let cls = 'form-input';
-        // Only show error class when form is submitted (formSubmitting state indicates submission attempt)
-        if (formSubmitting && fieldErrors[field]) cls += ' error';
-        return cls;
-    };
 
     // Handle select changes
     const handleSelectChange = (name, selectedOption) => {
@@ -578,10 +485,6 @@ const RoleTemplates = () => {
             icon: '',
             color: '',
             permissions: ''
-        });
-        setInputFocus({
-            name: false,
-            description: false
         });
         setFormSubmitting(false);
     };
@@ -725,10 +628,6 @@ const RoleTemplates = () => {
             color: '',
             permissions: ''
         });
-        setInputFocus({
-            name: false,
-            description: false
-        });
         setShowEditModal(true);
     };
 
@@ -743,34 +642,17 @@ const RoleTemplates = () => {
         resetFormData();
         setShowCreateModal(true);
     };
-    
-    return (
-        <div className="role-templates-page">
 
-            {/* Header */}
-            <div className="role-templates-header">
-                <div className="header-content">
-                    <div className="header-info">
-                        <h1 className="page-title">
-                            <FiSettings /> Role Templates
-                        </h1>
-                        <p className="page-description">
-                            Manage role templates for easy user creation
-                        </p>
-                    </div>
-                </div>
-                <div className="header-actions">
-                    <button
-                        className="btn btn-primary"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleCreateNew();
-                        }}
-                    >
-                        <FiPlus />
-                        Create Template
-                    </button>
+    return (
+        <div className="page-container">
+            <div className="page-content">
+                <div className="page-header">
+                    <h1 className="page-title">
+                        <FiSettings /> Role Templates
+                    </h1>
+                    <p className="page-description">
+                        Manage role templates for easy user creation
+                    </p>
                 </div>
             </div>
 
@@ -778,27 +660,51 @@ const RoleTemplates = () => {
             <div className="filters-section">
                 <div className="filter-controls">
                     <div className="search-input-container">
-                        <FiSearch className="search-icon" />
-                        <input
+                        <FloatingInput
                             type="text"
-                            placeholder="Search templates..."
+                            id="searchTemplates"
                             value={searchTerm}
                             onChange={(e) => handleSearch(e.target.value)}
-                            className="search-input"
+                            label="Search templates"
+                            icon={<FiSearch />}
+                            className="search-floating-input"
                         />
+
+                        <div className="page-actions">
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => fetchTemplates(pagination.currentPage, filterStatus, searchTerm, sortBy, sortOrder)}
+                                disabled={loading}
+                            >
+                                <FiRefreshCw className={loading ? 'spinning' : ''} />
+                                Refresh
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleCreateNew();
+                                }}
+                            >
+                                <FiPlus />
+                                Create Template
+                            </button>
+                        </div>
                     </div>
 
                     {/* Permission Display Mode Toggle */}
                     <div className="permission-display-toggle" style={{
+                        border: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
                         marginTop: '12px'
                     }}>
-                        <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
-                            Permission Display:
-                        </span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
+                                Permission Display:
+                            </span>
                             {[
                                 { mode: 'badge', label: 'Badge', icon: '🔑' },
                                 { mode: 'dots', label: 'Dots', icon: '●' },
@@ -827,68 +733,57 @@ const RoleTemplates = () => {
                                 </button>
                             ))}
                         </div>
-                    </div>
-                    <div className="filter-controls-right">
-                        <Select
-                            value={{
-                                value: filterStatus, label: filterStatus === 'all' ? 'Show All' :
-                                    filterStatus === 'active' ? 'Active Only' :
-                                        filterStatus === 'inactive' ? 'Inactive Only' : 'Default Only'
-                            }}
-                            onChange={(selectedOption) => handleFilterChange(selectedOption ? selectedOption.value : 'all')}
-                            options={[
-                                { value: 'all', label: 'Show All' },
-                                { value: 'active', label: 'Active Only' },
-                                { value: 'inactive', label: 'Inactive Only' },
-                                { value: 'default', label: 'Default Only' }
-                            ]}
-                            styles={customStyles}
-                            placeholder="Filter by status..."
-                            isClearable={false}
-                            isSearchable={false}
-                        />
-                        <Select
-                            value={{
-                                value: sortBy, label: sortBy === 'createdAt' ? 'Sort by Date' : 'Sort by Name'
-                            }}
-                            onChange={(selectedOption) => {
-                                const newSortField = selectedOption ? selectedOption.value : 'createdAt';
-                                console.log('Sort field changed to:', newSortField); // Debug log
-                                // When changing to name sort, default to ascending order
-                                const newSortOrder = newSortField === 'name' ? 'asc' : sortOrder;
-                                handleSort(newSortField, newSortOrder);
-                            }}
-                            options={[
-                                { value: 'createdAt', label: 'Sort by Date' },
-                                { value: 'name', label: 'Sort by Name' }
-                            ]}
-                            styles={customStyles}
-                            placeholder="Sort by..."
-                            isClearable={false}
-                            isSearchable={false}
-                        />
-                        <Select
-                            value={{
-                                value: sortOrder, label: sortOrder === 'desc' ? 'Descending' : 'Ascending'
-                            }}
-                            onChange={(selectedOption) => handleSort(sortBy, selectedOption ? selectedOption.value : 'desc')}
-                            options={[
-                                { value: 'desc', label: 'Descending' },
-                                { value: 'asc', label: 'Ascending' }
-                            ]}
-                            styles={customStyles}
-                            placeholder="Sort order..."
-                            isClearable={false}
-                            isSearchable={false}
-                        />
-                        <button
-                            className="refresh-btn"
-                            onClick={() => fetchTemplates(pagination.currentPage, filterStatus, searchTerm, sortBy, sortOrder)}
-                            disabled={loading}
-                        >
-                            <FiRefreshCw className={loading ? 'spinning' : ''} />
-                            Refresh
-                        </button>
+                        <div className="filter-controls-right">
+                            <Select
+                                value={{
+                                    value: filterStatus, label: filterStatus === 'all' ? 'Show All' :
+                                        filterStatus === 'active' ? 'Active Only' :
+                                            filterStatus === 'inactive' ? 'Inactive Only' : 'Default Only'
+                                }}
+                                onChange={(selectedOption) => handleFilterChange(selectedOption ? selectedOption.value : 'all')}
+                                options={[
+                                    { value: 'all', label: 'Show All' },
+                                    { value: 'active', label: 'Active Only' },
+                                    { value: 'inactive', label: 'Inactive Only' },
+                                    { value: 'default', label: 'Default Only' }
+                                ]}
+                                placeholder="Filter by status..."
+                                isClearable={false}
+                                isSearchable={false}
+                            />
+                            <Select
+                                value={{
+                                    value: sortBy, label: sortBy === 'createdAt' ? 'Sort by Date' : 'Sort by Name'
+                                }}
+                                onChange={(selectedOption) => {
+                                    const newSortField = selectedOption ? selectedOption.value : 'createdAt';
+                                    console.log('Sort field changed to:', newSortField); // Debug log
+                                    // When changing to name sort, default to ascending order
+                                    const newSortOrder = newSortField === 'name' ? 'asc' : sortOrder;
+                                    handleSort(newSortField, newSortOrder);
+                                }}
+                                options={[
+                                    { value: 'createdAt', label: 'Sort by Date' },
+                                    { value: 'name', label: 'Sort by Name' }
+                                ]}
+                                placeholder="Sort by..."
+                                isClearable={false}
+                                isSearchable={false}
+                            />
+                            <Select
+                                value={{
+                                    value: sortOrder, label: sortOrder === 'desc' ? 'Descending' : 'Ascending'
+                                }}
+                                onChange={(selectedOption) => handleSort(sortBy, selectedOption ? selectedOption.value : 'desc')}
+                                options={[
+                                    { value: 'desc', label: 'Descending' },
+                                    { value: 'asc', label: 'Ascending' }
+                                ]}
+                                placeholder="Sort order..."
+                                isClearable={false}
+                                isSearchable={false}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -934,13 +829,13 @@ const RoleTemplates = () => {
 
                         {/* Carousel Pagination Controls */}
                         {pagination.totalPages > 1 && (
-                            <div className="carousel-pagination-controls">
+                            <div className="pagination-controls">
                                 <div className="pagination-info">
                                     Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to {Math.min(pagination.currentPage * pagination.limit, pagination.totalCount)} of {pagination.totalCount} templates
                                 </div>
-                                <div className="carousel-navigation">
+                                <div className="pagination-navigation">
                                     <button
-                                        className="carousel-btn carousel-prev"
+                                        className="btn btn-secondary btn-sm"
                                         onClick={() => handlePageChange(pagination.currentPage - 1)}
                                         disabled={!pagination.hasPrevPage}
                                         title="Previous page"
@@ -963,7 +858,7 @@ const RoleTemplates = () => {
                                                     indicators.push(
                                                         <button
                                                             key={i}
-                                                            className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                                                            className={`btn ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                                                             onClick={() => handlePageChange(i)}
                                                             title={`Page ${i}`}
                                                         >
@@ -976,7 +871,7 @@ const RoleTemplates = () => {
                                                 indicators.push(
                                                     <button
                                                         key={1}
-                                                        className={`page-indicator ${1 === currentPage ? 'active' : ''}`}
+                                                        className={`btn ${1 === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                                                         onClick={() => handlePageChange(1)}
                                                         title="Page 1"
                                                     >
@@ -1002,7 +897,7 @@ const RoleTemplates = () => {
                                                         indicators.push(
                                                             <button
                                                                 key={i}
-                                                                className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                                                                className={`btn ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                                                                 onClick={() => handlePageChange(i)}
                                                                 title={`Page ${i}`}
                                                             >
@@ -1026,7 +921,7 @@ const RoleTemplates = () => {
                                                     indicators.push(
                                                         <button
                                                             key={totalPages}
-                                                            className={`page-indicator ${totalPages === currentPage ? 'active' : ''}`}
+                                                            className={`btn ${totalPages === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                                                             onClick={() => handlePageChange(totalPages)}
                                                             title={`Page ${totalPages}`}
                                                         >
@@ -1041,7 +936,7 @@ const RoleTemplates = () => {
                                     </div>
 
                                     <button
-                                        className="carousel-btn carousel-next"
+                                        className="btn btn-secondary btn-sm"
                                         onClick={() => handlePageChange(pagination.currentPage + 1)}
                                         disabled={!pagination.hasNextPage}
                                         title="Next page"
@@ -1089,53 +984,30 @@ const RoleTemplates = () => {
 
                         <div className="modal-content scrollable">
                             <form id="createTemplateForm" onSubmit={handleCreateTemplate} className="modal-form">
-                                <div className={getFloatingLabelClass('name')}>
-                                    <input
-                                        type="text"
-                                        id="templateName"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                        onFocus={() => setInputFocus(f => ({ ...f, name: true }))}
-                                        onBlur={() => {
-                                            setInputFocus(f => ({ ...f, name: false }));
-                                            handleFieldBlur('name');
-                                        }}
-                                        className={getInputClass('name')}
-                                        placeholder=""
-                                    />
-                                    <label htmlFor="templateName" className="form-label">Template Name</label>
-                                    {formSubmitting && fieldErrors.name && (
-                                        <div className="field-error">
-                                            <FiAlertCircle />
-                                            <span>{fieldErrors.name}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <FloatingInput
+                                    type="text"
+                                    id="templateName"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
+                                    onBlur={() => handleFieldBlur('name')}
+                                    label="Template Name"
+                                    error={formSubmitting && fieldErrors.name ? fieldErrors.name : ''}
+                                    required
+                                />
 
-                                <div className={getFloatingLabelClass('description')}>
-                                    <textarea
-                                        id="templateDescription"
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleInputChange}
-                                        onFocus={() => setInputFocus(f => ({ ...f, description: true }))}
-                                        onBlur={() => {
-                                            setInputFocus(f => ({ ...f, description: false }));
-                                            handleFieldBlur('description');
-                                        }}
-                                        className={getInputClass('description')}
-                                        placeholder=""
-                                        rows="3"
-                                    />
-                                    <label htmlFor="templateDescription" className="form-label">Description</label>
-                                    {formSubmitting && fieldErrors.description && (
-                                        <div className="field-error">
-                                            <FiAlertCircle />
-                                            <span>{fieldErrors.description}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <FloatingInput
+                                    type="textarea"
+                                    id="templateDescription"
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleInputChange}
+                                    onBlur={() => handleFieldBlur('description')}
+                                    label="Description"
+                                    error={formSubmitting && fieldErrors.description ? fieldErrors.description : ''}
+                                    required
+                                    rows="3"
+                                />
 
                                 <div className="form-group">
                                     <p className="form-description">Choose an icon that represents this role template. The icon will be displayed in the template card and user interface.</p>
@@ -1279,55 +1151,30 @@ const RoleTemplates = () => {
 
                         <div className="modal-content">
                             <form id="editTemplateForm" onSubmit={handleUpdateTemplate} className="modal-form">
-                                <div className={getFloatingLabelClass('name')}>
-                                    <input
-                                        type="text"
-                                        id="editTemplateName"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                        onFocus={() => setInputFocus(f => ({ ...f, name: true }))}
-                                        onBlur={() => {
-                                            setInputFocus(f => ({ ...f, name: false }));
-                                            handleFieldBlur('name');
-                                        }}
-                                        className={getInputClass('name')}
-                                        placeholder="Enter template name"
-                                        required
-                                    />
-                                    <label htmlFor="editTemplateName" className="form-label">Template Name</label>
-                                    {formSubmitting && fieldErrors.name && (
-                                        <div className="field-error">
-                                            <FiAlertCircle />
-                                            <span>{fieldErrors.name}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <FloatingInput
+                                    type="text"
+                                    id="editTemplateName"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
+                                    onBlur={() => handleFieldBlur('name')}
+                                    label="Template Name"
+                                    error={formSubmitting && fieldErrors.name ? fieldErrors.name : ''}
+                                    required
+                                />
 
-                                <div className={getFloatingLabelClass('description')}>
-                                    <textarea
-                                        id="editTemplateDescription"
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleInputChange}
-                                        onFocus={() => setInputFocus(f => ({ ...f, description: true }))}
-                                        onBlur={() => {
-                                            setInputFocus(f => ({ ...f, description: false }));
-                                            handleFieldBlur('description');
-                                        }}
-                                        className={getInputClass('description')}
-                                        placeholder="Enter template description"
-                                        rows="3"
-                                        required
-                                    />
-                                    <label htmlFor="editTemplateDescription" className="form-label">Description</label>
-                                    {formSubmitting && fieldErrors.description && (
-                                        <div className="field-error">
-                                            <FiAlertCircle />
-                                            <span>{fieldErrors.description}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <FloatingInput
+                                    type="textarea"
+                                    id="editTemplateDescription"
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleInputChange}
+                                    onBlur={() => handleFieldBlur('description')}
+                                    label="Description"
+                                    error={formSubmitting && fieldErrors.description ? fieldErrors.description : ''}
+                                    required
+                                    rows="3"
+                                />
 
                                 <div className="form-group">
                                     <p className="form-description">Choose an icon that represents this role template. The icon will be displayed in the template card and user interface.</p>
@@ -1548,7 +1395,7 @@ const RoleTemplates = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowViewModal(false)}
-                                className="btn btn-secondary"
+                                className="btn btn-secondary "
                             >
                                 Close
                             </button>

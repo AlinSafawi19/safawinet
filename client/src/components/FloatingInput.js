@@ -128,25 +128,45 @@ const FloatingInput = ({
                         {icon}
                     </div>
                 )}
-                <input
-                    ref={inputRef}
-                    type={inputType}
-                    id={id}
-                    value={value}
-                    onChange={onChange}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    required={required}
-                    maxLength={maxLength}
-                    minLength={minLength}
-                    pattern={pattern}
-                    autoComplete={autoComplete}
-                    autoFocus={autoFocus}
-                    className="floating-input"
-                    {...props}
-                />
+                {type === 'textarea' ? (
+                    <textarea
+                        ref={inputRef}
+                        id={id}
+                        value={value}
+                        onChange={onChange}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
+                        placeholder={placeholder}
+                        disabled={disabled}
+                        required={required}
+                        maxLength={maxLength}
+                        minLength={minLength}
+                        autoComplete={autoComplete}
+                        autoFocus={autoFocus}
+                        className="floating-input"
+                        {...props}
+                    />
+                ) : (
+                    <input
+                        ref={inputRef}
+                        type={inputType}
+                        id={id}
+                        value={value}
+                        onChange={onChange}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
+                        placeholder={placeholder}
+                        disabled={disabled}
+                        required={required}
+                        maxLength={maxLength}
+                        minLength={minLength}
+                        pattern={pattern}
+                        autoComplete={autoComplete}
+                        autoFocus={autoFocus}
+                        className="floating-input"
+                        {...props}
+                    />
+                )}
 
                 {label && (
                     <label
