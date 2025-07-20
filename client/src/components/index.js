@@ -14,6 +14,7 @@ export { default as NotificationBell } from './NotificationBell';
 export { default as ProfilePicture } from './ProfilePicture';
 export { default as ProfilePictureUpload } from './ProfilePictureUpload';
 export { default as RoleBadge } from './RoleBadge';
+export { default as RiskBadge } from './RiskBadge';
 export { default as Sidebar } from './Sidebar';
 export { default as StatusBadge } from './StatusBadge';
 export { default as TwoFactorModal } from './TwoFactorModal';

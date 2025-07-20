@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
 import axios from 'axios';
 import moment from 'moment';
 import 'moment-timezone';
 import Select from 'react-select';
-import DatePicker from 'react-datepicker';
 import { applyUserTheme } from '../utils/themeUtils';
 import { getProfileDisplay, getInitialsColor } from '../utils/avatarUtils';
+import DateRangePicker from '../components/DateRangePicker';
+import { RiskBadge, StatusBadge } from '../components';
 import {
   FiAlertTriangle,
   FiCheckCircle,
@@ -19,7 +20,8 @@ import {
   FiCalendar,
   FiMapPin,
   FiDownload,
-  FiXCircle
+  FiFilter,
+  FiX
 } from 'react-icons/fi';
 import { getStatusClass } from '../utils/classUtils';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -106,6 +108,14 @@ const AuditLogs = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
+  // Filter section visibility state
+  const [isFilterSectionOpen, setIsFilterSectionOpen] = useState(false);
+
+  // Handle filter section toggle
+  const handleFilterToggle = () => {
+    setIsFilterSectionOpen(!isFilterSectionOpen);
+  };
+
   // Create a single axios instance for all API calls
   const createApiInstance = useCallback(() => {
     const api = axios.create({
@@ -131,11 +141,11 @@ const AuditLogs = () => {
       setUserPagination(prev => ({ ...prev, loading: true }));
       const api = createApiInstance();
       const params = new URLSearchParams();
-      
+
       if (search) params.append('search', search);
       if (page) params.append('page', page);
       params.append('limit', '20'); // Load 20 users at a time
-      
+
       const response = await api.get(`/auth/audit-logs/users?${params}`);
 
       if (response.data.success) {
@@ -177,13 +187,13 @@ const AuditLogs = () => {
       // Calculate date range in user's timezone, then convert to UTC for backend
       let cutoff;
       const now = moment.tz(userTimezone);
-      
+
       // Check if custom date range is set
       if (filters.customDateRange && filters.customDateRange.start && filters.customDateRange.end) {
         // Use custom date range
         const startDate = moment.tz(filters.customDateRange.start, userTimezone).startOf('day').utc();
         const endDate = moment.tz(filters.customDateRange.end, userTimezone).endOf('day').utc();
-        
+
         // Set cutoff to start date for backward compatibility
         cutoff = startDate;
       } else {
@@ -302,39 +312,13 @@ const AuditLogs = () => {
     return action.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
   };
 
-  // Get risk level color
-  const getRiskLevelColor = (riskLevel) => {
-    switch (riskLevel) {
-      case 'critical':
-        return 'error';
-      case 'high':
-        return 'error';
-      case 'medium':
-        return 'warning';
-      case 'low':
-        return 'success';
-      default:
-        return 'unknown';
-    }
-  };
+
 
   // Handle filter changes
   const handleFilterChange = (filterType, value) => {
     setFilters(prev => ({
       ...prev,
       [filterType]: filterType === 'userId' ? (Array.isArray(value) ? value : []) : value
-    }));
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
-  };
-
-  // Handle date range changes
-  const handleDateRangeChange = (rangeType, date) => {
-    setFilters(prev => ({
-      ...prev,
-      customDateRange: {
-        ...prev.customDateRange,
-        [rangeType]: date
-      }
     }));
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
@@ -372,13 +356,13 @@ const AuditLogs = () => {
       // Calculate date range in user's timezone, then convert to UTC for backend
       let cutoff;
       const now = moment.tz(userTimezone);
-      
+
       // Check if custom date range is set
       if (filters.customDateRange && filters.customDateRange.start && filters.customDateRange.end) {
         // Use custom date range
         const startDate = moment.tz(filters.customDateRange.start, userTimezone).startOf('day').utc();
         const endDate = moment.tz(filters.customDateRange.end, userTimezone).endOf('day').utc();
-        
+
         // Set cutoff to start date for backward compatibility
         cutoff = startDate;
       } else {
@@ -589,7 +573,7 @@ const AuditLogs = () => {
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
 
-    // Check if a quick filter is currently active
+  // Check if a quick filter is currently active
   const isQuickFilterActive = (filterType) => {
     switch (filterType) {
       case 'failed_logins':
@@ -613,7 +597,7 @@ const AuditLogs = () => {
       case 'last_hour':
         // Only active if dateRange is '1h' AND no custom date range is set
         return filters.dateRange === '1h' && !filters.customDateRange;
- 
+
       default:
         return false;
     }
@@ -680,122 +664,23 @@ const AuditLogs = () => {
     { value: 'asc', label: 'Oldest First' }
   ];
 
-  // Custom styles for React Select
-  const customStyles = {
-    control: (provided, state) => ({
-      ...provided,
-      backgroundColor: '#f4f5f7',
-      border: `1.5px solid ${state.isFocused ? '#1f3bb3' : '#e3e6ea'}`,
-      borderRadius: '8px',
-      boxShadow: state.isFocused ? '0 0 0 2px rgba(31, 59, 179, 0.08)' : 'none',
-      minHeight: '44px',
-      fontSize: '1rem',
-      color: '#222',
-      transition: 'border-color 0.2s, box-shadow 0.2s',
-      '&:hover': {
-        borderColor: '#1f3bb3'
-      }
-    }),
-    menu: (provided) => ({
-      ...provided,
-      backgroundColor: '#fff',
-      border: '1px solid #e3e6ea',
-      borderRadius: '8px',
-      boxShadow: '0 4px 16px rgba(60,60,60,0.10)',
-      zIndex: 9999
-    }),
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.isSelected
-        ? '#1f3bb3'
-        : state.isFocused
-          ? '#eaf0fb'
-          : 'transparent',
-      color: state.isSelected ? '#fff' : '#222',
-      fontWeight: state.isSelected ? 600 : 400,
-      fontSize: '1rem',
-      cursor: 'pointer',
-      '&:hover': {
-        backgroundColor: state.isSelected ? '#1f3bb3' : '#eaf0fb'
-      }
-    }),
-    singleValue: (provided) => ({
-      ...provided,
-      color: '#222',
-      fontWeight: 500
-    }),
-    multiValue: (provided) => ({
-      ...provided,
-      backgroundColor: '#eaf0fb',
-      borderRadius: '6px',
-      border: '1px solid #1f3bb3'
-    }),
-    multiValueLabel: (provided) => ({
-      ...provided,
-      color: '#1f3bb3',
-      fontWeight: 500,
-      fontSize: '0.875rem'
-    }),
-    multiValueRemove: (provided) => ({
-      ...provided,
-      color: '#1f3bb3',
-      '&:hover': {
-        backgroundColor: '#1f3bb3',
-        color: '#fff'
-      }
-    }),
-    input: (provided) => ({
-      ...provided,
-      color: '#222'
-    }),
-    placeholder: (provided) => ({
-      ...provided,
-      color: '#bfc5ce',
-      fontWeight: 400
-    }),
-    dropdownIndicator: (provided, state) => ({
-      ...provided,
-      color: state.isFocused ? '#1f3bb3' : '#bfc5ce',
-      '&:hover': {
-        color: '#1f3bb3'
-      }
-    }),
-    indicatorSeparator: (provided) => ({
-      ...provided,
-      backgroundColor: '#e3e6ea'
-    }),
-    clearIndicator: (provided) => ({
-      ...provided,
-      color: '#bfc5ce',
-      '&:hover': {
-        color: '#1f3bb3'
-      }
-    }),
-    loadingMessage: (provided) => ({
-      ...provided,
-      color: '#666',
-      fontSize: '0.875rem',
-      fontStyle: 'italic'
-    })
-  };
-
   // Show access denied message if user has no permissions
   if (!hasAnyPermission) {
     return (
-      <div className="audit-logs-container">
-        <div className="audit-logs-header-row">
-          <div className="audit-logs-header">
-            <h1 className="audit-logs-title">
+      <div className="page-container">
+        <div className="page-content">
+          <div className="page-header">
+            <h1 className="page-title">
               <FiActivity /> Audit Logs
             </h1>
-            <p className="audit-logs-description">
+            <p className="page-description">
               View detailed security events and user activity logs
             </p>
           </div>
         </div>
-        <div className="audit-logs-main-content">
-          <div className="audit-logs-content">
-            <div className="audit-logs-error">
+        <div className="page-content">
+          <div className="page-content">
+            <div className="page-error">
               <FiAlertTriangle />
               <h3>Access Denied</h3>
               <p>You do not have permission to view audit logs. Please contact your administrator for access.</p>
@@ -807,13 +692,13 @@ const AuditLogs = () => {
   }
 
   return (
-    <div className="audit-logs-container">
-      <div className="audit-logs-header-row">
-        <div className="audit-logs-header">
-          <h1 className="audit-logs-title">
+    <div className="page-container">
+      <div className="page-content">
+        <div className="page-header">
+          <h1 className="page-title">
             <FiActivity /> Audit Logs
           </h1>
-          <p className="audit-logs-description">
+          <p className="page-description">
             View detailed security events and user activity logs
             {hasViewOwnPermission && !hasViewPermission && (
               <span className="permission-notice">
@@ -822,7 +707,28 @@ const AuditLogs = () => {
             )}
           </p>
         </div>
-        <div className="audit-logs-controls">
+
+        {/* Summary Cards */}
+        <div className="summary-cards">
+          <div className="summary-card">
+            <span className="summary-value">{pagination.total}</span>
+            <span className="summary-label">Total Events</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-value">
+              {summaryStats.highRiskCount}
+            </span>
+            <span className="summary-label">High Risk</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-value">
+              {summaryStats.failedLoginsCount}
+            </span>
+            <span className="summary-label">Failed Logins</span>
+          </div>
+        </div>
+
+        <div className="page-controls">
           {/* Row Limit Selector */}
           <div className="row-limit-selector">
             <label htmlFor="row-limit">
@@ -833,268 +739,380 @@ const AuditLogs = () => {
               value={limitOptions.find(option => option.value === pagination.limit)}
               onChange={(selectedOption) => handleLimitChange(selectedOption ? selectedOption.value : 25)}
               options={limitOptions}
-              styles={customStyles}
               placeholder="Select rows per page..."
               isClearable={false}
               isSearchable={false}
-            />
-          </div>
-          <button
-            className="refresh-btn"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <FiRefreshCw />
-            Refresh
-          </button>
-          {(hasExportPermission || authService.isAdmin()) && (
-            <button
-              className="export-btn"
-              onClick={handleExport}
-              disabled={loading}
-              title="Export audit logs to CSV"
-            >
-              <FiDownload />
-              Export CSV
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Filters Row */}
-      <div className="filters-row">
-        <div className="filters-group">
-          <div className="filter-group">
-            <h4>Action Type</h4>
-            <Select
-              value={actionOptions.find(option => option.value === filters.action)}
-              onChange={(selectedOption) => handleFilterChange('action', selectedOption ? selectedOption.value : '')}
-              options={actionOptions}
-              styles={customStyles}
-              placeholder="Select action type..."
-              isClearable
-              isSearchable
-            />
-          </div>
-          <div className="filter-group">
-            <h4>Risk Level</h4>
-            <Select
-              value={riskLevelOptions.find(option => option.value === filters.riskLevel)}
-              onChange={(selectedOption) => handleFilterChange('riskLevel', selectedOption ? selectedOption.value : '')}
-              options={riskLevelOptions}
-              styles={customStyles}
-              placeholder="Select risk level..."
-              isClearable
-              isSearchable
-            />
-          </div>
-          <div className="filter-group">
-            <h4>Status</h4>
-            <Select
-              value={statusOptions.find(option => option.value === filters.success)}
-              onChange={(selectedOption) => handleFilterChange('success', selectedOption ? selectedOption.value : '')}
-              options={statusOptions}
-              styles={customStyles}
-              placeholder="Select status..."
-              isClearable
-              isSearchable
-            />
-          </div>
-
-          <div className="filter-group">
-            <h4>Custom Date Range</h4>
-            <DatePicker
-              selectsRange={true}
-              startDate={startDate}
-              endDate={endDate}
-              onChange={(update) => {
-                const [start, end] = update;
-                setStartDate(start);
-                setEndDate(end);
-                if (start && end) {
-                  setFilters(prev => ({
-                    ...prev,
-                    customDateRange: {
-                      start: start.toISOString().split('T')[0], // Keep as YYYY-MM-DD for display
-                      end: end.toISOString().split('T')[0]      // Keep as YYYY-MM-DD for display
-                    }
-                  }));
-                  setPagination(prev => ({ ...prev, page: 1 }));
-                } else if (!start && !end) {
-                  // Clear custom date range when both dates are cleared
-                  setFilters(prev => ({
-                    ...prev,
-                    customDateRange: null
-                  }));
-                  setPagination(prev => ({ ...prev, page: 1 }));
-                }
+              styles={{
+                menu: (provided) => ({
+                  ...provided,
+                  zIndex: 9999
+                }),
+                menuPortal: (provided) => ({
+                  ...provided,
+                  zIndex: 9999
+                })
               }}
-              isClearable={true}
-              placeholderText="Select date range..."
-              className="date-range-input"
-              dateFormat="yyyy-MM-dd"
-              showMonthDropdown={false}
-              showYearDropdown={false}
-              dropdownMode="select"
+              menuPortalTarget={document.body}
             />
           </div>
-          {(hasViewPermission || authService.isAdmin()) && (
-            <div className="filter-group users-filter">
-              <h4>Users</h4>
-              <Select
-                value={Array.isArray(filters.userId) ? filters.userId.map(userId => userOptions.find(option => option.value === userId)).filter(Boolean) : []}
-                onChange={(selectedOptions) => {
-                  const selectedUserIds = selectedOptions ? selectedOptions.map(option => option.value) : [];
-                  handleFilterChange('userId', selectedUserIds);
-                }}
-                onInputChange={(newValue) => setUserSearchTerm(newValue)}
-                inputValue={userSearchTerm}
-                options={userOptions}
-                styles={customStyles}
-                placeholder="Select users..."
-                isMulti
-                isClearable
-                isSearchable
-                closeMenuOnSelect={false}
-                filterOption={() => true} // Disable client-side filtering since we're doing server-side search
-                onMenuScrollToBottom={loadMoreUsers}
-                loadingMessage={() => "Loading more users..."}
-                noOptionsMessage={() => "No users found"}
-              />
-            </div>
-          )}
-          <div className="filter-group">
-            <h4>Sort By</h4>
-            <Select
-              value={sortByOptions.find(option => option.value === filters.sortBy)}
-              onChange={(selectedOption) => handleSortChange('sortBy', selectedOption ? selectedOption.value : 'timestamp')}
-              options={sortByOptions}
-              styles={customStyles}
-              placeholder="Select sort field..."
-              isClearable
-              isSearchable
-            />
-          </div>
-          <div className="filter-group">
-            <h4>Sort Order</h4>
-            <Select
-              value={sortOrderOptions.find(option => option.value === filters.sortOrder)}
-              onChange={(selectedOption) => handleSortChange('sortOrder', selectedOption ? selectedOption.value : 'desc')}
-              options={sortOrderOptions}
-              styles={customStyles}
-              placeholder="Select sort order..."
-              isClearable
-              isSearchable
-            />
-          </div>
-          <div className="filter-actions">
+          <div className="filter-controls-right">
             <button
-              className="clear-filters-btn"
-              onClick={handleClearFilters}
+              className="btn btn-secondary"
+              onClick={handleRefresh}
+              disabled={loading}
             >
-              Clear All Filters
+              <FiRefreshCw />
+              Refresh
+            </button>
+            {(hasExportPermission || authService.isAdmin()) && (
+              <button
+                className="btn btn-primary"
+                onClick={handleExport}
+                disabled={loading}
+                title="Export audit logs to CSV"
+              >
+                <FiDownload />
+                Export CSV
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="audit-logs-main-content">
+        {/* Filter Section - Positioned absolutely on the right */}
+        <div className={`filter-section ${isFilterSectionOpen ? 'open' : 'closed'}`}>
+          <div className="filter-header" onClick={handleFilterToggle}>
+            <h3>
+              <FiFilter />
+              Filters
+            </h3>
+            <button
+              className="btn btn-light"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFilterToggle();
+              }}
+              title={isFilterSectionOpen ? "Hide filters" : "Show filters"}
+            >
+              <FiX />
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* Move summary cards here, directly below filters */}
-      <div className="summary-cards">
-        <div className="summary-card">
-          <span className="summary-value">{pagination.total}</span>
-          <span className="summary-label">Total Events</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-value">
-            {summaryStats.highRiskCount}
-          </span>
-          <span className="summary-label">High Risk</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-value">
-            {summaryStats.failedLoginsCount}
-          </span>
-          <span className="summary-label">Failed Logins</span>
-        </div>
-      </div>
+          <div className="filter-content">
+            <div className="filter-grid">
+              {/* Action Type Filter */}
+              <div className="filter-item">
+                <h4>Action Type</h4>
+                <Select
+                  value={actionOptions.find(option => option.value === filters.action)}
+                  onChange={(selectedOption) => handleFilterChange('action', selectedOption ? selectedOption.value : '')}
+                  options={actionOptions}
+                  placeholder="Select action type..."
+                  isClearable
+                  isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
+                />
+              </div>
 
-      <div className="audit-logs-main-content">
-        {/* Main Content */}
+              {/* Risk Level Filter */}
+              <div className="filter-item">
+                <h4>Risk Level</h4>
+                <Select
+                  value={riskLevelOptions.find(option => option.value === filters.riskLevel)}
+                  onChange={(selectedOption) => handleFilterChange('riskLevel', selectedOption ? selectedOption.value : '')}
+                  options={riskLevelOptions}
+                  placeholder="Select risk level..."
+                  isClearable
+                  isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="filter-item">
+                <h4>Status</h4>
+                <Select
+                  value={statusOptions.find(option => option.value === filters.success)}
+                  onChange={(selectedOption) => handleFilterChange('success', selectedOption ? selectedOption.value : '')}
+                  options={statusOptions}
+                  placeholder="Select status..."
+                  isClearable
+                  isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
+                />
+              </div>
+
+
+
+              {/* Sort By Filter */}
+              <div className="filter-item">
+                <h4>Sort By</h4>
+                <Select
+                  value={sortByOptions.find(option => option.value === filters.sortBy)}
+                  onChange={(selectedOption) => handleSortChange('sortBy', selectedOption ? selectedOption.value : 'timestamp')}
+                  options={sortByOptions}
+                  placeholder="Select sort field..."
+                  isClearable
+                  isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
+                />
+              </div>
+
+              {/* Sort Order Filter */}
+              <div className="filter-item">
+                <h4>Sort Order</h4>
+                <Select
+                  value={sortOrderOptions.find(option => option.value === filters.sortOrder)}
+                  onChange={(selectedOption) => handleSortChange('sortOrder', selectedOption ? selectedOption.value : 'desc')}
+                  options={sortOrderOptions}
+                  placeholder="Select sort order..."
+                  isClearable
+                  isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
+                />
+              </div>
+            </div>
+
+            {/* Filter Actions */}
+            <div className="filter-actions">
+              <div className="filter-actions-left">
+                <span className="filter-summary">
+                  {(() => {
+                    const activeFilters = [];
+                    if (filters.action) activeFilters.push(`Action: ${filters.action}`);
+                    if (filters.riskLevel) activeFilters.push(`Risk Level: ${filters.riskLevel}`);
+                    if (filters.success !== '') activeFilters.push(`Status: ${filters.success === 'true' ? 'Success' : 'Failed'}`);
+                    if (filters.userId && filters.userId.length > 0) activeFilters.push(`Users: ${filters.userId.length} selected`);
+                    if (filters.customDateRange) activeFilters.push('Custom Date Range');
+                    return activeFilters.length > 0 ? `${activeFilters.length} filter(s) active` : 'No filters applied';
+                  })()}
+                </span>
+              </div>
+              <div className="filter-actions-right">
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleClearFilters}
+                  title="Clear all filters"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
         <div className="audit-logs-content">
+
+
+          {/* Date Range Picker and Users Select - Always visible */}
+          <div className="search-bar-container">
+            <div className="search-controls">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={(update) => {
+                  const [start, end] = update;
+                  setStartDate(start);
+                  setEndDate(end);
+                  if (start && end) {
+                    setFilters(prev => ({
+                      ...prev,
+                      customDateRange: {
+                        start: start.toISOString().split('T')[0], // Keep as YYYY-MM-DD for display
+                        end: end.toISOString().split('T')[0]      // Keep as YYYY-MM-DD for display
+                      }
+                    }));
+                    setPagination(prev => ({ ...prev, page: 1 }));
+                  } else if (!start && !end) {
+                    // Clear custom date range when both dates are cleared
+                    setFilters(prev => ({
+                      ...prev,
+                      customDateRange: null
+                    }));
+                    setPagination(prev => ({ ...prev, page: 1 }));
+                  }
+                }}
+                placeholder="Select date range..."
+                className="date-range-input"
+                dateFormat="yyyy-MM-dd"
+                showMonthDropdown={false}
+                showYearDropdown={false}
+                dropdownMode="select"
+              />
+              {/* Users Select */}
+              {(hasViewPermission || authService.isAdmin()) && (
+                <div className="users-select-container">
+                  <Select
+                    value={Array.isArray(filters.userId) ? filters.userId.map(userId => userOptions.find(option => option.value === userId)).filter(Boolean) : []}
+                    onChange={(selectedOptions) => {
+                      const selectedUserIds = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                      handleFilterChange('userId', selectedUserIds);
+                    }}
+                    onInputChange={(newValue) => setUserSearchTerm(newValue)}
+                    inputValue={userSearchTerm}
+                    options={userOptions}
+                    placeholder="Select users..."
+                    isMulti
+                    isClearable
+                    isSearchable
+                    closeMenuOnSelect={false}
+                    filterOption={() => true} // Disable client-side filtering since we're doing server-side search
+                    onMenuScrollToBottom={loadMoreUsers}
+                    loadingMessage={() => "Loading more users..."}
+                    noOptionsMessage={() => "No users found"}
+                    styles={{
+                      menu: (provided) => ({
+                        ...provided,
+                        zIndex: 9999
+                      }),
+                      menuPortal: (provided) => ({
+                        ...provided,
+                        zIndex: 9999
+                      })
+                    }}
+                    menuPortalTarget={document.body}
+                  />
+                </div>
+              )}
+            </div>
+            {/* Filter Toggle Button */}
+            <div className="filter-toggle-container">
+              <button
+                className="btn btn-light"
+                onClick={handleFilterToggle}
+                title={isFilterSectionOpen ? "Hide filters" : "Show filters"}
+              >
+                <FiFilter />
+                {isFilterSectionOpen ? "Hide Filters" : "Show Filters"}
+              </button>
+            </div>
+          </div>
+
           {/* Quick Filter Buttons */}
           <div className="quick-filters-row">
-            <div className="quick-filters">
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('failed_logins') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('failed_logins')}
-              >
-                <FiAlertTriangle />
-                Failed Logins
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('high_risk') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('high_risk')}
-              >
-                <FiAlertCircle />
-                High Risk
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('critical_events') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('critical_events')}
-              >
-                <FiShield />
-                Critical Events
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('successful_logins') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('successful_logins')}
-              >
-                <FiCheckCircle />
-                Successful Logins
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('two_factor') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('two_factor')}
-              >
-                <FiShield />
-                2FA Events
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('security_alerts') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('security_alerts')}
-              >
-                <FiAlertTriangle />
-                Security Alerts
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('last_hour') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('last_hour')}
-              >
-                <FiClock />
-                Last Hour
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('last_24_hours') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('last_24_hours')}
-              >
-                <FiClock />
-                Last 24 Hours
-              </button>
-              <button
-                className={`quick-filter-btn${isQuickFilterActive('last_30_days') ? ' active' : ''}`}
-                onClick={() => handleQuickFilter('last_30_days')}
-              >
-                <FiCalendar />
-                Last 30 Days
-              </button>
+            <button
+              className={`btn ${isQuickFilterActive('failed_logins') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('failed_logins')}
+            >
+              <FiAlertTriangle />
+              Failed Logins
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('high_risk') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('high_risk')}
+            >
+              <FiAlertCircle />
+              High Risk
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('critical_events') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('critical_events')}
+            >
+              <FiShield />
+              Critical Events
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('successful_logins') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('successful_logins')}
+            >
+              <FiCheckCircle />
+              Successful Logins
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('two_factor') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('two_factor')}
+            >
+              <FiShield />
+              2FA Events
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('security_alerts') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('security_alerts')}
+            >
+              <FiAlertTriangle />
+              Security Alerts
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('last_hour') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('last_hour')}
+            >
+              <FiClock />
+              Last Hour
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('last_24_hours') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('last_24_hours')}
+            >
+              <FiClock />
+              Last 24 Hours
+            </button>
+            <button
+              className={`btn ${isQuickFilterActive('last_30_days') ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => handleQuickFilter('last_30_days')}
+            >
+              <FiCalendar />
+              Last 30 Days
+            </button>
 
-            </div>
           </div>
 
           {/* Audit Logs Table */}
           <div className="audit-table-container">
             {loading ? (
-              <div className="audit-logs-loading">
+              <div className="loading-state">
                 <div className="spinner"></div>
                 <p>Loading audit logs...</p>
               </div>
@@ -1107,18 +1125,18 @@ const AuditLogs = () => {
                 </button>
               </div>
             ) : auditLogs.length === 0 ? (
-              <div className="audit-logs-empty">
+              <div className="empty-state">
                 <FiEye />
                 <h3>No Audit Logs Found</h3>
                 <p>No security events match your current filters.</p>
-                <button className="clear-filters-btn" onClick={handleClearFilters}>
+                <button className="btn btn-secondary" onClick={handleClearFilters}>
                   Clear Filters
                 </button>
               </div>
             ) : (
               <>
-                <div className="audit-table-scroll">
-                  <table className="audit-table">
+                <div className="table-container">
+                  <table className="table">
                     <thead>
                       <tr>
                         {(hasViewPermission || authService.isAdmin()) && <th>User</th>}
@@ -1196,14 +1214,14 @@ const AuditLogs = () => {
                             </div>
                           </td>
                           <td className="status-cell">
-                            <span className={`status-badge ${getStatusClass(log.success ? 'success' : 'error')}`}>
-                              {log.success ? 'Success' : 'Failed'}
-                            </span>
+                            <StatusBadge
+                              isActive={log.success}
+                              activeText="Success"
+                              inactiveText="Failed"
+                            />
                           </td>
                           <td className="risk-cell">
-                            <span className={`risk-badge ${getStatusClass(getRiskLevelColor(log.riskLevel))}`}>
-                              {log.riskLevel || 'low'}
-                            </span>
+                            <RiskBadge riskLevel={log.riskLevel || 'low'} size="sm" />
                           </td>
                           <td>
                             <span>{log.ip}</span>
@@ -1275,7 +1293,7 @@ const AuditLogs = () => {
               </div>
               <div className="pagination-navigation">
                 <button
-                  className="pagination-btn pagination-prev"
+                  className="btn btn-secondary btn-sm"
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={!pagination.hasPrevPage}
                   title="Previous page"
@@ -1298,7 +1316,7 @@ const AuditLogs = () => {
                         indicators.push(
                           <button
                             key={i}
-                            className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                            className={`btn ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                             onClick={() => handlePageChange(i)}
                             title={`Page ${i}`}
                           >
@@ -1311,7 +1329,7 @@ const AuditLogs = () => {
                       indicators.push(
                         <button
                           key={1}
-                          className={`page-indicator ${1 === currentPage ? 'active' : ''}`}
+                          className={`btn ${1 === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                           onClick={() => handlePageChange(1)}
                           title="Page 1"
                         >
@@ -1337,7 +1355,7 @@ const AuditLogs = () => {
                           indicators.push(
                             <button
                               key={i}
-                              className={`page-indicator ${i === currentPage ? 'active' : ''}`}
+                              className={`btn ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                               onClick={() => handlePageChange(i)}
                               title={`Page ${i}`}
                             >
@@ -1361,7 +1379,7 @@ const AuditLogs = () => {
                         indicators.push(
                           <button
                             key={pagination.totalPages}
-                            className={`page-indicator ${pagination.totalPages === currentPage ? 'active' : ''}`}
+                            className={`btn ${pagination.totalPages === currentPage ? 'btn-primary' : 'btn-outline-primary'}`}
                             onClick={() => handlePageChange(pagination.totalPages)}
                             title={`Page ${pagination.totalPages}`}
                           >
@@ -1376,7 +1394,7 @@ const AuditLogs = () => {
                 </div>
 
                 <button
-                  className="pagination-btn pagination-next"
+                  className="btn btn-secondary btn-sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={!pagination.hasNextPage}
                   title="Next page"

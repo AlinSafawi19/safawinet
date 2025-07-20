@@ -186,3 +186,32 @@ body.has-rate-limit-warning {
     font-size: 1.1rem;
     margin: 0;
 }
+
+/* Filter Section Styles for AuditLogs and other pages */
+.filter-section {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  z-index: 10;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  transform: translateX(0);
+  opacity: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.filter-section.closed {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Main content area with relative positioning for absolute filters */
+.audit-logs-main-content {
+  position: relative;
+}

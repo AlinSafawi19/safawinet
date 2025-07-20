@@ -101,7 +101,7 @@ const Users = () => {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   // Filter section visibility state
-  const [isFilterSectionOpen, setIsFilterSectionOpen] = useState(true);
+  const [isFilterSectionOpen, setIsFilterSectionOpen] = useState(false);
 
   // Handle filter section toggle
   const handleFilterToggle = () => {
@@ -877,6 +877,17 @@ const Users = () => {
               placeholder="Select rows per page..."
               isClearable={false}
               isSearchable={false}
+              styles={{
+                menu: (provided) => ({
+                  ...provided,
+                  zIndex: 9999
+                }),
+                menuPortal: (provided) => ({
+                  ...provided,
+                  zIndex: 9999
+                })
+              }}
+              menuPortalTarget={document.body}
             />
           </div>
           <div className="page-controls-right">
@@ -978,6 +989,17 @@ const Users = () => {
                   placeholder="Select status..."
                   isClearable
                   isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
                 />
               </div>
 
@@ -999,6 +1021,17 @@ const Users = () => {
                   closeMenuOnSelect={false}
                   loadingMessage={() => "Loading more roles..."}
                   noOptionsMessage={() => "No roles found"}
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
                 />
               </div>
 
@@ -1025,6 +1058,17 @@ const Users = () => {
                     onMenuScrollToBottom={loadMoreCreatedBy}
                     loadingMessage={() => "Loading more users..."}
                     noOptionsMessage={() => "No users found"}
+                    styles={{
+                      menu: (provided) => ({
+                        ...provided,
+                        zIndex: 9999
+                      }),
+                      menuPortal: (provided) => ({
+                        ...provided,
+                        zIndex: 9999
+                      })
+                    }}
+                    menuPortalTarget={document.body}
                   />
                 </div>
               )}
@@ -1039,6 +1083,17 @@ const Users = () => {
                   placeholder="Select sort field..."
                   isClearable
                   isSearchable
+                  styles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    }),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999
+                    })
+                  }}
+                  menuPortalTarget={document.body}
                 />
               </div>
 
@@ -1210,8 +1265,8 @@ const Users = () => {
               </div>
             ) : (
               <>
-                <div className="users-table-container">
-                  <table className="users-table">
+                <div className="table-container">
+                  <table className="table">
                     <thead>
                       <tr>
                         {canDeleteUsers && (
